@@ -11,11 +11,8 @@
       >
         <div class="d-flex flex-row justify-content-between">
           <h6 class="p-0">{{ dataset.name }}</h6>
-          <small class="p-0">created: {{
-            moment(dataset.created_at*1000).format("YYYY-MM-DD")
-          }}</small>
-          <small class="p-0">frozen: {{
-            moment(dataset.frozen_at*1000).format("YYYY-MM-DD")
+          <small class="p-0">{{
+            moment(dataset.created_at * 1000).format("YYYY-MM-DD")
           }}</small>
         </div>
 
@@ -44,25 +41,26 @@ var moment = require("moment");
 export default {
   name: "DatasetTable",
   props: {
-    datasetHits: Array
+    datasetHits: Array,
+    responseheaders: {},
   },
-  data: function() {
+  data: function () {
     return {
-      moment: moment
+      moment: moment,
     };
   },
   computed: {
-    selected: function() {
+    selected: function () {
       return this.$store.state.current_dataset_index;
-    }
+    },
   },
   methods: {
-    updateSelectedDataset: function(index) {
+    updateSelectedDataset: function (index) {
       this.$store.commit("update_current_dataset_index", index);
       this.$store.commit("update_current_dataset", this.datasetHits[index]);
       this.$emit("update-dataset");
-    }
-  }
+    },
+  },
 };
 </script>
 

@@ -1,0 +1,12 @@
+// custom.scss
+
+
+$primary: #95319b; // Primary purple
+$secondary: #6f42c1; // A lighter/different shade of purple for secondary
+$success: #8e44ad; // A success color that's still in the purple range
+$warning: #9b59b6; // A purple warning color, softer than the primary
+$danger: #e74c3c; // For danger, a contrasting color can be helpful; adjust as needed
+$info: #9c88ff; // A soft purple for informational messages
+
+// Import Bootstrap's Sass files
+@import 'bootstrap/scss/bootstrap';

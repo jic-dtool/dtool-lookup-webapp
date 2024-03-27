@@ -42,52 +42,63 @@ import NumDatasets from "./NumDatasets.vue";
 import TagFilter from "./TagFilter.vue";
 import BaseUriFilter from "./BaseUriFilter.vue";
 import CreatorUsernameFilter from "./CreatorUsernameFilter.vue";
+import { getUsernameFromJwt } from "@/utils/jwtUtils";
+
 export default {
   name: "SummaryInfo",
   props: {
     lookup_url: String,
-    auth_str: String
+    auth_str: String,
+    token: String,
   },
-  data: function() {
+  data: function () {
     return {
       summary_info: null,
       loading: true,
-      errored: false
+      errored: false,
+      username: "",
     };
   },
   computed: {
-    source: function() {
-      return this.lookup_url + "/dataset/summary";
-    }
+    // Dynamically constructs the API endpoint URL using the provided username.
+    source: function () {
+      return this.lookup_url + "/users/" + this.username + "/summary";
+    },
   },
   methods: {
-    load_summary: function() {
+    load_summary: function () {
       console.log("Loading summary info");
       this.errored = false;
       this.loading = true;
       this.$http
         .get(this.source, { headers: { Authorization: this.auth_str } })
-        .then(response => (this.summary_info = response.data))
-        .catch(error => {
+        .then((response) => (this.summary_info = response.data))
+        .catch((error) => {
           console.log(error);
-          console.log(error.response);
           this.errored = true;
         })
         .finally(() => (this.loading = false));
     },
-    searchDatasets: function() {
+    searchDatasets: function () {
       this.$emit("start-search");
-    }
+    },
   },
   mounted() {
+    if (this.token) {
+      // Extracts username from the JWT token and initializes the component state
+      const username = getUsernameFromJwt(this.token);
+
+      this.username = username;
+      this.$store.commit("updateUsername", username);
+    }
     this.load_summary();
   },
   components: {
     NumDatasets,
     TagFilter,
     BaseUriFilter,
-    CreatorUsernameFilter
-  }
+    CreatorUsernameFilter,
+  },
 };
 </script>
 

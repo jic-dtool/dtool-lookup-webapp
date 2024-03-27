@@ -48,6 +48,7 @@
 </template>
 
 <script>
+import { BDropdown, BInputGroup, BFormInput, BButton } from "bootstrap-vue-next";
 var filesize = require("filesize");
 export default {
   name: "DatasetManifest",
@@ -62,8 +63,9 @@ export default {
       return this.$store.state.current_dataset_manifest;
     },
     numItems: function() {
-      return Object.values(this.manifest.items).length;
-    },
+  return this.manifest && this.manifest.items ? Object.values(this.manifest.items).length : 0;
+}
+,
     fetch_command: function() {
       return (
         "dtool item fetch " +
@@ -78,7 +80,15 @@ export default {
       console.log("update_fetch_identifer: " + identifier);
       this.fetch_identifier = identifier;
     }
-  }
+  },
+  
+  components: {
+    BDropdown,
+    BInputGroup,
+    BFormInput,
+    BButton
+  },
+
 };
 </script>
 

@@ -12,7 +12,7 @@
           v-bind:key="index"
           @click="toggleSelect(base_uri)"
         >
-          <div class="d-flex  justify-content-between">
+          <div class="d-flex justify-content-between">
             <small>
               <input
                 type="checkbox"
@@ -41,20 +41,20 @@
 export default {
   name: "BaseUriFilter",
   props: {
-    summary_info: Object
+    summary_info: Object,
   },
-  data: function() {
+  data: function () {
     return {
-      selectedBaseURIs: []
+      selectedBaseURIs: [],
     };
   },
   computed: {
-    canonicalSelectedBaseURIs: function() {
+    canonicalSelectedBaseURIs: function () {
       return this.$store.state.base_uris;
-    }
+    },
   },
   methods: {
-    toggleSelect: function(base_uri) {
+    toggleSelect: function (base_uri) {
       if (this.selectedBaseURIs.includes(base_uri)) {
         console.log("Unset base URI");
         // Remove item from array.
@@ -70,8 +70,8 @@ export default {
         this.$store.commit("update_base_uris", this.selectedBaseURIs);
         this.$emit("start-search");
       }
-    }
-  }
+    },
+  },
 };
 </script>
 

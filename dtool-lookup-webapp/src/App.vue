@@ -1,9 +1,45 @@
 <template>
   <div id="app" class="container-fluid">
     <header>
-      <nav class="navbar navbar-dark bg-dark p-2">
-        <span class="navbar-brand mb-0 h1">dtool</span>
-        <TextSearch @start-search="searchDatasets" />
+      <nav v-if="token" class="navbar navbar-expand-lg navbar-dark">
+        <a class="navbar-brand navbar-logo" href="#">
+          <img
+            src="/icons/128x128/dtool_logo.png"
+            alt="dtool Logo"
+            style="height: 35px"
+          />
+          dtool
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarToggler"
+          aria-controls="navbarToggler"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarToggler">
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0 d-flex align-items-center">
+            <li class="nav-item">
+              <form class="d-flex" role="search">
+                <TextSearch @start-search="searchDatasets" class="me-2" />
+              </form>
+            </li>
+            <li class="nav-item mr-2">
+              <!-- Apply margin to this <li> element -->
+              <button
+                class="btn btn-outline-danger"
+                type="button"
+                @click="logout"
+              >
+                Logout
+              </button>
+            </li>
+          </ul>
+        </div>
       </nav>
     </header>
 
@@ -13,6 +49,7 @@
           <SummaryInfo
             :auth_str="auth_str"
             :lookup_url="lookup_url"
+            :token="token"
             @start-search="searchDatasets"
           />
         </div>
@@ -20,6 +57,7 @@
           <div v-if="searchLoading" class="spinner-border text-primary">
             <span class="sr-only">Loading...</span>
           </div>
+
           <div v-else>
             <div v-if="searchErrored">
               <p>Unable to load datasets please try again.</p>
@@ -34,14 +72,30 @@
                 >Logout</a
               >
             </div>
+
             <div v-else>
               <DatasetTable
                 :datasetHits="datasetHits"
+                :responseheaders="responseheaders"
                 @update-dataset="updateDataset"
               />
+              <div v-if="shouldShowPagination">
+                <b-pagination
+                  v-model="pageNumber"
+                  :total-rows="pagination.total"
+                  :per-page="this.$store.state.update_current_Per_Page"
+                  first-text="First"
+                  prev-text="Prev"
+                  next-text="Next"
+                  last-text="Last"
+                  @click="searchDatasets"
+                  class="paginationcomponent"
+                ></b-pagination>
+              </div>
             </div>
           </div>
         </div>
+
         <div v-if="datasetLoaded" class="col-md-6 overflow-auto h-100 pl-0">
           <div class="card">
             <div class="card-header">
@@ -91,7 +145,7 @@
                     >
                   </div>
                   <div v-else>
-                    <Readme />
+                    <Readme :getinfo="getinfo" />
                   </div>
                 </div>
 
@@ -164,10 +218,11 @@ import Manifest from "./components/DatasetManifest.vue";
 import Readme from "./components/DatasetReadme.vue";
 import Annotations from "./components/DatasetAnnotations.vue";
 import DatasetSummary from "./components/DatasetSummary.vue";
+import { BPagination } from "bootstrap-vue-next";
 
 export default {
   name: "app",
-  data: function() {
+  data: function () {
     return {
       datasetHits: [],
       searchLoading: true,
@@ -179,63 +234,99 @@ export default {
       annotationsLoading: false,
       annotationsErrored: false,
       lookup_url: process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL,
-      token: null
+      token: null,
+      perPage: this.$store.state.update_current_Per_Page,
+      pageNumber: 1,
+      responseheaders: Array,
+      getinfo: {},
     };
   },
   computed: {
-    datasetLoaded: function() {
+    datasetLoaded: function () {
       return this.$store.state.current_dataset;
     },
-    current_dataset: function() {
+    current_dataset: function () {
       return this.datasetHits[this.$store.state.current_dataset_index];
     },
-    searchURL: function() {
-      return this.lookup_url + "/dataset/search";
+    searchURL: function () {
+      return (
+        this.lookup_url +
+        "/uris?page=" +
+        this.pageNumber +
+        "&page_size=" +
+        this.$store.state.update_current_Per_Page
+      );
     },
-    manifestURL: function() {
-      return this.lookup_url + "/dataset/manifest";
+    mongoSearchURL: function () {
+      return this.lookup_url + "/mongo/query";
     },
-    readmeURL: function() {
-      return this.lookup_url + "/dataset/readme";
+    manifestURL: function () {
+      return this.lookup_url + "/manifests";
     },
-    annotationsURL: function() {
-      return this.lookup_url + "/dataset/annotations";
+    configInfoURL: function () {
+      return this.lookup_url + "/config/versions";
     },
-    auth_str: function() {
+    readmeURL: function () {
+      return this.lookup_url + "/readmes";
+    },
+    annotationsURL: function () {
+      return this.lookup_url + "/annotations";
+    },
+    auth_str: function () {
       return "Bearer ".concat(this.token);
     },
-    searchQuery: function() {
+    searchQuery: function () {
       var query = {};
-      if (this.$store.state.free_text) {
-        query.free_text = this.$store.state.free_text;
-      }
-      if (this.$store.state.creator_usernames.length > 0) {
-        query.creator_usernames = this.$store.state.creator_usernames;
-      }
-      if (this.$store.state.base_uris.length > 0) {
-        query.base_uris = this.$store.state.base_uris;
-      }
-      if (this.$store.state.tags.length > 0) {
-        query.tags = this.$store.state.tags;
+
+      if (this.$store.state.mongo_text) {
+        query.query = JSON.parse(this.$store.state.mongo_text);
+      } else {
+        if (this.$store.state.free_text) {
+          query.free_text = this.$store.state.free_text;
+        }
+
+        if (this.$store.state.creator_usernames.length > 0) {
+          query.creator_usernames = this.$store.state.creator_usernames;
+        }
+        if (this.$store.state.base_uris.length > 0) {
+          query.base_uris = this.$store.state.base_uris;
+        }
+        if (this.$store.state.tags.length > 0) {
+          query.tags = this.$store.state.tags;
+        }
       }
       return query;
     },
-    uriQuery: function() {
+    uriQuery: function () {
       if (this.datasetHits.length > 0) {
         return {
-          uri: this.datasetHits[this.$store.state.current_dataset_index].uri
+          uri: this.datasetHits[this.$store.state.current_dataset_index].uri,
         };
       } else {
         return { uri: null };
       }
-    }
+    },
+    pagination: function () {
+      return this.responseheaders["x-pagination"]
+        ? JSON.parse(this.responseheaders["x-pagination"])
+        : {};
+    },
+
+    totalPageContents() {
+      return this.pagination.total;
+    },
+
+    shouldShowPagination() {
+    return this.pagination.total > 1;
+  },
   },
   methods: {
-    setTokenAndSearch: function(token) {
+    setTokenAndSearch: function (token) {
       this.token = token;
       this.searchDatasets();
     },
-    searchDatasets: function() {
+    searchDatasets: function () {
+      this.getconfiginfo();
       console.log("Running search");
       console.log(this.searchQuery);
       this.$store.commit("update_current_dataset_index", 0);
@@ -245,106 +336,182 @@ export default {
       this.updateDataset();
       this.searchLoading = true;
       this.searchErrored = false;
+
+      let searchURL = this.searchURL;
+      if (this.$store.state.mongo_text) {
+        searchURL = this.mongoSearchURL;
+      }
+
       this.$http
-        .post(this.searchURL, this.searchQuery, {
+        .post(searchURL, this.searchQuery, {
           headers: {
             Authorization: this.auth_str,
-            "Content-Type": "application/json"
-          }
+            "Content-Type": "application/json",
+          },
         })
-        .then(response => {
+        .then((response) => {
           this.datasetHits = response.data;
+          this.responseheaders = response.headers;
           this.$store.commit("update_current_dataset", this.current_dataset);
-          this.$store.commit("update_num_filtered", this.datasetHits.length);
+          this.$store.commit("update_num_filtered", this.pagination.total);
           this.updateDataset();
         })
-        .catch(error => {
+        .catch((error) => {
           console.log(error);
-          console.log(error.response);
-          this.searchErrored = true;
+          if (error.response && error.response.status === 404) {
+            console.log("404 Not Found - Resetting pageNumber and retrying");
+            this.pageNumber = 1;
+            this.searchDatasets(); // Retry the search with pageNumber reset to 1
+          } else {
+            console.log(error.response);
+            this.searchErrored = true;
+          }
         })
         .finally(() => {
           this.searchLoading = false;
         });
     },
-    updateDataset: function() {
+
+    updateDataset: function () {
       this.updateManifest();
       this.updateReadme();
       this.updateAnnotations();
     },
-    updateManifest: function() {
+    updateManifest: function () {
       console.log("Loading manifest");
-      console.log(this.uriQuery);
       this.manifestLoading = true;
       this.manifestErrored = false;
+
+      const uri = this.uriQuery.uri;
+      if (!uri) {
+        // Check if uri is not null
+        console.log("No URI available for manifest.");
+        this.manifestErrored = true;
+        this.manifestLoading = false;
+        return; // Exit the method if no URI
+      }
+
+      const fullManifestURL = `${this.manifestURL}/${encodeURIComponent(uri)}`;
+
       this.$http
-        .post(this.manifestURL, this.uriQuery, {
+        .get(fullManifestURL, {
           headers: {
             Authorization: this.auth_str,
-            "Content-Type": "application/json"
-          }
+            Accept: "application/json",
+          },
         })
-        .then(response => {
+        .then((response) => {
           this.$store.commit("update_current_dataset_manifest", response.data);
         })
-        .catch(error => {
+        .catch((error) => {
           console.log(error);
-          console.log(error.response);
           this.manifestErrored = true;
         })
-        .finally(() => (this.manifestLoading = false));
+        .finally(() => {
+          this.manifestLoading = false;
+        });
     },
-    updateReadme: function() {
+
+    updateReadme: function () {
       console.log("Loading readme");
-      console.log(this.uriQuery);
       this.readmeLoading = true;
       this.readmeErrored = false;
+
+      const uri = this.uriQuery.uri;
+      if (!uri) {
+        // Check if uri is not null
+        console.log("No URI available for readme.");
+        this.readmeErrored = true;
+        this.readmeLoading = false;
+        return; // Exit the method if no URI
+      }
+
+      const fullReadmeURL = `${this.readmeURL}/${encodeURIComponent(uri)}`;
+
       this.$http
-        .post(this.readmeURL, this.uriQuery, {
+        .get(fullReadmeURL, {
           headers: {
             Authorization: this.auth_str,
-            "Content-Type": "application/json"
-          }
+            Accept: "application/json",
+          },
         })
-        .then(response => {
+        .then((response) => {
           this.$store.commit("update_current_dataset_readme", response.data);
         })
-        .catch(error => {
+        .catch((error) => {
           console.log(error);
-          console.log(error.response);
           this.readmeErrored = true;
         })
-        .finally(() => (this.readmeLoading = false));
+        .finally(() => {
+          this.readmeLoading = false;
+        });
     },
-    updateAnnotations: function() {
+
+    updateAnnotations: function () {
       console.log("Loading annotations");
-      console.log(this.uriQuery);
       this.annotationsLoading = true;
       this.annotationsErrored = false;
+
+      const uri = this.uriQuery.uri;
+      if (!uri) {
+        // Check if uri is not null
+        console.log("No URI available for annotations.");
+        this.annotationsErrored = true;
+        this.annotationsLoading = false;
+        return; // Exit the method if no URI
+      }
+
+      const fullAnnotationsURL = `${this.annotationsURL}/${encodeURIComponent(
+        uri
+      )}`;
+
       this.$http
-        .post(this.annotationsURL, this.uriQuery, {
+        .get(fullAnnotationsURL, {
           headers: {
             Authorization: this.auth_str,
-            "Content-Type": "application/json"
-          }
+            Accept: "application/json",
+          },
         })
-        .then(response => {
+        .then((response) => {
           this.$store.commit(
             "update_current_dataset_annotations",
             response.data
           );
         })
-        .catch(error => {
+        .catch((error) => {
           console.log(error);
-          console.log(error.response);
           this.annotationsErrored = true;
         })
-        .finally(() => (this.annotationsLoading = false));
+        .finally(() => {
+          this.annotationsLoading = false;
+        });
     },
-    logout: function() {
+
+    getconfiginfo: function () {
+      console.log("Loading ConfigInfo");
+
+      this.$http
+        .get(this.configInfoURL, {
+          headers: {
+            Authorization: this.auth_str,
+            "Content-Type": "application/json",
+          },
+        })
+        .then((response) => {
+          this.getinfo = response.data;
+        })
+        .catch((error) => {
+          console.log(error);
+          console.log(error.response);
+        });
+    },
+
+    logout: function () {
       this.token = "";
-    }
+      this.$store.commit("clear_all");
+    },
   },
+
   components: {
     SignIn,
     SummaryInfo,
@@ -353,8 +520,9 @@ export default {
     Manifest,
     Readme,
     Annotations,
-    DatasetSummary
-  }
+    DatasetSummary,
+    BPagination,
+  },
 };
 </script>
 
@@ -368,10 +536,40 @@ export default {
   margin-top: 60px;
 } */
 
-/*Set the row height to the viewport*/
-.row-height {
-  height: calc(100vh - 60px);
+#app {
+  font-family: "Avenir", Helvetica, Arial, sans-serif;
 }
 
-/*Set up the columns with a 100% height, body color and overflow scroll*/
+.navbar {
+  background: #e1e1e1; /* Light grey background */
+  color: #95319b; /* Purple text color */
+  padding-left: 20px; /* Add padding to the left side of the navbar */
+  padding-right: 20px; /* Add padding to the right side of the navbar */
+}
+
+.navbar .navbar-brand,
+.navbar .navbar-nav .nav-link {
+  color: #95319b !important; /* Custom purple text color */
+  font-weight: bold;
+  font-size: 22px;
+}
+
+.navbar .btn-outline-danger {
+  color: #95319b !important; /* Custom purple text color */
+  border-color: #95319b !important; /* Custom purple border */
+}
+
+.navbar .btn-outline-danger:hover {
+  background-color: #95319b !important; /* Custom purple background on hover */
+  color: #ffffff !important; /* White text color on hover */
+}
+
+.navbar-logo {
+  padding-left: 20px; /* Add padding to the left of the logo to push it inward */
+}
+
+.nav-item.mr-2 {
+  /* This targets the <li> element with the mr-2 class */
+  margin-right: 20px; /* Adjust this value as needed */
+}
 </style>
