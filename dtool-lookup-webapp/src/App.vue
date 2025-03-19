@@ -1,7 +1,7 @@
 <template>
   <div id="app" class="container-fluid">
     <header>
-      <nav v-if="token" class="navbar navbar-expand-lg navbar-dark">
+      <nav class="navbar navbar-expand-lg navbar-dark">
         <a class="navbar-brand navbar-logo" href="#">
           <img
             src="/icons/128x128/dtool_logo.png"
@@ -41,13 +41,11 @@
       </nav>
     </header>
 
-    <div v-if="token" class="">
+    <div class="">
       <div class="row row-height">
         <div class="col-md-2 overflow-auto h-100 pr-0">
           <SummaryInfo
-            :auth_str="auth_str"
             :lookup_url="lookup_url"
-            :token="token"
             @start-search="searchDatasets"
           />
         </div>
@@ -208,14 +206,10 @@
         </div>
       </div>
     </div>
-    <div v-else>
-      <SignIn @sign-in="setTokenAndSearch" />
-    </div>
   </div>
 </template>
 
 <script>
-import SignIn from "./components/SignIn.vue";
 import SummaryInfo from "./components/SummaryInfo.vue";
 import TextSearch from "./components/TextSearch.vue";
 import DatasetTable from "./components/DatasetTable.vue";
@@ -243,7 +237,6 @@ export default {
       annotationsLoading: false,
       annotationsErrored: false,
       lookup_url: process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL,
-      token: null,
       perPage: this.$store.state.update_current_Per_Page,
       responseheaders: Array,
       getinfo: {
@@ -287,9 +280,9 @@ export default {
     tagsURL: function () {
       return this.lookup_url + "/tags";
     },
-    auth_str: function () {
-      return "Bearer ".concat(this.token);
-    },
+    //auth_str: function () {
+    //  return "Bearer ".concat(this.token);
+    //},
 
     searchQuery: function () {
       var query = {};
@@ -341,10 +334,6 @@ export default {
     },
   },
   methods: {
-    setTokenAndSearch: function (token) {
-      this.token = token;
-      this.searchDatasets();
-    },
     searchDatasets: function () {
       this.getconfiginfo();
       console.log(this.getinfo);
@@ -368,7 +357,7 @@ export default {
       this.$http
         .post(searchURL, this.searchQuery, {
           headers: {
-            Authorization: this.auth_str,
+            //Authorization: this.auth_str,
             "Content-Type": "application/json",
           },
         })
@@ -420,7 +409,7 @@ export default {
       this.$http
         .get(fullManifestURL, {
           headers: {
-            Authorization: this.auth_str,
+            //Authorization: this.auth_str,
             Accept: "application/json",
           },
         })
@@ -455,7 +444,7 @@ export default {
       this.$http
         .get(fullReadmeURL, {
           headers: {
-            Authorization: this.auth_str,
+            //Authorization: this.auth_str,
             Accept: "application/json",
           },
         })
@@ -492,7 +481,7 @@ export default {
       this.$http
         .get(fullAnnotationsURL, {
           headers: {
-            Authorization: this.auth_str,
+            //Authorization: this.auth_str,
             Accept: "application/json",
           },
         })
@@ -529,7 +518,7 @@ export default {
       this.$http
         .get(fullTagsURL, {
           headers: {
-            Authorization: this.auth_str,
+            //Authorization: this.auth_str,
             Accept: "application/json",
           },
         })
@@ -551,7 +540,7 @@ export default {
       this.$http
         .get(this.configInfoURL, {
           headers: {
-            Authorization: this.auth_str,
+            //Authorization: this.auth_str,
             "Content-Type": "application/json",
           },
         })
@@ -565,13 +554,11 @@ export default {
     },
 
     logout: function () {
-      this.token = "";
       this.$store.commit("clear_all");
     },
   },
 
   components: {
-    SignIn,
     SummaryInfo,
     TextSearch,
     DatasetTable,

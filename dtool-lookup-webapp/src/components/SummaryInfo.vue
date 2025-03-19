@@ -42,15 +42,13 @@ import NumDatasets from "./NumDatasets.vue";
 import TagFilter from "./TagFilter.vue";
 import BaseUriFilter from "./BaseUriFilter.vue";
 import CreatorUsernameFilter from "./CreatorUsernameFilter.vue";
-import { getUsernameFromJwt } from "@/utils/jwtUtils";
 
 export default {
   name: "SummaryInfo",
   props: {
     lookup_url: String,
-    auth_str: String,
-    token: String,
   },
+
   data: function () {
     return {
       summary_info: null,
@@ -71,7 +69,7 @@ export default {
       this.errored = false;
       this.loading = true;
       this.$http
-        .get(this.source, { headers: { Authorization: this.auth_str } })
+        .get(this.source)
         .then((response) => (this.summary_info = response.data))
         .catch((error) => {
           console.log(error);
@@ -85,13 +83,13 @@ export default {
     },
   },
   mounted() {
-    if (this.token) {
-      // Extracts username from the JWT token and initializes the component state
-      const username = getUsernameFromJwt(this.token);
 
-      this.username = username;
-      this.$store.commit("updateUsername", username);
-    }
+    // Extracts username from the JWT token and initializes the component state
+    const username = "test-user";
+
+    this.username = username;
+    this.$store.commit("updateUsername", username);
+
     this.load_summary();
   },
   components: {
