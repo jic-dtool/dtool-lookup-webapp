@@ -1,127 +1,117 @@
 <template>
-  <div>
-    <div class="d-flex justify-content-between flex-row">
-      <h3 class="p-1">{{ dataset.name }}</h3>
-      <small class="p-1">
+  <div class="w-100">
+    <!-- Row 1: Name and metadata -->
+    <div class="d-flex justify-space-between align-center flex-wrap">
+      <h5 class="text-h6 font-weight-bold">{{ dataset.name }}</h5>
+      <div class="text-caption text-grey-darken-1">
         Created by <em>{{ dataset.creator_username }}</em> on
-        <em>{{ moment(dataset.created_at * 1000).format("YYYY-MM-DD") }}</em
-        >, frozen on
-        <em>{{ moment(dataset.frozen_at * 1000).format("YYYY-MM-DD") }}</em
-        >&nbsp;
-        <span class="badge badge-pill badge-info bg-primary"
-          >{{ numItems }} items</span
-        >&nbsp;
-        <span class="badge badge-pill badge-info bg-primary">{{
-          filesize(total_size_in_bytes)
-        }}</span>
-      </small>
-    </div>
-    <div class="d-flex align-items-start justify-content-between flex-row">
-      <small class="p-1">{{ dataset.uri }}</small>
-      <BDropdown end size="sm" class="p-0">
-        <template #button-content> Copy </template>
-
-        <template #default>
-          <div class="container centered-content">
-            <!-- Dropdown text for descriptive content -->
-            <BDropdownText>
-              The command below copies the dataset to the working directory.
-            </BDropdownText>
-          </div>
-
-          <!-- Dropdown form containing input group, form input, and button -->
-          <BDropdownForm style="width: 300px">
-            <template #default>
-              <BInputGroup>
-                <BFormInput
-                  readonly
-                  v-model="copy_command"
-                  size="sm"
-                />
-                <BButton
-                  size="sm"
-                  variant="outline-secondary"
-                  v-clipboard:copy="copy_command"
-                >
-                  <span class="octicon octicon-clippy"></span>
-                </BButton>
-              </BInputGroup>
-            </template>
-          </BDropdownForm>
-        </template>
-      </BDropdown>
-    </div>
-    <div class="d-flex flex-sm-row align-items-start justify-content-between">
-      <div v-if="currentTags.length > 0" class="p-0">
-        <template v-for="(tag, index) in currentTags" :key="index">
-          <h5>
-            <span class="badge badge-pill badge-info bg-primary">{{ tag }}</span
-            >{{ "&nbsp;" }}
-          </h5>
-        </template>
+        <em>{{ moment(dataset.created_at * 1000).format("YYYY-MM-DD") }}</em>,
+        frozen on
+        <em>{{ moment(dataset.frozen_at * 1000).format("YYYY-MM-DD") }}</em>
+        <v-chip size="x-small" color="primary" class="ml-2">
+          {{ numItems }} items
+        </v-chip>
+        <v-chip size="x-small" color="primary" class="ml-1">
+          {{ filesize(total_size_in_bytes) }}
+        </v-chip>
       </div>
+    </div>
 
-      <div v-else class="alert alert-info p-1" role="alert">
+    <!-- Row 2: URI and Copy menu -->
+    <div class="d-flex justify-space-between align-center mt-2">
+      <span class="text-caption text-grey" style="font-family: monospace;">{{ dataset.uri }}</span>
+      <v-menu location="bottom end" :close-on-content-click="false">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" size="small" variant="outlined" color="primary">
+            Copy
+          </v-btn>
+        </template>
+        <v-card min-width="320">
+          <v-card-text class="text-body-2">
+            The command below copies the dataset to the working directory.
+          </v-card-text>
+          <v-card-text class="pt-0">
+            <v-text-field
+              :model-value="copy_command"
+              readonly
+              density="compact"
+              variant="outlined"
+              hide-details
+            >
+              <template #append-inner>
+                <v-btn
+                  icon="mdi-content-copy"
+                  size="small"
+                  variant="text"
+                  @click="copyToClipboard(copy_command)"
+                />
+              </template>
+            </v-text-field>
+          </v-card-text>
+        </v-card>
+      </v-menu>
+    </div>
+
+    <!-- Row 3: Tags and Tag menu -->
+    <div class="d-flex justify-space-between align-center mt-2">
+      <div v-if="currentTags.length > 0">
+        <v-chip
+          v-for="(tag, index) in currentTags"
+          :key="index"
+          size="small"
+          color="primary"
+          class="mr-1"
+        >
+          {{ tag }}
+        </v-chip>
+      </div>
+      <v-alert v-else type="info" density="compact" variant="tonal" class="py-1">
         Use tags to organise your datasets!
-      </div>
+      </v-alert>
 
-      <BDropdown end size="sm" class="pt-1" no-caret auto-close="outside">
-        <template #button-content>
-          Tag <span class="dropdown-toggle"></span>
+      <v-menu location="bottom end" :close-on-content-click="false">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" size="small" variant="outlined" color="primary" append-icon="mdi-menu-down">
+            Tag
+          </v-btn>
         </template>
-
-        <template #default>
-          <div class="container centered-content">
-            <!-- Dropdown text for descriptive content -->
-            <BDropdownText>
-              The command below adds a tag to the dataset.
-            </BDropdownText>
-          </div>
-
-          <!-- Dropdown form containing input group for tag name and command -->
-          <BDropdownForm style="width: 400px">
-            <template #default>
-              <!-- Input group for entering a tag name -->
-              <BInputGroup size="sm">
-                <template #prepend>
-                  <span class="input-group-text">Tag</span>
-                </template>
-                <BFormInput v-model="tag_name" size="sm" />
-              </BInputGroup>
-
-              <!-- Input group for displaying the tag command -->
-              <BInputGroup class="mt-2">
-                <BFormInput
-                  readonly
-                  v-model="tag_command"
-                  size="sm"
+        <v-card min-width="400">
+          <v-card-text class="text-body-2">
+            The command below adds a tag to the dataset.
+          </v-card-text>
+          <v-card-text class="pt-0">
+            <v-text-field
+              v-model="tag_name"
+              label="Tag"
+              density="compact"
+              variant="outlined"
+              hide-details
+              class="mb-2"
+            />
+            <v-text-field
+              :model-value="tag_command"
+              readonly
+              density="compact"
+              variant="outlined"
+              hide-details
+            >
+              <template #append-inner>
+                <v-btn
+                  icon="mdi-content-copy"
+                  size="small"
+                  variant="text"
+                  @click="copyToClipboard(tag_command)"
                 />
-                <BButton
-                  size="sm"
-                  variant="outline-secondary"
-                  v-clipboard:copy="tag_command"
-                >
-                  <span class="octicon octicon-clippy"></span>
-                </BButton>
-              </BInputGroup>
-            </template>
-          </BDropdownForm>
-        </template>
-      </BDropdown>
+              </template>
+            </v-text-field>
+          </v-card-text>
+        </v-card>
+      </v-menu>
     </div>
   </div>
 </template>
 
 <script>
-import {
-  BDropdown,
-  BDropdownText,
-  BDropdownForm,
-  BInputGroup,
-  BFormInput,
-  BButton,
-} from "bootstrap-vue-next";
-
 var filesize = require("filesize");
 var moment = require("moment");
 
@@ -171,16 +161,14 @@ export default {
       return [];
     },
   },
-
-  components: {
-    BDropdown,
-    BDropdownText,
-    BDropdownForm,
-    BInputGroup,
-    BFormInput,
-    BButton,
+  methods: {
+    async copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    },
   },
 };
 </script>
-
-<style></style>

@@ -1,47 +1,49 @@
 <template>
-  <div class="d-flex justify-content-between align-items-center">
-    <!-- Left side: Text and Dropdown for contents per page -->
-    <div class="d-flex align-items-center">
-      <!-- Adjusted margin and alignment -->
-      <div class="align-self-center" style="margin-right: 8px; font-size: 16px">
-        Contents per page:
-      </div>
-      <BFormSelect
-  v-model="selectedContentsPerPage"
-  class="me-3"
-  style="width: 100px"
-  :options="perPageOptions"
-  @change="updatePerPage($event.target.value)"
->
-</BFormSelect>
+  <v-row align="center" dense>
+    <!-- Left side: Contents per page -->
+    <v-col cols="auto" class="d-flex align-center">
+      <span class="text-body-2 mr-2">Contents per page:</span>
+      <v-select
+        v-model="selectedContentsPerPage"
+        :items="perPageOptions"
+        item-title="text"
+        item-value="value"
+        density="compact"
+        variant="outlined"
+        hide-details
+        style="width: 90px;"
+        @update:model-value="updatePerPage"
+      />
+    </v-col>
 
+    <v-spacer />
 
-    </div>
-
-    <!-- Right side: Dropdown for sorting options and Button for sort direction -->
-    <div class="d-flex align-items-center">
-      <BFormSelect
+    <!-- Right side: Sorting options -->
+    <v-col cols="auto" class="d-flex align-center">
+      <v-select
         v-model="selectedSortOption"
-        class="me-2"
-        style="width: 200px"
-        :options="formattedOptions"
-      >
-      </BFormSelect>
-      <button class="btn btn-primary sort-button" @click="toggleSortDirection">
-        <img :src="sortIcon" alt="Sort Icon" class="sort-icon" />
-      </button>
-    </div>
-  </div>
+        :items="formattedOptions"
+        item-title="text"
+        item-value="value"
+        density="compact"
+        variant="outlined"
+        hide-details
+        style="width: 160px;"
+        class="mr-2"
+      />
+      <v-btn
+        color="primary"
+        size="small"
+        :icon="sortDirection === 'asc' ? 'mdi-sort-ascending' : 'mdi-sort-descending'"
+        @click="toggleSortDirection"
+      />
+    </v-col>
+  </v-row>
 </template>
 
 <script>
-import { BFormSelect } from "bootstrap-vue-next";
-
 export default {
   name: "DatasetSorting",
-  components: {
-    BFormSelect,
-  },
   data() {
     // Initialize selectedSortOption and sortDirection based on store state
     let initialSortOption = this.$store.state.selected_sort_option;
@@ -83,10 +85,6 @@ export default {
         value: option,
       }));
     },
-    // Get the appropriate sort icon based on the sortDirection
-    sortIcon() {
-      return require(`@/assets/icons/sort-${this.sortDirection}.svg`);
-    },
     // Get the selectedSortValue with the correct prefix based on sortDirection
     selectedSortValue() {
       return this.sortDirection === "asc"
@@ -102,8 +100,6 @@ export default {
       this.$emit("start-search");
     },
     updatePerPage(perpage) {
-      this.selectedContentsPerPage =
-        this.selectedContentsPerPage === perpage ? null : perpage; // Toggle selection
       this.$store.commit("update_current_Per_Page", perpage);
       this.$emit("start-search");
     },
@@ -117,18 +113,3 @@ export default {
   },
 };
 </script>
-
-<style>
-.sort-button {
-  color: inherit;
-}
-
-.sort-icon {
-  filter: invert(100%);
-  transition: filter 0.3s;
-}
-
-.sort-button:hover .sort-icon {
-  filter: invert(0%);
-}
-</style>

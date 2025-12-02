@@ -1,228 +1,229 @@
 <template>
-  <div id="app" class="container-fluid">
-    <header>
-      <nav v-if="token" class="navbar navbar-expand-lg navbar-dark">
-        <a class="navbar-brand navbar-logo" href="#">
-          <img
-            src="/icons/128x128/dtool_logo.png"
-            alt="dtool Logo"
-            style="height: 35px"
-          />
+  <v-app>
+    <!-- Authenticated view -->
+    <template v-if="token">
+      <!-- App Bar -->
+      <v-app-bar color="grey-lighten-3" elevation="2">
+        <v-app-bar-nav-icon
+          class="d-md-none"
+          @click="drawer = !drawer"
+        />
+
+        <v-avatar size="36" class="ml-2 mr-2">
+          <v-img src="/icons/128x128/dtool_logo.png" alt="dtool Logo" />
+        </v-avatar>
+        <v-app-bar-title class="text-primary font-weight-bold">
           dtool
-        </a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarToggler"
-          aria-controls="navbarToggler"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarToggler">
-          <ul class="navbar-nav ms-auto mb-2 mb-lg-0 d-flex align-items-center">
-            <li class="nav-item">
-              <form class="d-flex" role="search">
-                <TextSearch
-                  :mongoplugin="safeMongoPlugin"
-                  @start-search="searchDatasets"
-                  class="me-2"
-                />
-              </form>
-            </li>
-            <li class="nav-item mr-2">
-              <template-downloader @logoutAction="logout">
-              </template-downloader>
-            </li>
-          </ul>
-        </div>
-      </nav>
-    </header>
+        </v-app-bar-title>
 
-    <div v-if="token" class="">
-      <div class="row row-height">
-        <div class="col-md-2 overflow-auto h-100 pr-0">
-          <SummaryInfo
-            :auth_str="auth_str"
-            :lookup_url="lookup_url"
-            :token="token"
-            @start-search="searchDatasets"
-          />
-        </div>
-        <div class="col-md-4 overflow-auto h-100 p-0">
-          <div v-if="searchLoading" class="spinner-border text-primary">
-            <span class="sr-only">Loading...</span>
-          </div>
+        <v-spacer />
 
-          <div v-else>
-            <div v-if="searchErrored">
-              <div v-if="authenticationError" class="alert alert-danger" role="alert">
-                <h5 class="alert-heading">Authentication Error (401)</h5>
-                <p>{{ searchErrorMessage }}</p>
-                <hr>
-                <p class="mb-0">
-                  This usually means your username is not registered on the dserver.
-                  Try logging in with username <strong>admin</strong> or contact an administrator
-                  to register your user.
-                </p>
-              </div>
-              <div v-else>
-                <p>{{ searchErrorMessage || "Unable to load datasets please try again." }}</p>
-              </div>
-              <a
-                href=""
-                class="btn btn-secondary me-2"
-                @click.prevent="searchDatasets()"
-                >Try again</a
-              >
-              <a href="" class="btn btn-secondary" @click.prevent="logout()"
-                >Logout</a
-              >
-            </div>
+        <TextSearch
+          :mongoplugin="safeMongoPlugin"
+          @start-search="searchDatasets"
+          class="mr-2"
+        />
 
-            <div v-else>
-              <div>
-                <div class="dataset-sorting-margin">
-                  <dataset-sorting
-                    @start-search="searchDatasets"
-                  ></dataset-sorting>
-                </div>
-              </div>
-              <DatasetTable
-                :datasetHits="datasetHits"
-                :responseheaders="responseheaders"
-                @update-dataset="updateDataset"
+        <template-downloader @logoutAction="logout" />
+      </v-app-bar>
+
+      <!-- Navigation Drawer for mobile -->
+      <v-navigation-drawer
+        v-model="drawer"
+        temporary
+        class="d-md-none"
+      >
+        <SummaryInfo
+          :auth_str="auth_str"
+          :lookup_url="lookup_url"
+          :token="token"
+          @start-search="searchDatasets"
+        />
+      </v-navigation-drawer>
+
+      <!-- Main Content -->
+      <v-main>
+        <v-container fluid class="pa-0 fill-height">
+          <v-row no-gutters class="fill-height">
+            <!-- Left Sidebar - Summary Info (hidden on mobile, shown on md+) -->
+            <v-col
+              cols="12"
+              md="2"
+              class="d-none d-md-block overflow-auto"
+              style="height: calc(100vh - 64px);"
+            >
+              <SummaryInfo
+                :auth_str="auth_str"
+                :lookup_url="lookup_url"
+                :token="token"
+                @start-search="searchDatasets"
               />
-              <div v-if="shouldShowPagination">
-                <BPagination
+            </v-col>
+
+            <!-- Middle Column - Dataset List -->
+            <v-col
+              cols="12"
+              md="4"
+              class="overflow-auto pa-2"
+              style="height: calc(100vh - 64px);"
+            >
+              <!-- Loading State -->
+              <div v-if="searchLoading" class="d-flex justify-center align-center" style="height: 200px;">
+                <v-progress-circular indeterminate color="primary" size="48" />
+              </div>
+
+              <!-- Error State -->
+              <div v-else-if="searchErrored">
+                <v-alert
+                  v-if="authenticationError"
+                  type="error"
+                  prominent
+                  class="mb-4"
+                >
+                  <template #title>Authentication Error (401)</template>
+                  <p>{{ searchErrorMessage }}</p>
+                  <v-divider class="my-2" />
+                  <p class="mb-0">
+                    This usually means your username is not registered on the dserver.
+                    Try logging in with username <strong>admin</strong> or contact an administrator
+                    to register your user.
+                  </p>
+                </v-alert>
+                <v-alert v-else type="error" class="mb-4">
+                  {{ searchErrorMessage || "Unable to load datasets please try again." }}
+                </v-alert>
+                <v-btn color="secondary" class="mr-2" @click="searchDatasets()">
+                  Try again
+                </v-btn>
+                <v-btn color="secondary" @click="logout()">
+                  Logout
+                </v-btn>
+              </div>
+
+              <!-- Dataset List -->
+              <div v-else>
+                <div class="mb-4 mt-2">
+                  <dataset-sorting @start-search="searchDatasets" />
+                </div>
+
+                <DatasetTable
+                  :datasetHits="datasetHits"
+                  :responseheaders="responseheaders"
+                  @update-dataset="updateDataset"
+                />
+
+                <v-pagination
+                  v-if="shouldShowPagination"
                   v-model="currentPage"
-                  :total-rows="pagination.total"
-                  :per-page="perPageValue"
-                  first-text="First"
-                  prev-text="Prev"
-                  next-text="Next"
-                  last-text="Last"
+                  :length="totalPages"
+                  :total-visible="7"
+                  rounded
+                  class="mt-4"
                   @update:model-value="onPageChange"
-                  class="paginationcomponent"
                 />
               </div>
-            </div>
-          </div>
-        </div>
+            </v-col>
 
-        <div v-if="datasetLoaded" class="col-md-6 overflow-auto h-100 pl-0">
-          <div class="card">
-            <div class="card-header">
-              <div v-if="manifestLoading" class="text-primary">
-                <span class="sr-only">Loading...</span>
-              </div>
-              <div v-else>
-                <div v-if="manifestErrored">
-                  <p>Unable to load manifest please try again.</p>
-                  <a
-                    href=""
-                    class="btn btn-secondary"
-                    @click.prevent="updateManifest()"
-                    >Try again</a
-                  >
-                  <p>Or try logging out and in again.</p>
-                  <a href="" class="btn btn-secondary" @click.prevent="logout()"
-                    >Logout</a
-                  >
-                </div>
-                <div v-else>
-                  <DatasetSummary />
-                </div>
-              </div>
-            </div>
+            <!-- Right Column - Dataset Details -->
+            <v-col
+              v-if="datasetLoaded"
+              cols="12"
+              md="6"
+              class="overflow-auto pa-2"
+              style="height: calc(100vh - 64px);"
+            >
+              <v-card>
+                <!-- Card Header - Dataset Summary -->
+                <v-card-title class="bg-grey-lighten-4">
+                  <div v-if="manifestLoading" class="d-flex justify-center">
+                    <v-progress-circular indeterminate color="primary" size="24" />
+                  </div>
+                  <div v-else-if="manifestErrored">
+                    <v-alert type="error" density="compact" class="mb-2">
+                      Unable to load manifest please try again.
+                    </v-alert>
+                    <v-btn size="small" color="secondary" class="mr-2" @click="updateManifest()">
+                      Try again
+                    </v-btn>
+                    <v-btn size="small" color="secondary" @click="logout()">
+                      Logout
+                    </v-btn>
+                  </div>
+                  <DatasetSummary v-else />
+                </v-card-title>
 
-            <div class="card-body">
-              <div>
-                <div v-if="readmeLoading" class="text-primary">
-                  <span class="sr-only">Loading...</span>
-                </div>
-                <div v-else>
-                  <div v-if="readmeErrored">
-                    <p>Unable to load readme please try again.</p>
-                    <a
-                      href=""
-                      class="btn btn-secondary"
-                      @click.prevent="updateReadme()"
-                      >Try again</a
-                    >
-                    <p>Or try logging out and in again.</p>
-                    <a
-                      href=""
-                      class="btn btn-secondary"
-                      @click.prevent="logout()"
-                      >Logout</a
-                    >
+                <!-- Card Body - Readme & Annotations -->
+                <v-card-text>
+                  <!-- Readme Section -->
+                  <div v-if="readmeLoading" class="d-flex justify-center py-4">
+                    <v-progress-circular indeterminate color="primary" size="24" />
                   </div>
-                  <div v-else>
-                    <Readme :getinfo="getinfo" />
+                  <div v-else-if="readmeErrored">
+                    <v-alert type="error" density="compact" class="mb-2">
+                      Unable to load readme please try again.
+                    </v-alert>
+                    <v-btn size="small" color="secondary" class="mr-2" @click="updateReadme()">
+                      Try again
+                    </v-btn>
+                    <v-btn size="small" color="secondary" @click="logout()">
+                      Logout
+                    </v-btn>
                   </div>
-                </div>
+                  <Readme v-else :getinfo="getinfo" />
 
-                <div v-if="annotationsLoading" class="text-primary">
-                  <span class="sr-only">Loading...</span>
-                </div>
-                <div v-else>
-                  <div v-if="annotationsErrored">
-                    <p>Unable to load annotations please try again.</p>
-                    <a
-                      href=""
-                      class="btn btn-secondary"
-                      @click.prevent="updateAnnotations()"
-                      >Try again</a
-                    >
-                    <p>Or try logging out and in again.</p>
-                    <a
-                      href=""
-                      class="btn btn-secondary"
-                      @click.prevent="logout()"
-                      >Logout</a
-                    >
+                  <!-- Annotations Section -->
+                  <div v-if="annotationsLoading" class="d-flex justify-center py-4">
+                    <v-progress-circular indeterminate color="primary" size="24" />
                   </div>
-                  <div v-else>
-                    <Annotations />
+                  <div v-else-if="annotationsErrored">
+                    <v-alert type="error" density="compact" class="mb-2">
+                      Unable to load annotations please try again.
+                    </v-alert>
+                    <v-btn size="small" color="secondary" class="mr-2" @click="updateAnnotations()">
+                      Try again
+                    </v-btn>
+                    <v-btn size="small" color="secondary" @click="logout()">
+                      Logout
+                    </v-btn>
                   </div>
-                </div>
-              </div>
-            </div>
+                  <Annotations v-else />
+                </v-card-text>
 
-            <div class="card-footer">
-              <div v-if="manifestLoading" class="text-primary">
-                <span class="sr-only">Loading...</span>
-              </div>
-              <div v-else>
-                <div v-if="manifestErrored">
-                  <p>Unable to load manifest please try again.</p>
-                  <a
-                    href=""
-                    class="btn btn-secondary"
-                    @click.prevent="updateManifest()"
-                    >Try again</a
-                  >
-                  <p>Or try logging out and in again.</p>
-                  <a href="" class="btn btn-secondary" @click.prevent="logout()"
-                    >Logout</a
-                  >
-                </div>
-                <div v-else>
-                  <Manifest />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div v-else>
+                <!-- Card Footer - Manifest -->
+                <v-card-actions class="bg-grey-lighten-4 flex-column align-start">
+                  <div v-if="manifestLoading" class="d-flex justify-center w-100 py-2">
+                    <v-progress-circular indeterminate color="primary" size="24" />
+                  </div>
+                  <div v-else-if="manifestErrored" class="w-100">
+                    <v-alert type="error" density="compact" class="mb-2">
+                      Unable to load manifest please try again.
+                    </v-alert>
+                    <v-btn size="small" color="secondary" class="mr-2" @click="updateManifest()">
+                      Try again
+                    </v-btn>
+                    <v-btn size="small" color="secondary" @click="logout()">
+                      Logout
+                    </v-btn>
+                  </div>
+                  <Manifest v-else class="w-100" />
+                </v-card-actions>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-main>
+    </template>
+
+    <!-- Sign In view -->
+    <v-main v-else>
       <SignIn @sign-in="setTokenAndSearch" />
-    </div>
-  </div>
+    </v-main>
+
+    <!-- Snackbar for notifications -->
+    <v-snackbar v-model="snackbar" :timeout="3000" :color="snackbarColor">
+      {{ snackbarText }}
+    </v-snackbar>
+  </v-app>
 </template>
 
 <script>
@@ -236,12 +237,12 @@ import Annotations from "./components/DatasetAnnotations.vue";
 import DatasetSummary from "./components/DatasetSummary.vue";
 import DatasetSorting from "./components/DatasetSorting.vue";
 import TemplateDownloader from "./components/TemplateDownloader.vue";
-import { BPagination } from "bootstrap-vue-next";
 
 export default {
   name: "app",
   data: function () {
     return {
+      drawer: false,
       datasetHits: [],
       searchLoading: true,
       searchErrored: false,
@@ -262,6 +263,9 @@ export default {
       getinfo: {
         versions: {},
       },
+      snackbar: false,
+      snackbarText: "",
+      snackbarColor: "success",
     };
   },
   computed: {
@@ -345,8 +349,15 @@ export default {
       return this.pagination.total;
     },
 
+    totalPages() {
+      if (this.pagination.total && this.$store.state.update_current_Per_Page) {
+        return Math.ceil(this.pagination.total / this.$store.state.update_current_Per_Page);
+      }
+      return 1;
+    },
+
     shouldShowPagination() {
-      return this.pagination.total > 1;
+      return this.pagination.total > this.$store.state.update_current_Per_Page;
     },
 
     safeMongoPlugin() {
@@ -365,6 +376,11 @@ export default {
     },
   },
   methods: {
+    showSnackbar(text, color = "success") {
+      this.snackbarText = text;
+      this.snackbarColor = color;
+      this.snackbar = true;
+    },
     onPageChange() {
       this.searchDatasets();
     },
@@ -617,60 +633,12 @@ export default {
     DatasetSummary,
     DatasetSorting,
     TemplateDownloader,
-    BPagination,
   },
 };
 </script>
 
 <style>
-/* #app {
-  font-family: "Avenir", Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-} */
-
-#app {
-  font-family: "Avenir", Helvetica, Arial, sans-serif;
-}
-
-.navbar {
-  background: #e1e1e1; /* Light grey background */
-  color: #95319b; /* Purple text color */
-  padding-left: 20px; /* Add padding to the left side of the navbar */
-  padding-right: 20px; /* Add padding to the right side of the navbar */
-}
-
-.navbar .navbar-brand,
-.navbar .navbar-nav .nav-link {
-  color: #95319b !important; /* Custom purple text color */
-  font-weight: bold;
-  font-size: 22px;
-}
-
-.navbar .btn-outline-danger {
-  color: #95319b !important; /* Custom purple text color */
-  border-color: #95319b !important; /* Custom purple border */
-}
-
-.navbar .btn-outline-danger:hover {
-  background-color: #95319b !important; /* Custom purple background on hover */
-  color: #ffffff !important; /* White text color on hover */
-}
-
-.navbar-logo {
-  padding-left: 20px; /* Add padding to the left of the logo to push it inward */
-}
-
-.nav-item.mr-2 {
-  /* This targets the <li> element with the mr-2 class */
-  margin-right: 20px; /* Adjust this value as needed */
-}
-.dataset-sorting-margin {
-  /* Add margin to the dataset sorting component */
-  margin-bottom: 20px;
-  margin-top: 20px;
+.v-application {
+  font-family: "Roboto", "Avenir", Helvetica, Arial, sans-serif;
 }
 </style>

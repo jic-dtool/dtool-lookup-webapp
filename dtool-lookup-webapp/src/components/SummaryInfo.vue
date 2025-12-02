@@ -1,38 +1,41 @@
 <template>
-  <div>
-    <div v-if="loading" class="spinner-border text-primary">
-      <span class="sr-only">Loading...</span>
+  <div class="pa-2">
+    <!-- Loading State -->
+    <div v-if="loading" class="d-flex justify-center py-4">
+      <v-progress-circular indeterminate color="primary" />
     </div>
+
+    <!-- Error State -->
+    <div v-else-if="errored">
+      <v-alert type="error" density="compact" class="mb-2">
+        Unable to load summary information please try again.
+      </v-alert>
+      <v-btn size="small" color="secondary" @click="load_summary()">
+        Try again
+      </v-btn>
+    </div>
+
+    <!-- Content -->
     <div v-else>
-      <div v-if="errored">
-        <div class="container">
-          <p>Unable to load summary information please try again.</p>
-          <a href="" class="btn btn-secondary" @click.prevent="load_summary()"
-            >Try again</a
-          >
-        </div>
-      </div>
-      <div v-else>
-        <NumDatasets
-          :summary_info="summary_info"
-          @start-search="searchDatasets"
-        />
+      <NumDatasets
+        :summary_info="summary_info"
+        @start-search="searchDatasets"
+      />
 
-        <TagFilter
-          :summary_info="summary_info"
-          @start-search="searchDatasets"
-        />
+      <TagFilter
+        :summary_info="summary_info"
+        @start-search="searchDatasets"
+      />
 
-        <BaseUriFilter
-          :summary_info="summary_info"
-          @start-search="searchDatasets"
-        />
+      <BaseUriFilter
+        :summary_info="summary_info"
+        @start-search="searchDatasets"
+      />
 
-        <CreatorUsernameFilter
-          :summary_info="summary_info"
-          @start-search="searchDatasets"
-        />
-      </div>
+      <CreatorUsernameFilter
+        :summary_info="summary_info"
+        @start-search="searchDatasets"
+      />
     </div>
   </div>
 </template>
@@ -80,7 +83,7 @@ export default {
         .finally(() => (this.loading = false));
     },
     searchDatasets: function () {
-      this.$store.state.current_pageNumber=1; // Resetting the page number to 1 if we make any changes in the filters. 
+      this.$store.state.current_pageNumber=1; // Resetting the page number to 1 if we make any changes in the filters.
       this.$emit("start-search");
     },
   },
@@ -102,5 +105,3 @@ export default {
   },
 };
 </script>
-
-<style></style>

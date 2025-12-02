@@ -1,72 +1,66 @@
 <template>
-  <div>
-    <h5>
-      Items <small>({{ numItems }})</small>
-    </h5>
-    <ul class="list-group">
-      <li
-        class="list-group-item"
+  <div class="w-100">
+    <h6 class="text-subtitle-1 font-weight-medium mb-2">
+      Items <span class="text-caption text-grey">({{ numItems }})</span>
+    </h6>
+
+    <v-list density="compact" class="py-0" max-height="300" style="overflow-y: auto;">
+      <v-list-item
         v-for="(item, id) in manifest.items"
-        v-bind:key="id"
-        @mouseover="update_fetch_identifier(id)"
+        :key="id"
+        class="border-b px-0"
+        @mouseenter="update_fetch_identifier(id)"
       >
-        <div class="d-flex justify-content-between">
-          <h6 class="mb-1">{{ item.relpath }}</h6>
-          <small>{{ filesize(item.size_in_bytes) }} </small>
-        </div>
+        <template #default>
+          <div class="py-1">
+            <!-- Row 1: Path and Size -->
+            <div class="d-flex justify-space-between align-center">
+              <span class="text-body-2 font-weight-medium">{{ item.relpath }}</span>
+              <span class="text-caption text-grey">{{ filesize(item.size_in_bytes) }}</span>
+            </div>
 
-        <div class="d-flex justify-content-between">
-          <small>{{ id }}</small>
-
-          <BDropdown end size="sm" class="p-0">
-            <template #button-content> Fetch </template>
-
-            <template #default>
-              <div class="container centered-content">
-                <!-- Dropdown text for descriptive content -->
-                <BDropdownText>
-                  The command below fetches the dataset item and returns an
-                  absolute path on disk from where it can be accessed.
-                </BDropdownText>
-              </div>
-
-              <!-- Dropdown form containing input group, form input, and button -->
-              <BDropdownForm style="width: 440px">
-                <template #default>
-                  <BInputGroup>
-                    <BFormInput
-                      readonly
-                      v-model="fetch_command"
-                      size="sm"
-                    />
-                    <BButton
-                      size="sm"
-                      variant="outline-secondary"
-                      v-clipboard:copy="fetch_command"
-                    >
-                      <span class="octicon octicon-clippy"></span>
-                    </BButton>
-                  </BInputGroup>
+            <!-- Row 2: ID and Fetch menu -->
+            <div class="d-flex justify-space-between align-center mt-1">
+              <span class="text-caption text-grey" style="font-family: monospace;">{{ id }}</span>
+              <v-menu location="start" :close-on-content-click="false">
+                <template #activator="{ props }">
+                  <v-btn v-bind="props" size="x-small" variant="text" color="primary">
+                    Fetch
+                  </v-btn>
                 </template>
-              </BDropdownForm>
-            </template>
-          </BDropdown>
-        </div>
-      </li>
-    </ul>
+                <v-card min-width="440">
+                  <v-card-text class="text-body-2">
+                    The command below fetches the dataset item and returns an absolute path on disk from where it can be accessed.
+                  </v-card-text>
+                  <v-card-text class="pt-0">
+                    <v-text-field
+                      :model-value="fetch_command"
+                      readonly
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                    >
+                      <template #append-inner>
+                        <v-btn
+                          icon="mdi-content-copy"
+                          size="small"
+                          variant="text"
+                          @click="copyToClipboard(fetch_command)"
+                        />
+                      </template>
+                    </v-text-field>
+                  </v-card-text>
+                </v-card>
+              </v-menu>
+            </div>
+          </div>
+        </template>
+      </v-list-item>
+    </v-list>
   </div>
 </template>
 
 <script>
-import {
-  BDropdown,
-  BDropdownText,
-  BDropdownForm,
-  BInputGroup,
-  BFormInput,
-  BButton,
-} from "bootstrap-vue-next";
-
 var filesize = require("filesize");
 
 export default {
@@ -100,18 +94,19 @@ export default {
       console.log("update_fetch_identifer: " + identifier);
       this.fetch_identifier = identifier;
     },
-  },
-
-  components: {
-    BDropdown,
-    BDropdownText,
-    BDropdownForm,
-    BInputGroup,
-    BFormInput,
-    BButton,
+    async copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    },
   },
 };
 </script>
 
-<style>
+<style scoped>
+.border-b {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
 </style>

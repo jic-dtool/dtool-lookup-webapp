@@ -4,187 +4,139 @@
     <div
       v-for="(details, annotationName, index) in filteredAnnotations"
       :key="index"
+      class="mb-4"
     >
-      <!-- Container for the heading and create dropdown -->
-      <div class="heading-container">
-        <!-- Display the annotation name outside and above the container -->
-        <h5 class="annotations-heading-outside">
+      <!-- Header with Create menu -->
+      <div class="d-flex justify-space-between align-center mb-2">
+        <h6 class="text-subtitle-1 font-weight-medium">
           {{ capitalizeFirstLetter(annotationName) }}
-        </h5>
-        <!-- Create dropdown button -->
-        <BDropdown end size="sm" class="pt-1" no-caret auto-close="outside">
-          <template #button-content>
-            Create <span class="dropdown-toggle"></span>
+        </h6>
+        <v-menu location="bottom end" :close-on-content-click="false">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" size="small" variant="outlined" color="primary" append-icon="mdi-menu-down">
+              Create
+            </v-btn>
           </template>
-
-          <template #default>
-            <div class="container centered-content">
-              <!-- Dropdown text for descriptive content -->
-              <BDropdownText>
-                The command below creates a key-value pair for the annotation
-                and updates it in the dataset.
-              </BDropdownText>
-            </div>
-
-            <!-- Dropdown form containing input group for key and value -->
-            <BDropdownForm style="width: 400px">
-              <template #default>
-                <!-- Input group for entering a key name -->
-                <BInputGroup size="sm">
-                  <template #prepend>
-                    <span class="input-group-text">Key</span>
-                  </template>
-                  <BFormInput v-model="newKey" size="sm" />
-                </BInputGroup>
-
-                <!-- Input group for entering a value -->
-                <BInputGroup size="sm" class="mt-2">
-                  <template #prepend>
-                    <span class="input-group-text">Value</span>
-                  </template>
-                  <BFormInput v-model="newValue" size="sm" />
-                </BInputGroup>
-
-                <!-- Input group for displaying the create command -->
-                <BInputGroup class="mt-2">
-                  <div class="form-control form-control-sm">
-                    {{ computedCreateCommand }}
-                  </div>
-                  <BButton
-                    size="sm"
-                    variant="outline-secondary"
-                    v-clipboard:copy="computedCreateCommand"
-                  >
-                    <span class="octicon octicon-clippy"></span>
-                  </BButton>
-                </BInputGroup>
-              </template>
-            </BDropdownForm>
-          </template>
-        </BDropdown>
+          <v-card min-width="400">
+            <v-card-text class="text-body-2">
+              The command below creates a key-value pair for the annotation and updates it in the dataset.
+            </v-card-text>
+            <v-card-text class="pt-0">
+              <v-text-field
+                v-model="newKey"
+                label="Key"
+                density="compact"
+                variant="outlined"
+                hide-details
+                class="mb-2"
+              />
+              <v-text-field
+                v-model="newValue"
+                label="Value"
+                density="compact"
+                variant="outlined"
+                hide-details
+                class="mb-2"
+              />
+              <v-text-field
+                :model-value="computedCreateCommand"
+                readonly
+                density="compact"
+                variant="outlined"
+                hide-details
+              >
+                <template #append-inner>
+                  <v-btn
+                    icon="mdi-content-copy"
+                    size="small"
+                    variant="text"
+                    @click="copyToClipboard(computedCreateCommand)"
+                  />
+                </template>
+              </v-text-field>
+            </v-card-text>
+          </v-card>
+        </v-menu>
       </div>
-      <!-- Container for the annotation details -->
-      <div class="annotations-container">
-        <table class="table table-striped table-sm">
-          <thead>
-            <tr>
-              <th>Key</th>
-              <th>Value</th>
-              <th style="width: 1%"></th>
-              <!-- Blank header for the dropdown, set minimal width -->
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Loop through each property of the annotation and display it -->
-            <tr
-              v-for="(value, propertyName, subIndex) in details"
-              :key="`details-${index}-${subIndex}`"
-            >
-              <td>{{ propertyName }}</td>
-              <td>{{ value }}</td>
-              <td class="text-right">
-                <!-- Align dropdown to the right -->
-                <!-- Add the dropdown button here -->
-                <BDropdown
-                  end
-                  size="sm"
-                  placement="start"
-                  class="p-0"
-                  auto-close="outside"
-                  ref="dropdown"
-                  @show="resetEditableValue"
-                >
-                  <template #button-content> Set </template>
-                  <template #default>
-                    <div class="container centered-content">
-                      <!-- Dropdown text for descriptive content -->
-                      <BDropdownText>
-                        The command below helps to set the annotation.
-                      </BDropdownText>
-                    </div>
-                    <!-- Input group containing the property name and the input field for the value -->
-                    <BDropdownForm style="width: 440px">
-                      <template #default>
-                        <BInputGroup size="sm">
-                          <template #prepend>
-                            <span class="input-group-text">{{
-                              propertyName
-                            }}</span>
-                          </template>
-                          <BFormInput
-                            v-model="editableValue"
-                            :placeholder="String(value)"
-                            size="sm"
-                          />
-                        </BInputGroup>
-                        <BInputGroup class="mt-2">
-                          <div class="form-control form-control-sm">
-                            {{
-                              generateSetCommand(
-                                propertyName,
-                                editableValue || value
-                              )
-                            }}
-                          </div>
-                          <BButton
-                            size="sm"
-                            variant="outline-secondary"
-                            v-clipboard:copy="
-                              generateSetCommand(
-                                propertyName,
-                                editableValue || value
-                              )
-                            "
-                            @click="closeDropdown"
-                          >
-                            <span class="octicon octicon-clippy"></span>
-                          </BButton>
-                        </BInputGroup>
+
+      <!-- Annotations table -->
+      <v-table density="compact" class="rounded">
+        <thead>
+          <tr>
+            <th class="text-left">Key</th>
+            <th class="text-left">Value</th>
+            <th style="width: 80px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(value, propertyName, subIndex) in details"
+            :key="`details-${index}-${subIndex}`"
+          >
+            <td class="text-body-2">{{ propertyName }}</td>
+            <td class="text-body-2">{{ value }}</td>
+            <td class="text-right">
+              <v-menu location="start" :close-on-content-click="false" @update:model-value="resetEditableValue">
+                <template #activator="{ props }">
+                  <v-btn v-bind="props" size="small" variant="text" color="primary">
+                    Set
+                  </v-btn>
+                </template>
+                <v-card min-width="440">
+                  <v-card-text class="text-body-2">
+                    The command below helps to set the annotation.
+                  </v-card-text>
+                  <v-card-text class="pt-0">
+                    <v-text-field
+                      v-model="editableValue"
+                      :label="propertyName"
+                      :placeholder="String(value)"
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                      class="mb-2"
+                    />
+                    <v-text-field
+                      :model-value="generateSetCommand(propertyName, editableValue || value)"
+                      readonly
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                    >
+                      <template #append-inner>
+                        <v-btn
+                          icon="mdi-content-copy"
+                          size="small"
+                          variant="text"
+                          @click="copyToClipboard(generateSetCommand(propertyName, editableValue || value))"
+                        />
                       </template>
-                    </BDropdownForm>
-                  </template>
-                </BDropdown>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                    </v-text-field>
+                  </v-card-text>
+                </v-card>
+              </v-menu>
+            </td>
+          </tr>
+        </tbody>
+      </v-table>
     </div>
   </div>
 </template>
 
 <script>
-import {
-  BDropdown,
-  BDropdownText,
-  BDropdownForm,
-  BInputGroup,
-  BFormInput,
-  BButton,
-} from "bootstrap-vue-next";
-
 export default {
   name: "DatasetAnnotations",
-  components: {
-    BDropdown,
-    BDropdownText,
-    BDropdownForm,
-    BInputGroup,
-    BFormInput,
-    BButton,
-  },
   data() {
     return {
-      newKey: "", // Data property to hold the new key
-      newValue: "", // Data property to hold the new value
-      editableValue: this.value, // Data property to hold the editable value
+      newKey: "",
+      newValue: "",
+      editableValue: "",
     };
   },
   computed: {
     annotations() {
       return this.$store.state.current_dataset_annotations;
     },
-    // Computed property to filter annotations that have non-empty values
     filteredAnnotations() {
       let filtered = {};
       for (let annotationName in this.annotations) {
@@ -194,7 +146,6 @@ export default {
       }
       return filtered;
     },
-    // Computed property to generate the create command
     computedCreateCommand() {
       return `dtool annotation set ${this.$store.state.current_dataset.uri} ${this.newKey} ${this.newValue}`;
     },
@@ -217,38 +168,13 @@ export default {
     resetEditableValue() {
       this.editableValue = "";
     },
-    closeDropdown() {
-      // Close the dropdown after copying
-      if (this.$refs.dropdown) {
-        this.$refs.dropdown.hide();
+    async copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (err) {
+        console.error('Failed to copy:', err);
       }
     },
   },
 };
 </script>
-
-<style>
-.annotations-container {
-  min-height: auto; /* Removes the default min-height */
-  overflow-y: auto;
-  overflow-x: hidden;
-  background-color: #f8f9fa;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  margin-bottom: 1rem; /* Adds some space below the container */
-}
-
-.annotations-heading-outside {
-  margin-top: 1rem; /* Adds space above the heading for separation from previous elements */
-  margin-bottom: 0.5rem; /* Reduces space below the heading to bring it closer to the container */
-}
-
-.heading-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-  margin-bottom: 10px;
-}
-</style>

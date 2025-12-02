@@ -1,99 +1,139 @@
 <template>
-  <div class="center-wrapper">
-    <div
-      class="container"
-      :class="{ 'right-panel-active': rightPanelActive }"
-      id="container"
-    >
-      <!-- Sign In Form -->
-      <div class="form-container sign-in-container">
-        <form @submit.stop.prevent="getToken">
-          <!-- Logo Image -->
-          <img
-            :src="logoSrc"
-            alt="Logo"
-            style="max-width: 100px; display: block; margin: 0 auto 20px"
-          />
+  <div class="sign-in-wrapper">
+    <v-container class="fill-height" fluid>
+      <v-row align="center" justify="center">
+        <v-col cols="12" sm="10" md="8" lg="6">
+          <v-card elevation="12" class="overflow-hidden">
+            <v-row no-gutters>
+              <!-- Sign In Form -->
+              <v-col
+                cols="12"
+                :md="rightPanelActive ? 6 : 6"
+                :order="rightPanelActive ? 2 : 1"
+                class="pa-0"
+              >
+                <v-card-text class="pa-8">
+                  <div class="text-center mb-6">
+                    <v-avatar size="80">
+                      <v-img :src="logoSrc" alt="Logo" />
+                    </v-avatar>
+                  </div>
 
-          <h1 v-html="firstContainerTitle"></h1>
+                  <h1
+                    class="text-h5 font-weight-bold text-center mb-6"
+                    v-html="rightPanelActive ? fourthContainerHeading : firstContainerTitle"
+                  ></h1>
 
-          <input
-            v-model="username"
-            type="username"
-            placeholder="Username"
-            required
-            :disabled="signInLoading"
-          />
-          <input
-            v-model="password"
-            type="password"
-            placeholder="Password"
-            required
-            :disabled="signInLoading"
-          />
-          <div v-if="signInFailed" class="alert alert-danger" role="alert">
-            Invalid username or password
-          </div>
-          <button
-            :disabled="signInLoading"
-            class="btn btn-lg btn-primary btn-block"
-          >
-            Sign In
-          </button>
+                  <!-- Sign In Form (shown when not right panel active) -->
+                  <v-form v-if="!rightPanelActive" @submit.prevent="getToken">
+                    <v-text-field
+                      v-model="username"
+                      label="Username"
+                      prepend-inner-icon="mdi-account"
+                      variant="outlined"
+                      density="comfortable"
+                      class="mb-3"
+                      :disabled="signInLoading"
+                      required
+                    />
 
-          <div class="d-flex justify-content-center" v-if="signInLoading">
-            <div class="spinner-border text-primary">
-              <span class="sr-only">Authenticating...</span>
-            </div>
-          </div>
-        </form>
-      </div>
+                    <v-text-field
+                      v-model="password"
+                      label="Password"
+                      prepend-inner-icon="mdi-lock"
+                      type="password"
+                      variant="outlined"
+                      density="comfortable"
+                      class="mb-3"
+                      :disabled="signInLoading"
+                      required
+                    />
 
-      <!-- second and third Container -->
-      <div class="overlay-container">
-        <div class="overlay">
-          <div class="overlay-panel second-container">
-            <h1 v-html="secondContainerTitle"></h1>
+                    <v-alert
+                      v-if="signInFailed"
+                      type="error"
+                      density="compact"
+                      class="mb-4"
+                    >
+                      Invalid username or password
+                    </v-alert>
 
-            <p v-html="secondContainerMessage"></p>
-            <button class="ghost" @click="activateRightPanel">More Info</button>
-          </div>
+                    <v-btn
+                      type="submit"
+                      color="primary"
+                      size="large"
+                      block
+                      :loading="signInLoading"
+                      :disabled="signInLoading"
+                    >
+                      Sign In
+                    </v-btn>
+                  </v-form>
 
-          <div class="overlay-panel third-container">
-            <h1 v-html="thirdContainerHeading"></h1>
+                  <!-- Resources (shown when right panel active) -->
+                  <div v-else>
+                    <p v-html="fourthContainerIntro" class="text-body-1 mb-4"></p>
+                    <v-list density="compact" class="bg-transparent">
+                      <v-list-item
+                        v-for="(resource, index) in fourthContainerResources"
+                        :key="index"
+                        :href="resource.url"
+                        target="_blank"
+                        prepend-icon="mdi-link"
+                      >
+                        <v-list-item-title>{{ resource.text }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </div>
+                </v-card-text>
+              </v-col>
 
-            <p v-html="thirdContainerMessage"></p>
+              <!-- Info Panel -->
+              <v-col
+                cols="12"
+                md="6"
+                :order="rightPanelActive ? 1 : 2"
+                class="d-none d-md-flex"
+              >
+                <v-sheet
+                  class="fill-height w-100 d-flex flex-column align-center justify-center pa-8"
+                  :style="overlayGradient"
+                >
+                  <h1
+                    class="text-h5 font-weight-bold text-white text-center mb-4"
+                    v-html="rightPanelActive ? thirdContainerHeading : secondContainerTitle"
+                  ></h1>
 
-            <button class="ghost" @click="deactivateRightPanel">
-              Return to Sign In
-            </button>
-          </div>
-        </div>
-      </div>
+                  <p
+                    class="text-body-1 text-white text-center mb-6"
+                    v-html="rightPanelActive ? thirdContainerMessage : secondContainerMessage"
+                  ></p>
 
-      <!-- Fourth Container -->
-      <div class="form-container fourth-container">
-        <form action="#">
-          <img
-            :src="logoSrc"
-            alt="Logo"
-            style="max-width: 100px; display: block; margin: 0 auto 20px"
-          />
+                  <v-btn
+                    variant="outlined"
+                    color="white"
+                    @click="rightPanelActive ? deactivateRightPanel() : activateRightPanel()"
+                  >
+                    {{ rightPanelActive ? 'Return to Sign In' : 'More Info' }}
+                  </v-btn>
+                </v-sheet>
+              </v-col>
+            </v-row>
+          </v-card>
 
-          <h1 v-html="fourthContainerHeading"></h1>
-
-          <p v-html="fourthContainerIntro"></p>
-          <ul style="list-style-type: none; padding: 0">
-            <li
-              v-for="(resource, index) in fourthContainerResources"
-              :key="index"
+          <!-- Mobile info button -->
+          <div class="d-md-none text-center mt-4">
+            <v-btn
+              variant="text"
+              color="primary"
+              @click="rightPanelActive ? deactivateRightPanel() : activateRightPanel()"
             >
-              <a :href="resource.url" target="_blank">{{ resource.text }}</a>
-            </li>
-          </ul>
-        </form>
-      </div>
-    </div>
+              {{ rightPanelActive ? 'Return to Sign In' : 'More Info' }}
+            </v-btn>
+          </div>
+        </v-col>
+      </v-row>
+    </v-container>
   </div>
 </template>
 
@@ -154,6 +194,11 @@ export default {
     loginCredentials: function () {
       return { username: this.username, password: this.password };
     },
+    overlayGradient() {
+      return {
+        background: 'linear-gradient(135deg, #6A1B9A 0%, #7B1FA2 50%, #9C27B0 75%, #AB47BC 100%)',
+      };
+    },
   },
   methods: {
     signIn: function (token) {
@@ -193,259 +238,8 @@ export default {
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css?family=Montserrat:400,800");
-
-* {
-  box-sizing: border-box;
+.sign-in-wrapper {
+  min-height: 100vh;
+  background: #f5f5f5;
 }
-
-.center-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh; /* Full height of the viewport */
-  background: #f6f5f7;
-}
-
-body {
-  margin: 0; /* Ensure there's no default margin */
-  display: flex;
-  justify-content: center; /* Center horizontally */
-  align-items: center; /* Center vertically */
-  min-height: 100vh; /* Minimum height to take full viewport height */
-  background: #f6f5f7;
-  font-family: "Montserrat", sans-serif;
-}
-
-h1 {
-  font-weight: bold;
-  margin: 0;
-}
-
-h2 {
-  text-align: center;
-}
-
-p {
-  font-size: 18px;
-  font-weight: 100;
-  line-height: 20px;
-  letter-spacing: 0.5px;
-  margin: 20px 0 30px;
-}
-
-span {
-  font-size: 12px;
-}
-
-a {
-  color: #333;
-  font-size: 14px;
-  text-decoration: none;
-  margin: 15px 0;
-}
-
-button {
-  border-radius: 20px;
-  border: 1px solid #95319b;
-  background-color: #95319b;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: bold;
-  padding: 12px 45px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: transform 80ms ease-in;
-}
-
-button:hover,
-button:active,
-button:focus {
-  background-color: #8b319b; /* Background color for hover and active states */
-  border-color: #8b319b; /* Border color for hover and active states */
-}
-
-button:active {
-  transform: scale(0.95); /* Slight scale down to give a pressed effect */
-}
-
-button:focus {
-  outline: none;
-}
-
-button.ghost {
-  background-color: transparent;
-  border-color: #ffffff;
-}
-
-form {
-  background-color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 0 50px;
-  height: 100%;
-  text-align: center;
-}
-
-input {
-  background-color: #eee;
-  border: none;
-  padding: 12px 15px;
-  margin: 8px 0;
-  width: 100%;
-}
-
-.container {
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
-  position: relative;
-  overflow: hidden;
-  width: 90vw;
-  max-width: 800px;
-  min-height: 530px;
-}
-
-.form-container {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  transition: all 0.6s ease-in-out;
-}
-
-.sign-in-container {
-  left: 0;
-  width: 50%;
-  z-index: 2;
-}
-
-.container.right-panel-active .sign-in-container {
-  transform: translateX(100%);
-}
-
-.fourth-container {
-  left: 0;
-  width: 50%;
-  opacity: 0;
-  z-index: 1;
-}
-
-.container.right-panel-active .fourth-container {
-  transform: translateX(100%);
-  opacity: 1;
-  z-index: 5;
-  animation: show 0.6s;
-}
-
-@keyframes show {
-  0%,
-  49.99% {
-    opacity: 0;
-    z-index: 1;
-  }
-
-  50%,
-  100% {
-    opacity: 1;
-    z-index: 5;
-  }
-}
-
-.overlay-container {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 50%;
-  height: 100%;
-  overflow: hidden;
-  transition: transform 0.6s ease-in-out;
-  z-index: 100;
-}
-
-.container.right-panel-active .overlay-container {
-  transform: translateX(-100%);
-}
-
-.overlay {
-  background: #cc1e67;
-  background: -webkit-linear-gradient(
-    135deg,
-    #8b319b 0%,
-    #95319b 50%,
-    #b44acb 75%,
-    #cc70e6 100%
-  );
-  background: linear-gradient(
-    135deg,
-    #8b319b 0%,
-    #95319b 50%,
-    #b44acb 75%,
-    #cc70e6 100%
-  );
-
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: 0 0;
-  color: #ffffff;
-  position: relative;
-  left: -100%;
-  height: 100%;
-  width: 200%;
-  transform: translateX(0);
-  transition: transform 0.6s ease-in-out;
-}
-
-.container.right-panel-active .overlay {
-  transform: translateX(50%);
-}
-
-.overlay-panel {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 0 40px;
-  text-align: center;
-  top: 0;
-  height: 100%;
-  width: 50%;
-  transform: translateX(0);
-  transition: transform 0.6s ease-in-out;
-}
-
-.third-container {
-  transform: translateX(-20%);
-}
-
-.container.right-panel-active .third-container {
-  transform: translateX(0);
-}
-
-.second-container {
-  right: 0;
-  transform: translateX(0);
-}
-
-.container.right-panel-active .second-container {
-  transform: translateX(20%);
-}
-
-
-@media (max-width: 668px) {
-  .overlay-container,
-  .fourth-container {
-    display: none;
-  }
-
-  /* Ensure the sign-in container takes full available space */
-  .sign-in-container {
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto; /* Center the sign-in container */
-  }
-}
-
 </style>

@@ -1,39 +1,44 @@
 <template>
-  <div>
-    <div class="list-group">
-      <a
-        href=""
-        class="list-group-item list-group-item-action"
-        v-for="(dataset, index) in datasetHits"
-        v-bind:class="{ active: selected === index }"
-        v-bind:key="dataset.uri"
-        @click.prevent="updateSelectedDataset(index)"
-      >
-        <div class="d-flex flex-row justify-content-between">
-          <h6 class="p-0">{{ dataset.name }}</h6>
-          <small class="p-0">{{
-            moment(dataset.created_at * 1000).format("YYYY-MM-DD")
-          }}</small>
-        </div>
+  <v-list density="compact" class="py-0">
+    <v-list-item
+      v-for="(dataset, index) in datasetHits"
+      :key="dataset.uri"
+      :active="selected === index"
+      @click="updateSelectedDataset(index)"
+      class="border-b"
+    >
+      <template #default>
+        <div class="py-1">
+          <!-- Row 1: Name and Date -->
+          <div class="d-flex justify-space-between align-center">
+            <span class="text-subtitle-2 font-weight-medium">{{ dataset.name }}</span>
+            <span class="text-caption text-grey">
+              {{ moment(dataset.created_at * 1000).format("YYYY-MM-DD") }}
+            </span>
+          </div>
 
-        <div class="d-flex flex-row justify-content-between">
-          <small class="p-0">{{ dataset.creator_username }}</small>
-          <small class="p-0">{{ dataset.uuid }}</small>
-        </div>
+          <!-- Row 2: Creator and UUID -->
+          <div class="d-flex justify-space-between align-center mt-1">
+            <span class="text-caption text-grey-darken-1">{{ dataset.creator_username }}</span>
+            <span class="text-caption text-grey" style="font-family: monospace;">{{ dataset.uuid }}</span>
+          </div>
 
-        <div class="d-flex flex-row">
-          <div class="p-0">
-            <template v-for="(tag, index) in dataset.tags" v-bind:key="index">
-              <span class="badge badge-pill badge-info bg-primary">{{
-                tag
-              }}</span
-              >{{ "&nbsp;" }}
-            </template>
+          <!-- Row 3: Tags -->
+          <div v-if="dataset.tags && dataset.tags.length" class="mt-1">
+            <v-chip
+              v-for="(tag, tagIndex) in dataset.tags"
+              :key="tagIndex"
+              size="x-small"
+              color="primary"
+              class="mr-1"
+            >
+              {{ tag }}
+            </v-chip>
           </div>
         </div>
-      </a>
-    </div>
-  </div>
+      </template>
+    </v-list-item>
+  </v-list>
 </template>
 
 <script>
@@ -64,4 +69,8 @@ export default {
 };
 </script>
 
-<style></style>
+<style scoped>
+.border-b {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+</style>
