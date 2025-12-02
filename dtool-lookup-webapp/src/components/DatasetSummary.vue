@@ -18,7 +18,7 @@
     </div>
     <div class="d-flex align-items-start justify-content-between flex-row">
       <small class="p-1">{{ dataset.uri }}</small>
-      <BDropdown right size="sm" class="p-0">
+      <BDropdown end size="sm" class="p-0">
         <template #button-content> Copy </template>
 
         <template #default>
@@ -32,22 +32,20 @@
           <!-- Dropdown form containing input group, form input, and button -->
           <BDropdownForm style="width: 300px">
             <template #default>
-              <b-input-group>
-                <b-form-input
+              <BInputGroup>
+                <BFormInput
                   readonly
                   v-model="copy_command"
                   size="sm"
-                ></b-form-input>
-                <b-input-group-append>
-                  <b-button
-                    size="sm"
-                    variant="outline-secondary"
-                    v-clipboard:copy="copy_command"
-                  >
-                    <span class="octicon octicon-clippy"></span>
-                  </b-button>
-                </b-input-group-append>
-              </b-input-group>
+                />
+                <BButton
+                  size="sm"
+                  variant="outline-secondary"
+                  v-clipboard:copy="copy_command"
+                >
+                  <span class="octicon octicon-clippy"></span>
+                </BButton>
+              </BInputGroup>
             </template>
           </BDropdownForm>
         </template>
@@ -67,7 +65,7 @@
         Use tags to organise your datasets!
       </div>
 
-      <BDropdown right size="sm" class="pt-1" no-caret auto-close="outside">
+      <BDropdown end size="sm" class="pt-1" no-caret auto-close="outside">
         <template #button-content>
           Tag <span class="dropdown-toggle"></span>
         </template>
@@ -84,27 +82,28 @@
           <BDropdownForm style="width: 400px">
             <template #default>
               <!-- Input group for entering a tag name -->
-              <b-input-group prepend="Tag" size="sm">
-                <b-form-input v-model="tag_name" size="sm"></b-form-input>
-              </b-input-group>
+              <BInputGroup size="sm">
+                <template #prepend>
+                  <span class="input-group-text">Tag</span>
+                </template>
+                <BFormInput v-model="tag_name" size="sm" />
+              </BInputGroup>
 
               <!-- Input group for displaying the tag command -->
-              <b-input-group>
-                <b-form-input
+              <BInputGroup class="mt-2">
+                <BFormInput
                   readonly
                   v-model="tag_command"
                   size="sm"
-                ></b-form-input>
-                <b-input-group-append>
-                  <b-button
-                    size="sm"
-                    variant="outline-secondary"
-                    v-clipboard:copy="tag_command"
-                  >
-                    <span class="octicon octicon-clippy"></span>
-                  </b-button>
-                </b-input-group-append>
-              </b-input-group>
+                />
+                <BButton
+                  size="sm"
+                  variant="outline-secondary"
+                  v-clipboard:copy="tag_command"
+                >
+                  <span class="octicon octicon-clippy"></span>
+                </BButton>
+              </BInputGroup>
             </template>
           </BDropdownForm>
         </template>
@@ -116,13 +115,16 @@
 <script>
 import {
   BDropdown,
+  BDropdownText,
+  BDropdownForm,
   BInputGroup,
   BFormInput,
   BButton,
-  BDropdownForm,
 } from "bootstrap-vue-next";
+
 var filesize = require("filesize");
 var moment = require("moment");
+
 export default {
   name: "DatasetSummary",
   data: function () {
@@ -172,10 +174,11 @@ export default {
 
   components: {
     BDropdown,
+    BDropdownText,
+    BDropdownForm,
     BInputGroup,
     BFormInput,
     BButton,
-    BDropdownForm,
   },
 };
 </script>

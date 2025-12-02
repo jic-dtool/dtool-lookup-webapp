@@ -12,7 +12,7 @@
           {{ capitalizeFirstLetter(annotationName) }}
         </h5>
         <!-- Create dropdown button -->
-        <BDropdown right size="sm" class="pt-1" no-caret auto-close="outside">
+        <BDropdown end size="sm" class="pt-1" no-caret auto-close="outside">
           <template #button-content>
             Create <span class="dropdown-toggle"></span>
           </template>
@@ -30,31 +30,34 @@
             <BDropdownForm style="width: 400px">
               <template #default>
                 <!-- Input group for entering a key name -->
-                <b-input-group prepend="Key" size="sm">
-                  <b-form-input v-model="newKey" size="sm"></b-form-input>
-                </b-input-group>
+                <BInputGroup size="sm">
+                  <template #prepend>
+                    <span class="input-group-text">Key</span>
+                  </template>
+                  <BFormInput v-model="newKey" size="sm" />
+                </BInputGroup>
 
                 <!-- Input group for entering a value -->
-                <b-input-group prepend="Value" size="sm">
-                  <b-form-input v-model="newValue" size="sm"></b-form-input>
-                </b-input-group>
+                <BInputGroup size="sm" class="mt-2">
+                  <template #prepend>
+                    <span class="input-group-text">Value</span>
+                  </template>
+                  <BFormInput v-model="newValue" size="sm" />
+                </BInputGroup>
 
                 <!-- Input group for displaying the create command -->
-                <b-input-group>
+                <BInputGroup class="mt-2">
                   <div class="form-control form-control-sm">
                     {{ computedCreateCommand }}
                   </div>
-
-                  <b-input-group-append>
-                    <b-button
-                      size="sm"
-                      variant="outline-secondary"
-                      v-clipboard:copy="computedCreateCommand"
-                    >
-                      <span class="octicon octicon-clippy"></span>
-                    </b-button>
-                  </b-input-group-append>
-                </b-input-group>
+                  <BButton
+                    size="sm"
+                    variant="outline-secondary"
+                    v-clipboard:copy="computedCreateCommand"
+                  >
+                    <span class="octicon octicon-clippy"></span>
+                  </BButton>
+                </BInputGroup>
               </template>
             </BDropdownForm>
           </template>
@@ -82,10 +85,10 @@
               <td class="text-right">
                 <!-- Align dropdown to the right -->
                 <!-- Add the dropdown button here -->
-                <b-dropdown
-                  right
+                <BDropdown
+                  end
                   size="sm"
-                  dropstart
+                  placement="start"
                   class="p-0"
                   auto-close="outside"
                   ref="dropdown"
@@ -95,26 +98,26 @@
                   <template #default>
                     <div class="container centered-content">
                       <!-- Dropdown text for descriptive content -->
-                      <b-dropdown-text>
+                      <BDropdownText>
                         The command below helps to set the annotation.
-                      </b-dropdown-text>
+                      </BDropdownText>
                     </div>
                     <!-- Input group containing the property name and the input field for the value -->
-                    <b-dropdown-form style="width: 440px">
+                    <BDropdownForm style="width: 440px">
                       <template #default>
-                        <b-input-group size="sm">
-                          <b-input-group-prepend>
-                            <b-input-group-text>{{
+                        <BInputGroup size="sm">
+                          <template #prepend>
+                            <span class="input-group-text">{{
                               propertyName
-                            }}</b-input-group-text>
-                          </b-input-group-prepend>
-                          <b-form-input
+                            }}</span>
+                          </template>
+                          <BFormInput
                             v-model="editableValue"
-                            :placeholder="value"
+                            :placeholder="String(value)"
                             size="sm"
-                          ></b-form-input>
-                        </b-input-group>
-                        <b-input-group class="mt-2">
+                          />
+                        </BInputGroup>
+                        <BInputGroup class="mt-2">
                           <div class="form-control form-control-sm">
                             {{
                               generateSetCommand(
@@ -123,26 +126,24 @@
                               )
                             }}
                           </div>
-                          <b-input-group-append>
-                            <b-button
-                              size="sm"
-                              variant="outline-secondary"
-                              v-clipboard:copy="
-                                generateSetCommand(
-                                  propertyName,
-                                  editableValue || value
-                                )
-                              "
-                              @click="closeDropdown"
-                            >
-                              <span class="octicon octicon-clippy"></span>
-                            </b-button>
-                          </b-input-group-append>
-                        </b-input-group>
+                          <BButton
+                            size="sm"
+                            variant="outline-secondary"
+                            v-clipboard:copy="
+                              generateSetCommand(
+                                propertyName,
+                                editableValue || value
+                              )
+                            "
+                            @click="closeDropdown"
+                          >
+                            <span class="octicon octicon-clippy"></span>
+                          </BButton>
+                        </BInputGroup>
                       </template>
-                    </b-dropdown-form>
+                    </BDropdownForm>
                   </template>
-                </b-dropdown>
+                </BDropdown>
               </td>
             </tr>
           </tbody>
@@ -156,10 +157,10 @@
 import {
   BDropdown,
   BDropdownText,
+  BDropdownForm,
   BInputGroup,
   BFormInput,
   BButton,
-  BDropdownForm,
 } from "bootstrap-vue-next";
 
 export default {
@@ -167,10 +168,10 @@ export default {
   components: {
     BDropdown,
     BDropdownText,
+    BDropdownForm,
     BInputGroup,
     BFormInput,
     BButton,
-    BDropdownForm,
   },
   data() {
     return {
@@ -215,6 +216,12 @@ export default {
     },
     resetEditableValue() {
       this.editableValue = "";
+    },
+    closeDropdown() {
+      // Close the dropdown after copying
+      if (this.$refs.dropdown) {
+        this.$refs.dropdown.hide();
+      }
     },
   },
 };

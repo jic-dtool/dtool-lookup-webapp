@@ -5,7 +5,7 @@
       <!-- Flex container to align items on opposite ends -->
       <div class="d-flex justify-content-between align-items-center">
         <h5>Readme</h5>
-        <BDropdown right size="sm" class="p-0">
+        <BDropdown end size="sm" class="p-0">
           <template #button-content> Edit </template>
 
           <template #default>
@@ -20,22 +20,20 @@
             <!-- Dropdown form containing input group, form input, and button -->
             <BDropdownForm style="width: 440px">
               <template #default>
-                <b-input-group>
-                  <b-form-input
+                <BInputGroup>
+                  <BFormInput
                     readonly
                     v-model="edit_command"
                     size="sm"
-                  ></b-form-input>
-                  <b-input-group-append>
-                    <b-button
-                      size="sm"
-                      variant="outline-secondary"
-                      v-clipboard:copy="edit_command"
-                    >
-                      <span class="octicon octicon-clippy"></span>
-                    </b-button>
-                  </b-input-group-append>
-                </b-input-group>
+                  />
+                  <BButton
+                    size="sm"
+                    variant="outline-secondary"
+                    v-clipboard:copy="edit_command"
+                  >
+                    <span class="octicon octicon-clippy"></span>
+                  </BButton>
+                </BInputGroup>
               </template>
             </BDropdownForm>
           </template>
@@ -52,11 +50,13 @@
 <script>
 import {
   BDropdown,
+  BDropdownText,
+  BDropdownForm,
   BInputGroup,
   BFormInput,
   BButton,
-  BDropdownForm,
 } from "bootstrap-vue-next";
+
 export default {
   name: "DatasetReadme",
   computed: {
@@ -71,10 +71,11 @@ export default {
   },
   components: {
     BDropdown,
+    BDropdownText,
+    BDropdownForm,
     BInputGroup,
     BFormInput,
     BButton,
-    BDropdownForm,
   },
 };
 </script>

@@ -20,7 +20,7 @@
           <input
             v-model="username"
             type="username"
-            placeholder="UserName"
+            placeholder="Username"
             required
             :disabled="signInLoading"
           />

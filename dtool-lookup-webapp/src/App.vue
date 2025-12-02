@@ -58,14 +58,25 @@
 
           <div v-else>
             <div v-if="searchErrored">
-              <p>Unable to load datasets please try again.</p>
+              <div v-if="authenticationError" class="alert alert-danger" role="alert">
+                <h5 class="alert-heading">Authentication Error (401)</h5>
+                <p>{{ searchErrorMessage }}</p>
+                <hr>
+                <p class="mb-0">
+                  This usually means your username is not registered on the dserver.
+                  Try logging in with username <strong>admin</strong> or contact an administrator
+                  to register your user.
+                </p>
+              </div>
+              <div v-else>
+                <p>{{ searchErrorMessage || "Unable to load datasets please try again." }}</p>
+              </div>
               <a
                 href=""
-                class="btn btn-secondary"
+                class="btn btn-secondary me-2"
                 @click.prevent="searchDatasets()"
                 >Try again</a
               >
-              <p>Or try logging out and in again.</p>
               <a href="" class="btn btn-secondary" @click.prevent="logout()"
                 >Logout</a
               >
@@ -85,17 +96,17 @@
                 @update-dataset="updateDataset"
               />
               <div v-if="shouldShowPagination">
-                <b-pagination
-                  v-model="this.$store.state.current_pageNumber"
+                <BPagination
+                  v-model="currentPage"
                   :total-rows="pagination.total"
-                  :per-page="this.$store.state.update_current_Per_Page"
+                  :per-page="perPageValue"
                   first-text="First"
                   prev-text="Prev"
                   next-text="Next"
                   last-text="Last"
-                  @click="searchDatasets"
+                  @update:model-value="onPageChange"
                   class="paginationcomponent"
-                ></b-pagination>
+                />
               </div>
             </div>
           </div>
@@ -234,6 +245,8 @@ export default {
       datasetHits: [],
       searchLoading: true,
       searchErrored: false,
+      searchErrorMessage: null,
+      authenticationError: false,
       manifestLoading: false,
       manifestErrored: false,
       readmeLoading: false,
@@ -339,8 +352,22 @@ export default {
     safeMongoPlugin() {
       return this.getinfo.versions.dserver_direct_mongo_plugin || "N/A";
     },
+    currentPage: {
+      get() {
+        return this.$store.state.current_pageNumber;
+      },
+      set(value) {
+        this.$store.state.current_pageNumber = value;
+      },
+    },
+    perPageValue() {
+      return this.$store.state.update_current_Per_Page;
+    },
   },
   methods: {
+    onPageChange() {
+      this.searchDatasets();
+    },
     setTokenAndSearch: function (token) {
       this.token = token;
       this.searchDatasets();
@@ -381,12 +408,18 @@ export default {
         })
         .catch((error) => {
           console.log(error);
-          if (error.response && error.response.status === 404) {
+          if (error.response && error.response.status === 401) {
+            console.log("401 Unauthorized - User not authenticated or not registered");
+            this.authenticationError = true;
+            this.searchErrorMessage = "Authentication failed. Your user may not be registered on the server. Please contact an administrator.";
+            this.searchErrored = true;
+          } else if (error.response && error.response.status === 404) {
             console.log("404 Not Found - Resetting pageNumber and retrying");
             this.$store.state.current_pageNumber = 1;
             this.searchDatasets(); // Retry the search with pageNumber reset to 1
           } else {
             console.log(error.response);
+            this.searchErrorMessage = "An error occurred while loading datasets.";
             this.searchErrored = true;
           }
         })
@@ -566,6 +599,9 @@ export default {
 
     logout: function () {
       this.token = "";
+      this.authenticationError = false;
+      this.searchErrorMessage = null;
+      this.searchErrored = false;
       this.$store.commit("clear_all");
     },
   },
