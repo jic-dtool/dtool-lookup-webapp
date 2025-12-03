@@ -2,7 +2,7 @@
   <v-list density="compact" class="py-0">
     <v-list-item
       v-for="(dataset, index) in datasetHits"
-      :key="dataset.uri"
+      :key="dataset.uri || index"
       :active="selected === index"
       @click="updateSelectedDataset(index)"
       class="border-b"
@@ -42,17 +42,13 @@
 </template>
 
 <script>
-var moment = require("moment");
+import moment from "moment";
+
 export default {
   name: "DatasetTable",
   props: {
     datasetHits: Array,
     responseheaders: {},
-  },
-  data: function () {
-    return {
-      moment: moment,
-    };
   },
   computed: {
     selected: function () {
@@ -60,6 +56,9 @@ export default {
     },
   },
   methods: {
+    moment(timestamp) {
+      return moment(timestamp);
+    },
     updateSelectedDataset: function (index) {
       this.$store.commit("update_current_dataset_index", index);
       this.$store.commit("update_current_dataset", this.datasetHits[index]);

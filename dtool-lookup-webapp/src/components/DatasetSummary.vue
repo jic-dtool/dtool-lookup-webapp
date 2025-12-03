@@ -1,5 +1,5 @@
 <template>
-  <div class="w-100">
+  <div v-if="dataset" class="w-100">
     <!-- Row 1: Name and metadata -->
     <div class="d-flex justify-space-between align-center flex-wrap">
       <h5 class="text-h6 font-weight-bold">{{ dataset.name }}</h5>
@@ -112,15 +112,13 @@
 </template>
 
 <script>
-var filesize = require("filesize");
-var moment = require("moment");
+import { filesize } from "filesize";
+import moment from "moment";
 
 export default {
   name: "DatasetSummary",
   data: function () {
     return {
-      filesize: filesize,
-      moment: moment,
       tag_name: null,
     };
   },
@@ -135,6 +133,10 @@ export default {
         : 0;
     },
     total_size_in_bytes: function () {
+      if (!this.$store.state.current_dataset_manifest ||
+          !this.$store.state.current_dataset_manifest.items) {
+        return 0;
+      }
       var total = 0;
       Object.values(this.$store.state.current_dataset_manifest.items).forEach(
         (item) => {
@@ -144,9 +146,11 @@ export default {
       return total;
     },
     copy_command: function () {
+      if (!this.dataset) return "";
       return "dtool cp " + this.dataset.uri + " .";
     },
     tag_command: function () {
+      if (!this.dataset) return "";
       return "dtool tag set " + this.dataset.uri + " " + this.tag_name;
     },
     currentTags() {
@@ -162,6 +166,12 @@ export default {
     },
   },
   methods: {
+    filesize(bytes) {
+      return filesize(bytes);
+    },
+    moment(timestamp) {
+      return moment(timestamp);
+    },
     async copyToClipboard(text) {
       try {
         await navigator.clipboard.writeText(text);

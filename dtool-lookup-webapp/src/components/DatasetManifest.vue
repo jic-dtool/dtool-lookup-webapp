@@ -1,10 +1,10 @@
 <template>
-  <div class="w-100">
+  <div v-if="manifest" class="w-100">
     <h6 class="text-subtitle-1 font-weight-medium mb-2">
       Items <span class="text-caption text-grey">({{ numItems }})</span>
     </h6>
 
-    <v-list density="compact" class="py-0" max-height="300" style="overflow-y: auto;">
+    <v-list v-if="manifest.items" density="compact" class="py-0" max-height="300" style="overflow-y: auto;">
       <v-list-item
         v-for="(item, id) in manifest.items"
         :key="id"
@@ -61,13 +61,12 @@
 </template>
 
 <script>
-var filesize = require("filesize");
+import { filesize } from "filesize";
 
 export default {
   name: "DatasetManifest",
   data: function () {
     return {
-      filesize: filesize,
       fetch_identifier: null,
     };
   },
@@ -81,6 +80,7 @@ export default {
         : 0;
     },
     fetch_command: function () {
+      if (!this.$store.state.current_dataset) return "";
       return (
         "dtool item fetch " +
         this.$store.state.current_dataset.uri +
@@ -90,6 +90,9 @@ export default {
     },
   },
   methods: {
+    filesize(bytes) {
+      return filesize(bytes);
+    },
     update_fetch_identifier(identifier) {
       console.log("update_fetch_identifer: " + identifier);
       this.fetch_identifier = identifier;

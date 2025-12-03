@@ -53,9 +53,14 @@ export default {
     getReadmeContent() {
       // Accessing the string content of the 'readme' key directly
       // Ensure the content is trimmed to check for non-blank content
+      if (!this.$store.state.current_dataset_readme ||
+          !this.$store.state.current_dataset_readme.readme) {
+        return null;
+      }
       return this.$store.state.current_dataset_readme.readme.trim();
     },
     edit_command: function () {
+      if (!this.$store.state.current_dataset) return "";
       return "dtool readme edit " + this.$store.state.current_dataset.uri;
     },
   },

@@ -1,9 +1,9 @@
 <template>
-  <div>
+  <div v-if="Object.keys(filteredAnnotations).length > 0">
     <!-- Loop through each filtered annotation that has non-empty values -->
     <div
       v-for="(details, annotationName, index) in filteredAnnotations"
-      :key="index"
+      :key="annotationName || index"
       class="mb-4"
     >
       <!-- Header with Create menu -->
@@ -135,7 +135,7 @@ export default {
   },
   computed: {
     annotations() {
-      return this.$store.state.current_dataset_annotations;
+      return this.$store.state.current_dataset_annotations || {};
     },
     filteredAnnotations() {
       let filtered = {};
@@ -147,6 +147,7 @@ export default {
       return filtered;
     },
     computedCreateCommand() {
+      if (!this.$store.state.current_dataset) return "";
       return `dtool annotation set ${this.$store.state.current_dataset.uri} ${this.newKey} ${this.newValue}`;
     },
   },
@@ -163,6 +164,7 @@ export default {
       return false;
     },
     generateSetCommand(propertyName, value) {
+      if (!this.$store.state.current_dataset) return "";
       return `dtool annotation set ${this.$store.state.current_dataset.uri} ${propertyName} ${value}`;
     },
     resetEditableValue() {
