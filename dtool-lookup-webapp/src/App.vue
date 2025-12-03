@@ -42,38 +42,30 @@
       </v-navigation-drawer>
 
       <!-- Main Content -->
-      <v-main>
-        <v-container fluid class="pa-0 fill-height">
-          <v-row no-gutters class="fill-height">
-            <!-- Left Sidebar - Summary Info (hidden on mobile, shown on md+) -->
-            <v-col
-              cols="12"
-              md="2"
-              class="d-none d-md-block overflow-auto"
-              style="height: calc(100vh - 64px);"
-            >
+      <v-main class="bg-grey-lighten-4">
+        <div class="main-layout pa-4">
+          <!-- Left Sidebar - Navigation Rail (hidden on mobile, shown on md+) -->
+          <div class="nav-column d-none d-md-flex">
+            <v-card class="fill-height overflow-auto" variant="flat" rounded="lg">
               <SummaryInfo
                 :auth_str="auth_str"
                 :lookup_url="lookup_url"
                 :token="token"
                 @start-search="searchDatasets"
               />
-            </v-col>
+            </v-card>
+          </div>
 
-            <!-- Middle Column - Dataset List -->
-            <v-col
-              cols="12"
-              md="4"
-              class="overflow-auto pa-2"
-              style="height: calc(100vh - 64px);"
-            >
+          <!-- Middle Column - Dataset List -->
+          <div class="list-column">
+            <v-card class="fill-height d-flex flex-column" variant="elevated" rounded="lg">
               <!-- Loading State -->
-              <div v-if="searchLoading" class="d-flex justify-center align-center" style="height: 200px;">
+              <div v-if="searchLoading" class="d-flex justify-center align-center flex-grow-1">
                 <v-progress-circular indeterminate color="primary" size="48" />
               </div>
 
               <!-- Error State -->
-              <div v-else-if="searchErrored">
+              <div v-else-if="searchErrored" class="pa-4">
                 <v-alert
                   v-if="authenticationError"
                   type="error"
@@ -101,40 +93,38 @@
               </div>
 
               <!-- Dataset List -->
-              <div v-else>
-                <div class="mb-4 mt-2">
+              <template v-else>
+                <div class="pa-3 border-b">
                   <dataset-sorting @start-search="searchDatasets" />
                 </div>
 
-                <DatasetTable
-                  :datasetHits="datasetHits"
-                  :responseheaders="responseheaders"
-                  @update-dataset="updateDataset"
-                />
+                <div class="flex-grow-1 overflow-auto">
+                  <DatasetTable
+                    :datasetHits="datasetHits"
+                    :responseheaders="responseheaders"
+                    @update-dataset="updateDataset"
+                  />
+                </div>
 
-                <v-pagination
-                  v-if="shouldShowPagination"
-                  v-model="currentPage"
-                  :length="totalPages"
-                  :total-visible="7"
-                  rounded
-                  class="mt-4"
-                  @update:model-value="onPageChange"
-                />
-              </div>
-            </v-col>
+                <div v-if="shouldShowPagination" class="pa-3 border-t">
+                  <v-pagination
+                    v-model="currentPage"
+                    :length="totalPages"
+                    :total-visible="5"
+                    density="compact"
+                    rounded
+                    @update:model-value="onPageChange"
+                  />
+                </div>
+              </template>
+            </v-card>
+          </div>
 
-            <!-- Right Column - Dataset Details -->
-            <v-col
-              v-if="datasetLoaded"
-              cols="12"
-              md="6"
-              class="overflow-auto pa-2"
-              style="height: calc(100vh - 64px);"
-            >
-              <v-card>
+          <!-- Right Column - Dataset Details -->
+          <div v-if="datasetLoaded" class="detail-column">
+            <v-card class="fill-height overflow-auto" variant="elevated" rounded="lg">
                 <!-- Card Header - Dataset Summary -->
-                <v-card-title class="bg-grey-lighten-4">
+                <div class="pa-4">
                   <div v-if="manifestLoading" class="d-flex justify-center">
                     <v-progress-circular indeterminate color="primary" size="24" />
                   </div>
@@ -150,10 +140,10 @@
                     </v-btn>
                   </div>
                   <DatasetSummary v-else />
-                </v-card-title>
+                </div>
 
                 <!-- Card Body - Readme & Annotations -->
-                <v-card-text>
+                <div class="pa-4 pt-0">
                   <!-- Readme Section -->
                   <div v-if="readmeLoading" class="d-flex justify-center py-4">
                     <v-progress-circular indeterminate color="primary" size="24" />
@@ -187,10 +177,10 @@
                     </v-btn>
                   </div>
                   <Annotations v-else />
-                </v-card-text>
+                </div>
 
                 <!-- Card Footer - Manifest -->
-                <v-card-actions class="bg-grey-lighten-4 flex-column align-start">
+                <div class="pa-4 pt-0">
                   <div v-if="manifestLoading" class="d-flex justify-center w-100 py-2">
                     <v-progress-circular indeterminate color="primary" size="24" />
                   </div>
@@ -206,11 +196,10 @@
                     </v-btn>
                   </div>
                   <Manifest v-else class="w-100" />
-                </v-card-actions>
+                </div>
               </v-card>
-            </v-col>
-          </v-row>
-        </v-container>
+            </div>
+        </div>
       </v-main>
     </template>
 
@@ -640,5 +629,59 @@ export default {
 <style>
 .v-application {
   font-family: "Roboto", "Avenir", Helvetica, Arial, sans-serif;
+}
+
+.border-b {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.border-t {
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Main layout using flexbox for full-width columns */
+.main-layout {
+  display: flex;
+  gap: 16px;
+  height: calc(100vh - 64px);
+  width: 100%;
+}
+
+.nav-column {
+  flex: 0 0 260px;
+  min-width: 220px;
+  max-width: 300px;
+  height: 100%;
+}
+
+.list-column {
+  flex: 0 0 380px;
+  min-width: 320px;
+  height: 100%;
+}
+
+.detail-column {
+  flex: 1 1 auto;
+  min-width: 400px;
+  height: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .main-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .nav-column,
+  .list-column,
+  .detail-column {
+    flex: none;
+    width: 100%;
+    min-width: unset;
+    max-width: unset;
+    height: auto;
+    min-height: 400px;
+  }
 }
 </style>

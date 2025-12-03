@@ -200,7 +200,7 @@ export default {
 
 <style scoped>
 .annotations-section {
-  margin-top: 16px;
+  /* Parent container handles spacing */
 }
 
 .annotation-list {

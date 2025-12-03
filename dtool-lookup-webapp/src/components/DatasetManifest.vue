@@ -1,82 +1,88 @@
 <template>
   <div v-if="manifest" class="manifest-section">
-    <v-card variant="outlined" rounded="lg">
-      <v-card-item density="compact">
-        <template #prepend>
-          <v-icon size="small" color="primary">mdi-file-tree</v-icon>
-        </template>
-        <v-card-title class="text-body-2 font-weight-medium">
-          Items
-          <v-chip size="x-small" variant="tonal" color="primary" class="ml-2">
-            {{ numItems }}
-          </v-chip>
-        </v-card-title>
-      </v-card-item>
-      <v-divider />
-      <v-list
-        v-if="manifest.items"
-        class="manifest-list pa-2"
-        bg-color="transparent"
-      >
-        <v-list-item
-          v-for="(item, id) in manifest.items"
-          :key="id"
-          rounded="lg"
-          class="manifest-item mb-1"
-          @mouseenter="update_fetch_identifier(id)"
-        >
-          <template #prepend>
-            <v-avatar size="32" color="grey-lighten-3" rounded="lg" class="mr-3">
-              <v-icon size="16" color="grey-darken-1">{{ getFileIcon(item.relpath) }}</v-icon>
-            </v-avatar>
+    <v-expansion-panels variant="accordion">
+      <v-expansion-panel rounded="lg">
+        <v-expansion-panel-title class="manifest-panel-title">
+          <template #default>
+            <div class="d-flex align-center">
+              <v-icon size="small" color="primary" class="mr-2">mdi-file-tree</v-icon>
+              <span class="text-body-2 font-weight-medium">Items</span>
+              <v-chip size="x-small" variant="tonal" color="primary" class="ml-2">
+                {{ numItems }}
+              </v-chip>
+            </div>
           </template>
-          <v-list-item-title class="text-body-2 font-weight-medium">
-            {{ item.relpath }}
-          </v-list-item-title>
-          <v-list-item-subtitle class="text-caption text-medium-emphasis">
-            {{ filesize(item.size_in_bytes) }}
-          </v-list-item-subtitle>
-          <template #append>
-            <v-menu location="start" :close-on-content-click="false">
-              <template #activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  size="small"
-                  variant="tonal"
-                  color="primary"
-                  icon="mdi-download"
-                />
+          <template #actions="{ expanded }">
+            <v-icon :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+          </template>
+        </v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <v-list
+            v-if="manifest.items"
+            class="manifest-list"
+            bg-color="transparent"
+          >
+            <v-list-item
+              v-for="(item, id) in manifest.items"
+              :key="id"
+              rounded="lg"
+              class="manifest-item mb-1"
+              @mouseenter="update_fetch_identifier(id)"
+            >
+              <template #prepend>
+                <v-avatar size="32" color="grey-lighten-3" rounded="lg" class="mr-3">
+                  <v-icon size="16" color="grey-darken-1">{{ getFileIcon(item.relpath) }}</v-icon>
+                </v-avatar>
               </template>
-              <v-card min-width="440" rounded="lg">
-                <v-card-text class="text-body-2 pb-2">
-                  Fetch this item to get an absolute path on disk:
-                </v-card-text>
-                <v-card-text class="pt-0">
-                  <v-text-field
-                    :model-value="fetch_command"
-                    readonly
-                    density="compact"
-                    variant="outlined"
-                    hide-details
-                    rounded="lg"
-                    bg-color="grey-lighten-4"
-                  >
-                    <template #append-inner>
-                      <v-btn
-                        icon="mdi-content-copy"
-                        size="small"
-                        variant="text"
-                        @click="copyToClipboard(fetch_command)"
-                      />
-                    </template>
-                  </v-text-field>
-                </v-card-text>
-              </v-card>
-            </v-menu>
-          </template>
-        </v-list-item>
-      </v-list>
-    </v-card>
+              <v-list-item-title class="text-body-2 font-weight-medium">
+                {{ item.relpath }}
+              </v-list-item-title>
+              <v-list-item-subtitle class="text-caption text-medium-emphasis">
+                {{ filesize(item.size_in_bytes) }}
+              </v-list-item-subtitle>
+              <template #append>
+                <v-menu location="start" :close-on-content-click="false">
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      size="small"
+                      variant="tonal"
+                      color="primary"
+                      icon="mdi-download"
+                    />
+                  </template>
+                  <v-card min-width="440" rounded="lg">
+                    <v-card-text class="text-body-2 pb-2">
+                      Fetch this item to get an absolute path on disk:
+                    </v-card-text>
+                    <v-card-text class="pt-0">
+                      <v-text-field
+                        :model-value="fetch_command"
+                        readonly
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        rounded="lg"
+                        bg-color="grey-lighten-4"
+                      >
+                        <template #append-inner>
+                          <v-btn
+                            icon="mdi-content-copy"
+                            size="small"
+                            variant="text"
+                            @click="copyToClipboard(fetch_command)"
+                          />
+                        </template>
+                      </v-text-field>
+                    </v-card-text>
+                  </v-card>
+                </v-menu>
+              </template>
+            </v-list-item>
+          </v-list>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+    </v-expansion-panels>
   </div>
 </template>
 
@@ -176,12 +182,18 @@ export default {
 
 <style scoped>
 .manifest-section {
-  margin-top: 16px;
+  /* Parent container handles spacing */
+}
+
+.manifest-panel-title {
+  min-height: 48px;
 }
 
 .manifest-list {
   max-height: 350px;
   overflow-y: auto;
+  margin: -12px -16px;
+  padding: 8px;
 }
 
 .manifest-item {

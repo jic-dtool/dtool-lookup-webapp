@@ -4,7 +4,7 @@
     <div class="pa-4 bg-primary">
       <h6 class="text-h6 text-white font-weight-medium">
         <v-icon start>mdi-folder-search</v-icon>
-        Browser
+        Repository
       </h6>
     </div>
 
@@ -282,7 +282,6 @@ export default {
 <style scoped>
 .summary-sidebar {
   height: 100%;
-  background-color: #fafafa;
 }
 
 .border-b {

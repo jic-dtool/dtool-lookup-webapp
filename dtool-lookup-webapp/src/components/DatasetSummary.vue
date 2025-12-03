@@ -226,7 +226,7 @@ export default {
 
 <style scoped>
 .dataset-summary {
-  padding: 16px;
+  /* Parent container handles padding */
 }
 
 .uri-text {
