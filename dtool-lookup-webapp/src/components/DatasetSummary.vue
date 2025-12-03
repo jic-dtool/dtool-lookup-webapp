@@ -1,113 +1,156 @@
 <template>
-  <div v-if="dataset" class="w-100">
-    <!-- Row 1: Name and metadata -->
-    <div class="d-flex justify-space-between align-center flex-wrap">
-      <h5 class="text-h6 font-weight-bold">{{ dataset.name }}</h5>
-      <div class="text-caption text-grey-darken-1">
-        Created by <em>{{ dataset.creator_username }}</em> on
-        <em>{{ moment(dataset.created_at * 1000).format("YYYY-MM-DD") }}</em>,
-        frozen on
-        <em>{{ moment(dataset.frozen_at * 1000).format("YYYY-MM-DD") }}</em>
-        <v-chip size="x-small" color="primary" class="ml-2">
-          {{ numItems }} items
-        </v-chip>
-        <v-chip size="x-small" color="primary" class="ml-1">
-          {{ filesize(total_size_in_bytes) }}
-        </v-chip>
-      </div>
-    </div>
-
-    <!-- Row 2: URI and Copy menu -->
-    <div class="d-flex justify-space-between align-center mt-2">
-      <span class="text-caption text-grey" style="font-family: monospace;">{{ dataset.uri }}</span>
-      <v-menu location="bottom end" :close-on-content-click="false">
-        <template #activator="{ props }">
-          <v-btn v-bind="props" size="small" variant="outlined" color="primary">
-            Copy
-          </v-btn>
+  <div v-if="dataset" class="dataset-summary">
+    <!-- Header Card -->
+    <v-card variant="flat" class="mb-4">
+      <v-card-item>
+        <template #prepend>
+          <v-avatar color="primary" variant="tonal" size="48" rounded="lg">
+            <v-icon size="24">mdi-database</v-icon>
+          </v-avatar>
         </template>
-        <v-card min-width="320">
-          <v-card-text class="text-body-2">
-            The command below copies the dataset to the working directory.
-          </v-card-text>
-          <v-card-text class="pt-0">
-            <v-text-field
-              :model-value="copy_command"
-              readonly
-              density="compact"
-              variant="outlined"
-              hide-details
-            >
-              <template #append-inner>
-                <v-btn
-                  icon="mdi-content-copy"
-                  size="small"
-                  variant="text"
-                  @click="copyToClipboard(copy_command)"
-                />
-              </template>
-            </v-text-field>
-          </v-card-text>
-        </v-card>
-      </v-menu>
+        <v-card-title class="text-h6 font-weight-medium">
+          {{ dataset.name }}
+        </v-card-title>
+        <v-card-subtitle class="text-body-2">
+          <v-icon size="x-small" class="mr-1">mdi-account</v-icon>
+          {{ dataset.creator_username }}
+        </v-card-subtitle>
+      </v-card-item>
+    </v-card>
+
+    <!-- Metadata Chips -->
+    <div class="d-flex flex-wrap ga-2 mb-4">
+      <v-chip variant="tonal" color="primary" size="small" prepend-icon="mdi-file-multiple">
+        {{ numItems }} items
+      </v-chip>
+      <v-chip variant="tonal" color="secondary" size="small" prepend-icon="mdi-harddisk">
+        {{ filesize(total_size_in_bytes) }}
+      </v-chip>
+      <v-chip variant="tonal" size="small" prepend-icon="mdi-calendar-plus">
+        Created {{ moment(dataset.created_at * 1000).format("MMM D, YYYY") }}
+      </v-chip>
+      <v-chip variant="tonal" size="small" prepend-icon="mdi-calendar-check">
+        Frozen {{ moment(dataset.frozen_at * 1000).format("MMM D, YYYY") }}
+      </v-chip>
     </div>
 
-    <!-- Row 3: Tags and Tag menu -->
-    <div class="d-flex justify-space-between align-center mt-2">
-      <div v-if="currentTags.length > 0">
-        <v-chip
-          v-for="(tag, index) in currentTags"
-          :key="index"
-          size="small"
-          color="primary"
-          class="mr-1"
-        >
-          {{ tag }}
-        </v-chip>
-      </div>
-      <v-alert v-else type="info" density="compact" variant="tonal" class="py-1">
-        Use tags to organise your datasets!
-      </v-alert>
-
-      <v-menu location="bottom end" :close-on-content-click="false">
-        <template #activator="{ props }">
-          <v-btn v-bind="props" size="small" variant="outlined" color="primary" append-icon="mdi-menu-down">
-            Tag
-          </v-btn>
+    <!-- URI Section -->
+    <v-card variant="outlined" class="mb-4" rounded="lg">
+      <v-card-item density="compact">
+        <template #prepend>
+          <v-icon size="small" color="primary">mdi-link-variant</v-icon>
         </template>
-        <v-card min-width="400">
-          <v-card-text class="text-body-2">
-            The command below adds a tag to the dataset.
-          </v-card-text>
-          <v-card-text class="pt-0">
-            <v-text-field
-              v-model="tag_name"
-              label="Tag"
-              density="compact"
-              variant="outlined"
-              hide-details
-              class="mb-2"
-            />
-            <v-text-field
-              :model-value="tag_command"
-              readonly
-              density="compact"
-              variant="outlined"
-              hide-details
-            >
-              <template #append-inner>
-                <v-btn
-                  icon="mdi-content-copy"
-                  size="small"
-                  variant="text"
-                  @click="copyToClipboard(tag_command)"
+        <v-card-title class="text-body-2 font-weight-medium">URI</v-card-title>
+        <template #append>
+          <v-menu location="bottom end" :close-on-content-click="false">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" size="small" variant="tonal" color="primary" prepend-icon="mdi-content-copy">
+                Copy
+              </v-btn>
+            </template>
+            <v-card min-width="360" rounded="lg">
+              <v-card-text class="text-body-2 pb-2">
+                Copy this dataset to your working directory:
+              </v-card-text>
+              <v-card-text class="pt-0">
+                <v-text-field
+                  :model-value="copy_command"
+                  readonly
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  rounded="lg"
+                  bg-color="grey-lighten-4"
+                >
+                  <template #append-inner>
+                    <v-btn
+                      icon="mdi-content-copy"
+                      size="small"
+                      variant="text"
+                      @click="copyToClipboard(copy_command)"
+                    />
+                  </template>
+                </v-text-field>
+              </v-card-text>
+            </v-card>
+          </v-menu>
+        </template>
+      </v-card-item>
+      <v-card-text class="pt-0">
+        <code class="uri-text text-body-2">{{ dataset.uri }}</code>
+      </v-card-text>
+    </v-card>
+
+    <!-- Tags Section -->
+    <v-card variant="outlined" rounded="lg">
+      <v-card-item density="compact">
+        <template #prepend>
+          <v-icon size="small" color="primary">mdi-tag-multiple</v-icon>
+        </template>
+        <v-card-title class="text-body-2 font-weight-medium">Tags</v-card-title>
+        <template #append>
+          <v-menu location="bottom end" :close-on-content-click="false">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" size="small" variant="tonal" color="primary" prepend-icon="mdi-tag-plus">
+                Add Tag
+              </v-btn>
+            </template>
+            <v-card min-width="400" rounded="lg">
+              <v-card-text class="text-body-2 pb-2">
+                Add a tag to this dataset:
+              </v-card-text>
+              <v-card-text class="pt-0">
+                <v-text-field
+                  v-model="tag_name"
+                  label="Tag name"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  rounded="lg"
+                  class="mb-3"
                 />
-              </template>
-            </v-text-field>
-          </v-card-text>
-        </v-card>
-      </v-menu>
-    </div>
+                <v-text-field
+                  :model-value="tag_command"
+                  readonly
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  rounded="lg"
+                  bg-color="grey-lighten-4"
+                >
+                  <template #append-inner>
+                    <v-btn
+                      icon="mdi-content-copy"
+                      size="small"
+                      variant="text"
+                      @click="copyToClipboard(tag_command)"
+                    />
+                  </template>
+                </v-text-field>
+              </v-card-text>
+            </v-card>
+          </v-menu>
+        </template>
+      </v-card-item>
+      <v-card-text class="pt-0">
+        <div v-if="currentTags.length > 0" class="d-flex flex-wrap ga-2">
+          <v-chip
+            v-for="(tag, index) in currentTags"
+            :key="index"
+            variant="tonal"
+            color="primary"
+            size="small"
+            label
+          >
+            {{ tag }}
+          </v-chip>
+        </div>
+        <div v-else class="text-body-2 text-medium-emphasis">
+          <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
+          No tags yet. Add tags to organize your datasets.
+        </div>
+      </v-card-text>
+    </v-card>
   </div>
 </template>
 
@@ -154,14 +197,12 @@ export default {
       return "dtool tag set " + this.dataset.uri + " " + this.tag_name;
     },
     currentTags() {
-      // Check if `current_dataset_tags` exists and has a `tags` property
       if (
         this.$store.state.current_dataset_tags &&
         this.$store.state.current_dataset_tags.tags
       ) {
         return this.$store.state.current_dataset_tags.tags;
       }
-      // Return an empty array if `current_dataset_tags` is null or doesn't have a `tags` property
       return [];
     },
   },
@@ -182,3 +223,22 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.dataset-summary {
+  padding: 16px;
+}
+
+.uri-text {
+  font-family: "Roboto Mono", monospace;
+  background-color: rgba(var(--v-theme-surface-variant), 0.4);
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: block;
+  word-break: break-all;
+}
+
+.ga-2 {
+  gap: 8px;
+}
+</style>

@@ -1,36 +1,44 @@
 <template>
-  <v-list density="compact" class="py-0">
+  <v-list class="dataset-list pa-2" bg-color="transparent">
     <v-list-item
       v-for="(dataset, index) in datasetHits"
       :key="dataset.uri || index"
       :active="selected === index"
       @click="updateSelectedDataset(index)"
-      class="border-b"
+      rounded="lg"
+      class="dataset-item mb-1"
+      :class="{ 'dataset-item--active': selected === index }"
     >
       <template #default>
-        <div class="py-1">
-          <!-- Row 1: Name and Date -->
-          <div class="d-flex justify-space-between align-center">
-            <span class="text-subtitle-2 font-weight-medium">{{ dataset.name }}</span>
-            <span class="text-caption text-grey">
-              {{ moment(dataset.created_at * 1000).format("YYYY-MM-DD") }}
-            </span>
+        <div class="py-2">
+          <!-- Headline (dataset name) -->
+          <v-list-item-title class="text-body-1 font-weight-medium mb-1">
+            {{ dataset.name }}
+          </v-list-item-title>
+
+          <!-- Supporting text -->
+          <v-list-item-subtitle class="text-body-2 text-medium-emphasis d-flex align-center ga-2">
+            <v-icon size="x-small" class="mr-1">mdi-account</v-icon>
+            {{ dataset.creator_username }}
+            <span class="mx-1">·</span>
+            <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
+            {{ moment(dataset.created_at * 1000).format("MMM D, YYYY") }}
+          </v-list-item-subtitle>
+
+          <!-- UUID (tertiary line) -->
+          <div class="text-caption text-disabled mt-1 uuid-text">
+            {{ dataset.uuid }}
           </div>
 
-          <!-- Row 2: Creator and UUID -->
-          <div class="d-flex justify-space-between align-center mt-1">
-            <span class="text-caption text-grey-darken-1">{{ dataset.creator_username }}</span>
-            <span class="text-caption text-grey" style="font-family: monospace;">{{ dataset.uuid }}</span>
-          </div>
-
-          <!-- Row 3: Tags -->
-          <div v-if="dataset.tags && dataset.tags.length" class="mt-1">
+          <!-- Tags -->
+          <div v-if="dataset.tags && dataset.tags.length" class="mt-2 d-flex flex-wrap ga-1">
             <v-chip
               v-for="(tag, tagIndex) in dataset.tags"
               :key="tagIndex"
-              size="x-small"
+              size="small"
+              variant="tonal"
               color="primary"
-              class="mr-1"
+              label
             >
               {{ tag }}
             </v-chip>
@@ -69,7 +77,35 @@ export default {
 </script>
 
 <style scoped>
-.border-b {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+.dataset-list {
+  overflow-y: auto;
+}
+
+.dataset-item {
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.dataset-item:hover {
+  background-color: rgba(var(--v-theme-primary), 0.04);
+}
+
+.dataset-item--active {
+  background-color: rgba(var(--v-theme-primary), 0.12) !important;
+  border-color: rgba(var(--v-theme-primary), 0.24);
+}
+
+.uuid-text {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+}
+
+.ga-1 {
+  gap: 4px;
+}
+
+.ga-2 {
+  gap: 8px;
 }
 </style>
