@@ -152,7 +152,7 @@ const newValue = ref("");
 const editableValue = ref("");
 
 const annotations = computed<Annotations>(() => {
-  return store.state.current_dataset_annotations || {};
+  return store.current_dataset_annotations || {};
 });
 
 const filteredAnnotations = computed<Annotations>(() => {
@@ -166,8 +166,8 @@ const filteredAnnotations = computed<Annotations>(() => {
 });
 
 const computedCreateCommand = computed(() => {
-  if (!store.state.current_dataset) return "";
-  return `dtool annotation set ${store.state.current_dataset.uri} ${newKey.value} ${newValue.value}`;
+  if (!store.current_dataset) return "";
+  return `dtool annotation set ${store.current_dataset.uri} ${newKey.value} ${newValue.value}`;
 });
 
 function capitalizeFirstLetter(string: string): string {
@@ -184,8 +184,8 @@ function hasNonEmptyValues(annotation: Record<string, unknown>): boolean {
 }
 
 function generateSetCommand(propertyName: string, value: string): string {
-  if (!store.state.current_dataset) return "";
-  return `dtool annotation set ${store.state.current_dataset.uri} ${propertyName} ${value}`;
+  if (!store.current_dataset) return "";
+  return `dtool annotation set ${store.current_dataset.uri} ${propertyName} ${value}`;
 }
 
 function resetEditableValue(): void {

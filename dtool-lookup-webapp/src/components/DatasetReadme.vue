@@ -71,12 +71,12 @@ const store = useStore();
 
 const getReadmeContent = computed<string | null>(() => {
   if (
-    !store.state.current_dataset_readme ||
-    !store.state.current_dataset_readme.readme
+    !store.current_dataset_readme ||
+    !store.current_dataset_readme.readme
   ) {
     return null;
   }
-  return store.state.current_dataset_readme.readme.trim();
+  return store.current_dataset_readme.readme.trim();
 });
 
 const formattedReadme = computed(() => {
@@ -89,8 +89,8 @@ const formattedReadme = computed(() => {
 });
 
 const edit_command = computed(() => {
-  if (!store.state.current_dataset) return "";
-  return "dtool readme edit " + store.state.current_dataset.uri;
+  if (!store.current_dataset) return "";
+  return "dtool readme edit " + store.current_dataset.uri;
 });
 
 function formatLine(line: string): string {

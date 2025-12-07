@@ -1,5 +1,4 @@
-import { createStore, Store as VuexStore } from "vuex";
-import { InjectionKey } from "vue";
+import { defineStore } from "pinia";
 import type {
   Dataset,
   Manifest,
@@ -30,10 +29,8 @@ export interface State {
   lookup_url: string | null;
 }
 
-export const key: InjectionKey<VuexStore<State>> = Symbol();
-
-export const store = createStore<State>({
-  state: {
+export const useStore = defineStore("main", {
+  state: (): State => ({
     free_text: null,
     mongo_text: null,
     creator_usernames: [],
@@ -52,78 +49,70 @@ export const store = createStore<State>({
     selected_sort_option: "frozen_at",
     server_versions: {},
     lookup_url: null,
-  },
-  mutations: {
-    update_free_text(state: State, free_text: string | null) {
-      state.free_text = free_text;
-    },
-    update_mongo_text(state: State, mongo_text: string | null) {
-      state.mongo_text = mongo_text;
-    },
-    update_creator_usernames(state: State, creator_usernames: string[]) {
-      state.creator_usernames = creator_usernames;
-    },
-    update_base_uris(state: State, base_uris: string[]) {
-      state.base_uris = base_uris;
-    },
-    update_tags(state: State, tags: string[]) {
-      state.tags = tags;
-    },
-    update_current_dataset_index(state: State, index: number) {
-      state.current_dataset_index = index;
-    },
-    update_current_pageNumber(state: State, pageNumber: number) {
-      state.current_pageNumber = pageNumber;
-    },
-    update_current_dataset(state: State, dataset: Dataset | null) {
-      state.current_dataset = dataset;
-    },
-    update_current_dataset_manifest(state: State, manifest: Manifest | null) {
-      state.current_dataset_manifest = manifest;
-    },
-    update_current_dataset_readme(state: State, readme: Readme | null) {
-      state.current_dataset_readme = readme;
-    },
-    update_current_dataset_annotations(
-      state: State,
-      annotations: Annotations | null
-    ) {
-      state.current_dataset_annotations = annotations;
-    },
-    update_current_dataset_tags(state: State, tags: Tags | null) {
-      state.current_dataset_tags = tags;
-    },
-    update_num_filtered(state: State, num_filtered: number) {
-      state.num_filtered = num_filtered;
-    },
-    update_current_Per_Page(state: State, perpage: number) {
-      state.update_current_Per_Page = perpage;
-    },
-    updateUsername(state: State, username: string | null) {
-      state.username = username;
-    },
-    update_selected_sort_option(state: State, selected_sort_option: string) {
-      state.selected_sort_option = selected_sort_option;
-    },
-    update_server_versions(state: State, versions: ServerVersions) {
-      state.server_versions = versions;
-    },
-    update_lookup_url(state: State, lookup_url: string | null) {
-      state.lookup_url = lookup_url;
-    },
+  }),
 
-    clear_all(state: State) {
-      state.username = null;
-      state.free_text = null;
-      state.mongo_text = null;
-      state.creator_usernames = [];
-      state.tags = [];
-      state.base_uris = [];
+  actions: {
+    updateFreeText(free_text: string | null) {
+      this.free_text = free_text;
+    },
+    updateMongoText(mongo_text: string | null) {
+      this.mongo_text = mongo_text;
+    },
+    updateCreatorUsernames(creator_usernames: string[]) {
+      this.creator_usernames = creator_usernames;
+    },
+    updateBaseUris(base_uris: string[]) {
+      this.base_uris = base_uris;
+    },
+    updateTags(tags: string[]) {
+      this.tags = tags;
+    },
+    updateCurrentDatasetIndex(index: number) {
+      this.current_dataset_index = index;
+    },
+    updateCurrentPageNumber(pageNumber: number) {
+      this.current_pageNumber = pageNumber;
+    },
+    updateCurrentDataset(dataset: Dataset | null) {
+      this.current_dataset = dataset;
+    },
+    updateCurrentDatasetManifest(manifest: Manifest | null) {
+      this.current_dataset_manifest = manifest;
+    },
+    updateCurrentDatasetReadme(readme: Readme | null) {
+      this.current_dataset_readme = readme;
+    },
+    updateCurrentDatasetAnnotations(annotations: Annotations | null) {
+      this.current_dataset_annotations = annotations;
+    },
+    updateCurrentDatasetTags(tags: Tags | null) {
+      this.current_dataset_tags = tags;
+    },
+    updateNumFiltered(num_filtered: number) {
+      this.num_filtered = num_filtered;
+    },
+    updateCurrentPerPage(perpage: number) {
+      this.update_current_Per_Page = perpage;
+    },
+    updateUsername(username: string | null) {
+      this.username = username;
+    },
+    updateSelectedSortOption(selected_sort_option: string) {
+      this.selected_sort_option = selected_sort_option;
+    },
+    updateServerVersions(versions: ServerVersions) {
+      this.server_versions = versions;
+    },
+    updateLookupUrl(lookup_url: string | null) {
+      this.lookup_url = lookup_url;
+    },
+    clearAll() {
+      this.username = null;
+      this.free_text = null;
+      this.mongo_text = null;
+      this.creator_usernames = [];
+      this.tags = [];
+      this.base_uris = [];
     },
   },
-  actions: {},
 });
-
-export function useStore() {
-  return store;
-}

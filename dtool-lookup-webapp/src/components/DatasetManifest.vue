@@ -100,7 +100,7 @@ const store = useStore();
 const fetch_identifier = ref<string | null>(null);
 
 const manifest = computed<Manifest | null>(() => {
-  return store.state.current_dataset_manifest;
+  return store.current_dataset_manifest;
 });
 
 const numItems = computed(() => {
@@ -110,10 +110,10 @@ const numItems = computed(() => {
 });
 
 const fetch_command = computed(() => {
-  if (!store.state.current_dataset) return "";
+  if (!store.current_dataset) return "";
   return (
     "dtool item fetch " +
-    store.state.current_dataset.uri +
+    store.current_dataset.uri +
     " " +
     fetch_identifier.value
   );

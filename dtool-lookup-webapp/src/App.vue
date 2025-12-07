@@ -266,22 +266,22 @@ const snackbarColor = ref("success");
 
 // Computed properties
 const datasetLoaded = computed<Dataset | null>(() => {
-  return store.state.current_dataset;
+  return store.current_dataset;
 });
 
 const current_dataset = computed<Dataset | undefined>(() => {
-  return datasetHits.value[store.state.current_dataset_index];
+  return datasetHits.value[store.current_dataset_index];
 });
 
 const searchURL = computed(() => {
   return (
     lookup_url +
     "/uris?page=" +
-    store.state.current_pageNumber +
+    store.current_pageNumber +
     "&page_size=" +
-    store.state.update_current_Per_Page +
+    store.update_current_Per_Page +
     "&sort=" +
-    store.state.selected_sort_option
+    store.selected_sort_option
   );
 });
 
@@ -316,21 +316,21 @@ const auth_str = computed(() => {
 const searchQuery = computed<SearchQuery>(() => {
   const query: SearchQuery = {};
 
-  if (store.state.mongo_text) {
-    query.query = JSON.parse(store.state.mongo_text);
+  if (store.mongo_text) {
+    query.query = JSON.parse(store.mongo_text);
   } else {
-    if (store.state.free_text) {
-      query.free_text = store.state.free_text;
+    if (store.free_text) {
+      query.free_text = store.free_text;
     }
 
-    if (store.state.creator_usernames.length > 0) {
-      query.creator_usernames = store.state.creator_usernames;
+    if (store.creator_usernames.length > 0) {
+      query.creator_usernames = store.creator_usernames;
     }
-    if (store.state.base_uris.length > 0) {
-      query.base_uris = store.state.base_uris;
+    if (store.base_uris.length > 0) {
+      query.base_uris = store.base_uris;
     }
-    if (store.state.tags.length > 0) {
-      query.tags = store.state.tags;
+    if (store.tags.length > 0) {
+      query.tags = store.tags;
     }
   }
   return query;
@@ -339,7 +339,7 @@ const searchQuery = computed<SearchQuery>(() => {
 const uriQuery = computed<{ uri: string | null }>(() => {
   if (datasetHits.value.length > 0) {
     return {
-      uri: datasetHits.value[store.state.current_dataset_index]?.uri ?? null,
+      uri: datasetHits.value[store.current_dataset_index]?.uri ?? null,
     };
   } else {
     return { uri: null };
@@ -354,16 +354,16 @@ const pagination = computed<PaginationInfo>(() => {
 });
 
 const totalPages = computed(() => {
-  if (pagination.value.total && store.state.update_current_Per_Page) {
+  if (pagination.value.total && store.update_current_Per_Page) {
     return Math.ceil(
-      pagination.value.total / store.state.update_current_Per_Page
+      pagination.value.total / store.update_current_Per_Page
     );
   }
   return 1;
 });
 
 const shouldShowPagination = computed(() => {
-  return pagination.value.total > store.state.update_current_Per_Page;
+  return pagination.value.total > store.update_current_Per_Page;
 });
 
 const safeMongoPlugin = computed(() => {
@@ -372,10 +372,10 @@ const safeMongoPlugin = computed(() => {
 
 const currentPage = computed({
   get(): number {
-    return store.state.current_pageNumber;
+    return store.current_pageNumber;
   },
   set(value: number) {
-    store.state.current_pageNumber = value;
+    store.current_pageNumber = value;
   },
 });
 
@@ -401,17 +401,17 @@ function searchDatasets(): void {
 
   console.log("Running search");
   console.log(searchQuery.value);
-  store.commit("update_current_dataset_index", 0);
-  store.commit("update_current_dataset", null);
-  store.commit("update_current_dataset_manifest", null);
-  store.commit("update_current_dataset_readme", null);
-  store.commit("update_current_dataset_tags", null);
+  store.updateCurrentDatasetIndex(0);
+  store.updateCurrentDataset(null);
+  store.updateCurrentDatasetManifest(null);
+  store.updateCurrentDatasetReadme(null);
+  store.updateCurrentDatasetTags(null);
   updateDataset();
   searchLoading.value = true;
   searchErrored.value = false;
 
   let url = searchURL.value;
-  if (store.state.mongo_text) {
+  if (store.mongo_text) {
     url = mongoSearchURL.value;
   }
 
@@ -425,8 +425,8 @@ function searchDatasets(): void {
     .then((response: AxiosResponse<Dataset[]>) => {
       datasetHits.value = response.data;
       responseheaders.value = response.headers as ResponseHeaders;
-      store.commit("update_current_dataset", current_dataset.value);
-      store.commit("update_num_filtered", pagination.value.total);
+      store.updateCurrentDataset(current_dataset.value ?? null);
+      store.updateNumFiltered(pagination.value.total);
       updateDataset();
     })
     .catch((error: AxiosError) => {
@@ -441,7 +441,7 @@ function searchDatasets(): void {
         searchErrored.value = true;
       } else if (error.response && error.response.status === 404) {
         console.log("404 Not Found - Resetting pageNumber and retrying");
-        store.state.current_pageNumber = 1;
+        store.current_pageNumber = 1;
         searchDatasets(); // Retry the search with pageNumber reset to 1
       } else {
         console.log(error.response);
@@ -485,7 +485,7 @@ function updateManifest(): void {
       },
     })
     .then((response: AxiosResponse) => {
-      store.commit("update_current_dataset_manifest", response.data);
+      store.updateCurrentDatasetManifest(response.data);
     })
     .catch((error: AxiosError) => {
       console.log(error);
@@ -519,7 +519,7 @@ function updateReadme(): void {
       },
     })
     .then((response: AxiosResponse) => {
-      store.commit("update_current_dataset_readme", response.data);
+      store.updateCurrentDatasetReadme(response.data);
     })
     .catch((error: AxiosError) => {
       console.log(error);
@@ -553,7 +553,7 @@ function updateAnnotations(): void {
       },
     })
     .then((response: AxiosResponse) => {
-      store.commit("update_current_dataset_annotations", response.data);
+      store.updateCurrentDatasetAnnotations(response.data);
     })
     .catch((error: AxiosError) => {
       console.log(error);
@@ -587,7 +587,7 @@ function updateTags(): void {
       },
     })
     .then((response: AxiosResponse) => {
-      store.commit("update_current_dataset_tags", response.data);
+      store.updateCurrentDatasetTags(response.data);
     })
     .catch((error: AxiosError) => {
       console.error(error);
@@ -602,7 +602,7 @@ function getconfiginfo(): void {
   console.log("Loading ConfigInfo");
 
   // Store the lookup URL in the store for components to use
-  store.commit("update_lookup_url", lookup_url);
+  store.updateLookupUrl(lookup_url);
 
   axios
     .get(configInfoURL.value, {
@@ -615,7 +615,7 @@ function getconfiginfo(): void {
       getinfo.value = response.data;
       // Store server versions in the store for components to access
       if (response.data && response.data.versions) {
-        store.commit("update_server_versions", response.data.versions);
+        store.updateServerVersions(response.data.versions);
       }
     })
     .catch((error: AxiosError) => {
@@ -629,7 +629,7 @@ function logout(): void {
   authenticationError.value = false;
   searchErrorMessage.value = null;
   searchErrored.value = false;
-  store.commit("clear_all");
+  store.clearAll();
 }
 </script>
 

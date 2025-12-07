@@ -36,7 +36,7 @@
         <div class="d-flex justify-space-between align-center">
           <span class="text-body-2 text-grey-darken-1">Filtered</span>
           <v-chip size="small" color="secondary" variant="flat">
-            {{ $store.state.num_filtered }}
+            {{ store.num_filtered }}
           </v-chip>
         </div>
         <v-btn
@@ -61,8 +61,8 @@
             Tags
             <template #actions="{ expanded }">
               <v-badge
-                v-if="$store.state.tags.length > 0"
-                :content="$store.state.tags.length"
+                v-if="store.tags.length > 0"
+                :content="store.tags.length"
                 color="primary"
                 inline
                 class="mr-2"
@@ -80,7 +80,7 @@
               >
                 <template #prepend>
                   <v-checkbox-btn
-                    :model-value="$store.state.tags.includes(tag)"
+                    :model-value="store.tags.includes(tag)"
                     density="compact"
                     hide-details
                     @click.stop="toggleTag(tag)"
@@ -104,8 +104,8 @@
             Locations
             <template #actions="{ expanded }">
               <v-badge
-                v-if="$store.state.base_uris.length > 0"
-                :content="$store.state.base_uris.length"
+                v-if="store.base_uris.length > 0"
+                :content="store.base_uris.length"
                 color="primary"
                 inline
                 class="mr-2"
@@ -123,7 +123,7 @@
               >
                 <template #prepend>
                   <v-checkbox-btn
-                    :model-value="$store.state.base_uris.includes(base_uri)"
+                    :model-value="store.base_uris.includes(base_uri)"
                     density="compact"
                     hide-details
                     @click.stop="toggleBaseUri(base_uri)"
@@ -149,8 +149,8 @@
             Creators
             <template #actions="{ expanded }">
               <v-badge
-                v-if="$store.state.creator_usernames.length > 0"
-                :content="$store.state.creator_usernames.length"
+                v-if="store.creator_usernames.length > 0"
+                :content="store.creator_usernames.length"
                 color="primary"
                 inline
                 class="mr-2"
@@ -168,7 +168,7 @@
               >
                 <template #prepend>
                   <v-checkbox-btn
-                    :model-value="$store.state.creator_usernames.includes(creator)"
+                    :model-value="store.creator_usernames.includes(creator)"
                     density="compact"
                     hide-details
                     @click.stop="toggleCreator(creator)"
@@ -239,7 +239,7 @@ function load_summary(): void {
 }
 
 function searchDatasets(): void {
-  store.state.current_pageNumber = 1;
+  store.current_pageNumber = 1;
   emit("start-search");
 }
 
@@ -247,7 +247,7 @@ function clearFilters(): void {
   selectedTags.value = [];
   selectedBaseUris.value = [];
   selectedCreators.value = [];
-  store.commit("clear_all");
+  store.clearAll();
   emit("start-search");
 }
 
@@ -257,7 +257,7 @@ function toggleTag(tag: string): void {
   } else {
     selectedTags.value.push(tag);
   }
-  store.commit("update_tags", selectedTags.value);
+  store.updateTags(selectedTags.value);
   searchDatasets();
 }
 
@@ -267,7 +267,7 @@ function toggleBaseUri(base_uri: string): void {
   } else {
     selectedBaseUris.value.push(base_uri);
   }
-  store.commit("update_base_uris", selectedBaseUris.value);
+  store.updateBaseUris(selectedBaseUris.value);
   searchDatasets();
 }
 
@@ -277,7 +277,7 @@ function toggleCreator(creator: string): void {
   } else {
     selectedCreators.value.push(creator);
   }
-  store.commit("update_creator_usernames", selectedCreators.value);
+  store.updateCreatorUsernames(selectedCreators.value);
   searchDatasets();
 }
 
@@ -285,7 +285,7 @@ onMounted(() => {
   if (props.token) {
     const extractedUsername = getUsernameFromJwt(props.token);
     username.value = extractedUsername;
-    store.commit("updateUsername", extractedUsername);
+    store.updateUsername(extractedUsername);
   }
   load_summary();
 });

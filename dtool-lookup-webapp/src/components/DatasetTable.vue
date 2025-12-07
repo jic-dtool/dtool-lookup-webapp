@@ -67,12 +67,12 @@ const emit = defineEmits<{
 const store = useStore();
 
 const selected = computed(() => {
-  return store.state.current_dataset_index;
+  return store.current_dataset_index;
 });
 
 function updateSelectedDataset(index: number): void {
-  store.commit("update_current_dataset_index", index);
-  store.commit("update_current_dataset", props.datasetHits[index]);
+  store.updateCurrentDatasetIndex(index);
+  store.updateCurrentDataset(props.datasetHits[index]);
   emit("update-dataset");
 }
 </script>

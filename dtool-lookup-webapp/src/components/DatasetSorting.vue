@@ -63,17 +63,17 @@ const store = useStore();
 
 // Initialize selectedSortOption and sortDirection based on store state
 const getInitialSortOption = (): string => {
-  const option = store.state.selected_sort_option;
+  const option = store.selected_sort_option;
   return option.startsWith("-") ? option.substring(1) : option;
 };
 
 const getInitialSortDirection = (): "asc" | "desc" => {
-  return store.state.selected_sort_option.startsWith("-") ? "desc" : "asc";
+  return store.selected_sort_option.startsWith("-") ? "desc" : "asc";
 };
 
 const selectedSortOption = ref(getInitialSortOption());
 const sortDirection = ref<"asc" | "desc">(getInitialSortDirection());
-const selectedContentsPerPage = ref(store.state.update_current_Per_Page);
+const selectedContentsPerPage = ref(store.update_current_Per_Page);
 
 const sortOptions = [
   "frozen_at",
@@ -111,19 +111,19 @@ const selectedSortValue = computed(() => {
 
 // Watch for changes to selectedSortOption
 watch(selectedSortOption, () => {
-  store.commit("update_selected_sort_option", selectedSortValue.value);
+  store.updateSelectedSortOption(selectedSortValue.value);
   emit("start-search");
 });
 
 // Toggle the sortDirection and update the store and emit an event
 function toggleSortDirection(): void {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
-  store.commit("update_selected_sort_option", selectedSortValue.value);
+  store.updateSelectedSortOption(selectedSortValue.value);
   emit("start-search");
 }
 
 function updatePerPage(perpage: number): void {
-  store.commit("update_current_Per_Page", perpage);
+  store.updateCurrentPerPage(perpage);
   emit("start-search");
 }
 </script>

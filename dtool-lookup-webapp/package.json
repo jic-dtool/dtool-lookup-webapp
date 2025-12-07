@@ -21,7 +21,7 @@
     "vue": "^3.5.13",
     "vue-axios": "^3.5.2",
     "vuetify": "^3.7.4",
-    "vuex": "^4.1.0"
+    "pinia": "^2.1.7"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",

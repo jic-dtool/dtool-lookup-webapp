@@ -63,9 +63,9 @@ const isJsonEnabled = computed(() => props.mongoplugin !== "N/A");
 
 function startSearch(): void {
   if (isJsonEnabled.value && isJson.value) {
-    store.commit("update_mongo_text", textQuery.value);
+    store.updateMongoText(textQuery.value);
   } else {
-    store.commit("update_free_text", textQuery.value);
+    store.updateFreeText(textQuery.value);
   }
   emit("start-search");
 }

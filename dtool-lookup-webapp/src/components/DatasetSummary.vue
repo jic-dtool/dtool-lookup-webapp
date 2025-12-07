@@ -165,12 +165,12 @@ const store = useStore();
 const tag_name = ref<string | null>(null);
 
 const dataset = computed<Dataset | null>(() => {
-  return store.state.current_dataset;
+  return store.current_dataset;
 });
 
 const hasSignedUrlPlugin = computed(() => {
   // Check if dserver-signed-url-plugin is installed
-  const versions = store.state.server_versions;
+  const versions = store.server_versions;
   return !!(versions && versions.dserver_signed_url_plugin);
 });
 
@@ -179,7 +179,7 @@ const displayUri = computed(() => {
   if (!dataset.value) return "";
   if (hasSignedUrlPlugin.value) {
     // Construct dserver:// URI using the server URL and dataset UUID
-    const lookupUrl = store.state.lookup_url;
+    const lookupUrl = store.lookup_url;
     if (lookupUrl) {
       // Extract hostname from the lookup URL
       try {
@@ -195,22 +195,22 @@ const displayUri = computed(() => {
 });
 
 const numItems = computed(() => {
-  return store.state.current_dataset_manifest &&
-    store.state.current_dataset_manifest.items
-    ? Object.values(store.state.current_dataset_manifest.items).length
+  return store.current_dataset_manifest &&
+    store.current_dataset_manifest.items
+    ? Object.values(store.current_dataset_manifest.items).length
     : 0;
 });
 
 const total_size_in_bytes = computed(() => {
   if (
-    !store.state.current_dataset_manifest ||
-    !store.state.current_dataset_manifest.items
+    !store.current_dataset_manifest ||
+    !store.current_dataset_manifest.items
   ) {
     return 0;
   }
   let total = 0;
   Object.values(
-    store.state.current_dataset_manifest.items as Record<
+    store.current_dataset_manifest.items as Record<
       string,
       ManifestItem
     >
@@ -232,10 +232,10 @@ const tag_command = computed(() => {
 
 const currentTags = computed<string[]>(() => {
   if (
-    store.state.current_dataset_tags &&
-    store.state.current_dataset_tags.tags
+    store.current_dataset_tags &&
+    store.current_dataset_tags.tags
   ) {
-    return store.state.current_dataset_tags.tags;
+    return store.current_dataset_tags.tags;
   }
   return [];
 });

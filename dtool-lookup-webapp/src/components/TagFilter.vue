@@ -45,7 +45,7 @@ const emit = defineEmits<{
 const store = useStore();
 const selectedTags = ref<string[]>([]);
 
-const canonicalSelectedTags = computed(() => store.state.tags);
+const canonicalSelectedTags = computed(() => store.tags);
 
 function toggleSelect(tag: string): void {
   if (selectedTags.value.includes(tag)) {
@@ -55,7 +55,7 @@ function toggleSelect(tag: string): void {
     console.log("Set tag");
     selectedTags.value.push(tag);
   }
-  store.commit("update_tags", selectedTags.value);
+  store.updateTags(selectedTags.value);
   emit("start-search");
 }
 </script>

@@ -45,7 +45,7 @@ const emit = defineEmits<{
 const store = useStore();
 const selectedCreators = ref<string[]>([]);
 
-const canonicalSelectedCreators = computed(() => store.state.creator_usernames);
+const canonicalSelectedCreators = computed(() => store.creator_usernames);
 
 function toggleSelect(creator: string): void {
   if (selectedCreators.value.includes(creator)) {
@@ -55,7 +55,7 @@ function toggleSelect(creator: string): void {
     console.log("Set creator username");
     selectedCreators.value.push(creator);
   }
-  store.commit("update_creator_usernames", selectedCreators.value);
+  store.updateCreatorUsernames(selectedCreators.value);
   emit("start-search");
 }
 </script>

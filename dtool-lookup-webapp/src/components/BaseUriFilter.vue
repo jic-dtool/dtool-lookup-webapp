@@ -45,7 +45,7 @@ const emit = defineEmits<{
 const store = useStore();
 const selectedBaseURIs = ref<string[]>([]);
 
-const canonicalSelectedBaseURIs = computed(() => store.state.base_uris);
+const canonicalSelectedBaseURIs = computed(() => store.base_uris);
 
 function toggleSelect(base_uri: string): void {
   if (selectedBaseURIs.value.includes(base_uri)) {
@@ -55,7 +55,7 @@ function toggleSelect(base_uri: string): void {
     console.log("Set base URI");
     selectedBaseURIs.value.push(base_uri);
   }
-  store.commit("update_base_uris", selectedBaseURIs.value);
+  store.updateBaseUris(selectedBaseURIs.value);
   emit("start-search");
 }
 </script>

@@ -43,10 +43,10 @@ const emit = defineEmits<{
 
 const store = useStore();
 
-const numFiltered = computed(() => store.state.num_filtered);
+const numFiltered = computed(() => store.num_filtered);
 
 function clearFilters(): void {
-  store.commit("clear_all");
+  store.clearAll();
   emit("start-search");
 }
 </script>

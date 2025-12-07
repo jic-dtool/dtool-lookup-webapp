@@ -1,6 +1,6 @@
 import { createApp } from "vue";
 import App from "./App.vue";
-import { store, key } from "./store";
+import { createPinia } from "pinia";
 
 import axios from "axios";
 import VueAxios from "vue-axios";
@@ -50,9 +50,10 @@ const vuetify = createVuetify({
   },
 });
 
+const pinia = createPinia();
 const app = createApp(App);
 
 app.use(vuetify);
-app.use(store, key);
+app.use(pinia);
 app.use(VueAxios, axios);
 app.mount("#app");
