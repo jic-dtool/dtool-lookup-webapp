@@ -5,7 +5,7 @@
     </v-card-title>
     <v-list density="compact" class="py-0" max-height="200" style="overflow-y: auto;">
       <v-list-item
-        v-for="(creator, index) in summary_info['creator_usernames']"
+        v-for="(creator, index) in summary_info.creator_usernames"
         :key="index"
         @click="toggleSelect(creator)"
         class="cursor-pointer"
@@ -21,7 +21,7 @@
         <v-list-item-title class="text-body-2">{{ creator }}</v-list-item-title>
         <template #append>
           <v-chip size="x-small" color="secondary" variant="flat">
-            {{ summary_info["datasets_per_creator"][creator] }}
+            {{ summary_info.datasets_per_creator[creator] }}
           </v-chip>
         </template>
       </v-list-item>
@@ -29,47 +29,33 @@
   </v-card>
 </template>
 
-<script lang="ts">
-import { defineComponent, type PropType } from "vue";
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useStore } from "@/store";
 import type { SummaryInfo } from "@/types";
 
-export default defineComponent({
-  name: "CreatorUsernameFilter",
-  props: {
-    summary_info: {
-      type: Object as PropType<SummaryInfo>,
-      required: true,
-    },
-  },
-  emits: ["start-search"],
-  data() {
-    return {
-      selectedCreators: [] as string[],
-    };
-  },
-  computed: {
-    canonicalSelectedCreators(): string[] {
-      return this.$store.state.creator_usernames;
-    },
-  },
-  methods: {
-    toggleSelect(creator: string): void {
-      if (this.selectedCreators.includes(creator)) {
-        console.log("Unset creator username");
-        // Remove item from array.
-        this.selectedCreators.splice(
-          this.selectedCreators.indexOf(creator),
-          1
-        );
-        this.$store.commit("update_creator_usernames", this.selectedCreators);
-        this.$emit("start-search");
-      } else {
-        console.log("Set base URI");
-        this.selectedCreators.push(creator);
-        this.$store.commit("update_creator_usernames", this.selectedCreators);
-        this.$emit("start-search");
-      }
-    },
-  },
-});
+const props = defineProps<{
+  summary_info: SummaryInfo;
+}>();
+
+const emit = defineEmits<{
+  (e: "start-search"): void;
+}>();
+
+const store = useStore();
+const selectedCreators = ref<string[]>([]);
+
+const canonicalSelectedCreators = computed(() => store.state.creator_usernames);
+
+function toggleSelect(creator: string): void {
+  if (selectedCreators.value.includes(creator)) {
+    console.log("Unset creator username");
+    selectedCreators.value.splice(selectedCreators.value.indexOf(creator), 1);
+  } else {
+    console.log("Set creator username");
+    selectedCreators.value.push(creator);
+  }
+  store.commit("update_creator_usernames", selectedCreators.value);
+  emit("start-search");
+}
 </script>

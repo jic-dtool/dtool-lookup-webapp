@@ -66,54 +66,48 @@
   </v-dialog>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
+import { ref } from "vue";
 
-export default defineComponent({
-  name: "TemplateDownloader",
-  emits: ["logoutAction"],
-  data() {
-    return {
-      infoDialog: false,
-      downloadReadmeYaml:
-        process.env.VUE_APP_OFFER_DTOOL_README_YAML_DOWNLOAD === "true",
-      downloadReadmeJson:
-        process.env.VUE_APP_OFFER_DTOOL_JSON_DOWNLOAD === "true",
-      showInfoMenuEntry: process.env.VUE_APP_SHOW_INFO_MENU_ENTRY === "true",
-      infoContent: process.env.VUE_APP_INFO_CONTENT || "Info Content",
-    };
-  },
-  methods: {
-    logout(): void {
-      this.$emit("logoutAction");
-    },
-    async downloadFile(fileName: string): Promise<void> {
-      const filePath =
-        fileName === "dtool.json"
-          ? process.env.VUE_APP_DTOOL_JSON_PATH ||
-            `data/templates/${fileName}`
-          : process.env.VUE_APP_DTOOL_README_YAML_PATH ||
-            `data/templates/${fileName}`;
+const emit = defineEmits<{
+  (e: "logoutAction"): void;
+}>();
 
-      try {
-        const response = await fetch(filePath);
-        if (!response.ok) throw new Error("Network response was not ok");
+const infoDialog = ref(false);
+const downloadReadmeYaml = process.env.VUE_APP_OFFER_DTOOL_README_YAML_DOWNLOAD === "true";
+const downloadReadmeJson = process.env.VUE_APP_OFFER_DTOOL_JSON_DOWNLOAD === "true";
+const showInfoMenuEntry = process.env.VUE_APP_SHOW_INFO_MENU_ENTRY === "true";
+const infoContent = process.env.VUE_APP_INFO_CONTENT || "Info Content";
 
-        const text = await response.text();
-        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-        const downloadUrl = window.URL.createObjectURL(blob);
+function logout(): void {
+  emit("logoutAction");
+}
 
-        const a = document.createElement("a");
-        a.href = downloadUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(downloadUrl);
-        document.body.removeChild(a);
-      } catch (error) {
-        console.error("Failed to download file:", error);
-      }
-    },
-  },
-});
+async function downloadFile(fileName: string): Promise<void> {
+  const filePath =
+    fileName === "dtool.json"
+      ? process.env.VUE_APP_DTOOL_JSON_PATH ||
+        `data/templates/${fileName}`
+      : process.env.VUE_APP_DTOOL_README_YAML_PATH ||
+        `data/templates/${fileName}`;
+
+  try {
+    const response = await fetch(filePath);
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const text = await response.text();
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const downloadUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error("Failed to download file:", error);
+  }
+}
 </script>

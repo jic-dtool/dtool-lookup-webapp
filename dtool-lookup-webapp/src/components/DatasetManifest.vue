@@ -86,104 +86,102 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
-import { filesize } from "filesize";
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { filesize as filesizeLib } from "filesize";
+import { useStore } from "@/store";
 import type { Manifest } from "@/types";
 
 interface FileIconMap {
   [key: string]: string;
 }
 
-export default defineComponent({
-  name: "DatasetManifest",
-  data() {
-    return {
-      fetch_identifier: null as string | null,
-    };
-  },
-  computed: {
-    manifest(): Manifest | null {
-      return this.$store.state.current_dataset_manifest;
-    },
-    numItems(): number {
-      return this.manifest && this.manifest.items
-        ? Object.values(this.manifest.items).length
-        : 0;
-    },
-    fetch_command(): string {
-      if (!this.$store.state.current_dataset) return "";
-      return (
-        "dtool item fetch " +
-        this.$store.state.current_dataset.uri +
-        " " +
-        this.fetch_identifier
-      );
-    },
-  },
-  methods: {
-    filesize(bytes: number): string {
-      return filesize(bytes) as string;
-    },
-    update_fetch_identifier(identifier: string): void {
-      this.fetch_identifier = identifier;
-    },
-    getFileIcon(filename: string): string {
-      const ext = filename.split(".").pop()?.toLowerCase() || "";
-      const iconMap: FileIconMap = {
-        // Images
-        png: "mdi-file-image",
-        jpg: "mdi-file-image",
-        jpeg: "mdi-file-image",
-        gif: "mdi-file-image",
-        svg: "mdi-file-image",
-        webp: "mdi-file-image",
-        // Documents
-        pdf: "mdi-file-pdf-box",
-        doc: "mdi-file-word",
-        docx: "mdi-file-word",
-        xls: "mdi-file-excel",
-        xlsx: "mdi-file-excel",
-        ppt: "mdi-file-powerpoint",
-        pptx: "mdi-file-powerpoint",
-        // Code
-        py: "mdi-language-python",
-        js: "mdi-language-javascript",
-        ts: "mdi-language-typescript",
-        html: "mdi-language-html5",
-        css: "mdi-language-css3",
-        json: "mdi-code-json",
-        xml: "mdi-file-xml-box",
-        yaml: "mdi-file-code",
-        yml: "mdi-file-code",
-        // Data
-        csv: "mdi-file-delimited",
-        txt: "mdi-file-document",
-        md: "mdi-language-markdown",
-        // Archives
-        zip: "mdi-folder-zip",
-        tar: "mdi-folder-zip",
-        gz: "mdi-folder-zip",
-        rar: "mdi-folder-zip",
-        "7z": "mdi-folder-zip",
-        // Scientific
-        hdf5: "mdi-database",
-        h5: "mdi-database",
-        nc: "mdi-database",
-        npy: "mdi-database",
-        npz: "mdi-database",
-      };
-      return iconMap[ext] || "mdi-file";
-    },
-    async copyToClipboard(text: string): Promise<void> {
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch (err) {
-        console.error("Failed to copy:", err);
-      }
-    },
-  },
+const store = useStore();
+const fetch_identifier = ref<string | null>(null);
+
+const manifest = computed<Manifest | null>(() => {
+  return store.state.current_dataset_manifest;
 });
+
+const numItems = computed(() => {
+  return manifest.value && manifest.value.items
+    ? Object.values(manifest.value.items).length
+    : 0;
+});
+
+const fetch_command = computed(() => {
+  if (!store.state.current_dataset) return "";
+  return (
+    "dtool item fetch " +
+    store.state.current_dataset.uri +
+    " " +
+    fetch_identifier.value
+  );
+});
+
+function filesize(bytes: number): string {
+  return filesizeLib(bytes) as string;
+}
+
+function update_fetch_identifier(identifier: string): void {
+  fetch_identifier.value = identifier;
+}
+
+function getFileIcon(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  const iconMap: FileIconMap = {
+    // Images
+    png: "mdi-file-image",
+    jpg: "mdi-file-image",
+    jpeg: "mdi-file-image",
+    gif: "mdi-file-image",
+    svg: "mdi-file-image",
+    webp: "mdi-file-image",
+    // Documents
+    pdf: "mdi-file-pdf-box",
+    doc: "mdi-file-word",
+    docx: "mdi-file-word",
+    xls: "mdi-file-excel",
+    xlsx: "mdi-file-excel",
+    ppt: "mdi-file-powerpoint",
+    pptx: "mdi-file-powerpoint",
+    // Code
+    py: "mdi-language-python",
+    js: "mdi-language-javascript",
+    ts: "mdi-language-typescript",
+    html: "mdi-language-html5",
+    css: "mdi-language-css3",
+    json: "mdi-code-json",
+    xml: "mdi-file-xml-box",
+    yaml: "mdi-file-code",
+    yml: "mdi-file-code",
+    // Data
+    csv: "mdi-file-delimited",
+    txt: "mdi-file-document",
+    md: "mdi-language-markdown",
+    // Archives
+    zip: "mdi-folder-zip",
+    tar: "mdi-folder-zip",
+    gz: "mdi-folder-zip",
+    rar: "mdi-folder-zip",
+    "7z": "mdi-folder-zip",
+    // Scientific
+    hdf5: "mdi-database",
+    h5: "mdi-database",
+    nc: "mdi-database",
+    npy: "mdi-database",
+    npz: "mdi-database",
+  };
+  return iconMap[ext] || "mdi-file";
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    console.error("Failed to copy:", err);
+  }
+}
 </script>
 
 <style scoped>

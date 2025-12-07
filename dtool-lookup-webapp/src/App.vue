@@ -215,8 +215,8 @@
   </v-app>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
+import { ref, computed, getCurrentInstance } from "vue";
 import type { AxiosError, AxiosResponse } from "axios";
 import SignIn from "./components/SignIn.vue";
 import SummaryInfo from "./components/SummaryInfo.vue";
@@ -228,6 +228,7 @@ import Annotations from "./components/DatasetAnnotations.vue";
 import DatasetSummary from "./components/DatasetSummary.vue";
 import DatasetSorting from "./components/DatasetSorting.vue";
 import TemplateDownloader from "./components/TemplateDownloader.vue";
+import { useStore } from "./store";
 import type {
   Dataset,
   ConfigInfo,
@@ -236,439 +237,400 @@ import type {
   ResponseHeaders,
 } from "./types";
 
-interface AppData {
-  drawer: boolean;
-  datasetHits: Dataset[];
-  searchLoading: boolean;
-  searchErrored: boolean;
-  searchErrorMessage: string | null;
-  authenticationError: boolean;
-  manifestLoading: boolean;
-  manifestErrored: boolean;
-  readmeLoading: boolean;
-  readmeErrored: boolean;
-  tagsLoading: boolean;
-  tagsErrored: boolean;
-  annotationsLoading: boolean;
-  annotationsErrored: boolean;
-  lookup_url: string;
-  token: string | null;
-  perPage: number;
-  responseheaders: ResponseHeaders;
-  getinfo: ConfigInfo;
-  snackbar: boolean;
-  snackbarText: string;
-  snackbarColor: string;
-}
+const store = useStore();
+const instance = getCurrentInstance();
+const axios = instance?.appContext.config.globalProperties.$http;
 
-export default defineComponent({
-  name: "App",
-  components: {
-    SignIn,
-    SummaryInfo,
-    TextSearch,
-    DatasetTable,
-    Manifest,
-    Readme,
-    Annotations,
-    DatasetSummary,
-    DatasetSorting,
-    TemplateDownloader,
-  },
-  data(): AppData {
+// Reactive state
+const drawer = ref(false);
+const datasetHits = ref<Dataset[]>([]);
+const searchLoading = ref(true);
+const searchErrored = ref(false);
+const searchErrorMessage = ref<string | null>(null);
+const authenticationError = ref(false);
+const manifestLoading = ref(false);
+const manifestErrored = ref(false);
+const readmeLoading = ref(false);
+const readmeErrored = ref(false);
+const tagsLoading = ref(false);
+const tagsErrored = ref(false);
+const annotationsLoading = ref(false);
+const annotationsErrored = ref(false);
+const lookup_url = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "";
+const token = ref<string | null>(null);
+const responseheaders = ref<ResponseHeaders>({});
+const getinfo = ref<ConfigInfo>({ versions: {} });
+const snackbar = ref(false);
+const snackbarText = ref("");
+const snackbarColor = ref("success");
+
+// Computed properties
+const datasetLoaded = computed<Dataset | null>(() => {
+  return store.state.current_dataset;
+});
+
+const current_dataset = computed<Dataset | undefined>(() => {
+  return datasetHits.value[store.state.current_dataset_index];
+});
+
+const searchURL = computed(() => {
+  return (
+    lookup_url +
+    "/uris?page=" +
+    store.state.current_pageNumber +
+    "&page_size=" +
+    store.state.update_current_Per_Page +
+    "&sort=" +
+    store.state.selected_sort_option
+  );
+});
+
+const mongoSearchURL = computed(() => {
+  return lookup_url + "/mongo/query";
+});
+
+const manifestURL = computed(() => {
+  return lookup_url + "/manifests";
+});
+
+const configInfoURL = computed(() => {
+  return lookup_url + "/config/versions";
+});
+
+const readmeURL = computed(() => {
+  return lookup_url + "/readmes";
+});
+
+const annotationsURL = computed(() => {
+  return lookup_url + "/annotations";
+});
+
+const tagsURL = computed(() => {
+  return lookup_url + "/tags";
+});
+
+const auth_str = computed(() => {
+  return "Bearer ".concat(token.value || "");
+});
+
+const searchQuery = computed<SearchQuery>(() => {
+  const query: SearchQuery = {};
+
+  if (store.state.mongo_text) {
+    query.query = JSON.parse(store.state.mongo_text);
+  } else {
+    if (store.state.free_text) {
+      query.free_text = store.state.free_text;
+    }
+
+    if (store.state.creator_usernames.length > 0) {
+      query.creator_usernames = store.state.creator_usernames;
+    }
+    if (store.state.base_uris.length > 0) {
+      query.base_uris = store.state.base_uris;
+    }
+    if (store.state.tags.length > 0) {
+      query.tags = store.state.tags;
+    }
+  }
+  return query;
+});
+
+const uriQuery = computed<{ uri: string | null }>(() => {
+  if (datasetHits.value.length > 0) {
     return {
-      drawer: false,
-      datasetHits: [],
-      searchLoading: true,
-      searchErrored: false,
-      searchErrorMessage: null,
-      authenticationError: false,
-      manifestLoading: false,
-      manifestErrored: false,
-      readmeLoading: false,
-      readmeErrored: false,
-      tagsLoading: false,
-      tagsErrored: false,
-      annotationsLoading: false,
-      annotationsErrored: false,
-      lookup_url: process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "",
-      token: null,
-      perPage: this.$store.state.update_current_Per_Page,
-      responseheaders: {},
-      getinfo: {
-        versions: {},
-      },
-      snackbar: false,
-      snackbarText: "",
-      snackbarColor: "success",
+      uri: datasetHits.value[store.state.current_dataset_index]?.uri ?? null,
     };
+  } else {
+    return { uri: null };
+  }
+});
+
+const pagination = computed<PaginationInfo>(() => {
+  const paginationHeader = responseheaders.value["x-pagination"];
+  return paginationHeader
+    ? JSON.parse(paginationHeader)
+    : { total: 0, page: 1, per_page: 10, pages: 1 };
+});
+
+const totalPages = computed(() => {
+  if (pagination.value.total && store.state.update_current_Per_Page) {
+    return Math.ceil(
+      pagination.value.total / store.state.update_current_Per_Page
+    );
+  }
+  return 1;
+});
+
+const shouldShowPagination = computed(() => {
+  return pagination.value.total > store.state.update_current_Per_Page;
+});
+
+const safeMongoPlugin = computed(() => {
+  return getinfo.value.versions.dserver_direct_mongo_plugin || "N/A";
+});
+
+const currentPage = computed({
+  get(): number {
+    return store.state.current_pageNumber;
   },
-  computed: {
-    datasetLoaded(): Dataset | null {
-      return this.$store.state.current_dataset;
-    },
-    current_dataset(): Dataset | undefined {
-      return this.datasetHits[this.$store.state.current_dataset_index];
-    },
-    searchURL(): string {
-      return (
-        this.lookup_url +
-        "/uris?page=" +
-        this.$store.state.current_pageNumber +
-        "&page_size=" +
-        this.$store.state.update_current_Per_Page +
-        "&sort=" +
-        this.$store.state.selected_sort_option
-      );
-    },
-    mongoSearchURL(): string {
-      return this.lookup_url + "/mongo/query";
-    },
-    manifestURL(): string {
-      return this.lookup_url + "/manifests";
-    },
-    configInfoURL(): string {
-      return this.lookup_url + "/config/versions";
-    },
-    readmeURL(): string {
-      return this.lookup_url + "/readmes";
-    },
-    annotationsURL(): string {
-      return this.lookup_url + "/annotations";
-    },
-    tagsURL(): string {
-      return this.lookup_url + "/tags";
-    },
-    auth_str(): string {
-      return "Bearer ".concat(this.token || "");
-    },
-    searchQuery(): SearchQuery {
-      const query: SearchQuery = {};
-
-      if (this.$store.state.mongo_text) {
-        query.query = JSON.parse(this.$store.state.mongo_text);
-      } else {
-        if (this.$store.state.free_text) {
-          query.free_text = this.$store.state.free_text;
-        }
-
-        if (this.$store.state.creator_usernames.length > 0) {
-          query.creator_usernames = this.$store.state.creator_usernames;
-        }
-        if (this.$store.state.base_uris.length > 0) {
-          query.base_uris = this.$store.state.base_uris;
-        }
-        if (this.$store.state.tags.length > 0) {
-          query.tags = this.$store.state.tags;
-        }
-      }
-      return query;
-    },
-    uriQuery(): { uri: string | null } {
-      if (this.datasetHits.length > 0) {
-        return {
-          uri: this.datasetHits[this.$store.state.current_dataset_index]?.uri ?? null,
-        };
-      } else {
-        return { uri: null };
-      }
-    },
-    pagination(): PaginationInfo {
-      const paginationHeader = this.responseheaders["x-pagination"];
-      return paginationHeader
-        ? JSON.parse(paginationHeader)
-        : { total: 0, page: 1, per_page: 10, pages: 1 };
-    },
-    totalPageContents(): number {
-      return this.pagination.total;
-    },
-    totalPages(): number {
-      if (this.pagination.total && this.$store.state.update_current_Per_Page) {
-        return Math.ceil(
-          this.pagination.total / this.$store.state.update_current_Per_Page
-        );
-      }
-      return 1;
-    },
-    shouldShowPagination(): boolean {
-      return this.pagination.total > this.$store.state.update_current_Per_Page;
-    },
-    safeMongoPlugin(): string {
-      return this.getinfo.versions.dserver_direct_mongo_plugin || "N/A";
-    },
-    currentPage: {
-      get(): number {
-        return this.$store.state.current_pageNumber;
-      },
-      set(value: number) {
-        this.$store.state.current_pageNumber = value;
-      },
-    },
-    perPageValue(): number {
-      return this.$store.state.update_current_Per_Page;
-    },
-  },
-  methods: {
-    showSnackbar(text: string, color: string = "success"): void {
-      this.snackbarText = text;
-      this.snackbarColor = color;
-      this.snackbar = true;
-    },
-    onPageChange(): void {
-      this.searchDatasets();
-    },
-    setTokenAndSearch(token: string): void {
-      this.token = token;
-      this.searchDatasets();
-    },
-    searchDatasets(): void {
-      this.getconfiginfo();
-      console.log(this.getinfo);
-
-      console.log("Running search");
-      console.log(this.searchQuery);
-      this.$store.commit("update_current_dataset_index", 0);
-      this.$store.commit("update_current_dataset", null);
-      this.$store.commit("update_current_dataset_manifest", null);
-      this.$store.commit("update_current_dataset_readme", null);
-      this.$store.commit("update_current_dataset_tags", null);
-      this.updateDataset();
-      this.searchLoading = true;
-      this.searchErrored = false;
-
-      let searchURL = this.searchURL;
-      if (this.$store.state.mongo_text) {
-        searchURL = this.mongoSearchURL;
-      }
-
-      this.$http
-        .post(searchURL, this.searchQuery, {
-          headers: {
-            Authorization: this.auth_str,
-            "Content-Type": "application/json",
-          },
-        })
-        .then((response: AxiosResponse<Dataset[]>) => {
-          this.datasetHits = response.data;
-          this.responseheaders = response.headers as ResponseHeaders;
-          this.$store.commit("update_current_dataset", this.current_dataset);
-          this.$store.commit("update_num_filtered", this.pagination.total);
-          this.updateDataset();
-        })
-        .catch((error: AxiosError) => {
-          console.log(error);
-          if (error.response && error.response.status === 401) {
-            console.log(
-              "401 Unauthorized - User not authenticated or not registered"
-            );
-            this.authenticationError = true;
-            this.searchErrorMessage =
-              "Authentication failed. Your user may not be registered on the server. Please contact an administrator.";
-            this.searchErrored = true;
-          } else if (error.response && error.response.status === 404) {
-            console.log("404 Not Found - Resetting pageNumber and retrying");
-            this.$store.state.current_pageNumber = 1;
-            this.searchDatasets(); // Retry the search with pageNumber reset to 1
-          } else {
-            console.log(error.response);
-            this.searchErrorMessage =
-              "An error occurred while loading datasets.";
-            this.searchErrored = true;
-          }
-        })
-        .finally(() => {
-          this.searchLoading = false;
-        });
-    },
-
-    updateDataset(): void {
-      this.updateManifest();
-      this.updateReadme();
-      this.updateAnnotations();
-      this.updateTags();
-    },
-    updateManifest(): void {
-      console.log("Loading manifest");
-      this.manifestLoading = true;
-      this.manifestErrored = false;
-
-      const uri = this.uriQuery.uri;
-      if (!uri) {
-        // Check if uri is not null
-        console.log("No URI available for manifest.");
-        this.manifestErrored = true;
-        this.manifestLoading = false;
-        return; // Exit the method if no URI
-      }
-
-      const fullManifestURL = `${this.manifestURL}/${encodeURIComponent(uri)}`;
-
-      this.$http
-        .get(fullManifestURL, {
-          headers: {
-            Authorization: this.auth_str,
-            Accept: "application/json",
-          },
-        })
-        .then((response: AxiosResponse) => {
-          this.$store.commit("update_current_dataset_manifest", response.data);
-        })
-        .catch((error: AxiosError) => {
-          console.log(error);
-          this.manifestErrored = true;
-        })
-        .finally(() => {
-          this.manifestLoading = false;
-        });
-    },
-
-    updateReadme(): void {
-      console.log("Loading readme");
-      this.readmeLoading = true;
-      this.readmeErrored = false;
-
-      const uri = this.uriQuery.uri;
-      if (!uri) {
-        // Check if uri is not null
-        console.log("No URI available for readme.");
-        this.readmeErrored = true;
-        this.readmeLoading = false;
-        return; // Exit the method if no URI
-      }
-
-      const fullReadmeURL = `${this.readmeURL}/${encodeURIComponent(uri)}`;
-
-      this.$http
-        .get(fullReadmeURL, {
-          headers: {
-            Authorization: this.auth_str,
-            Accept: "application/json",
-          },
-        })
-        .then((response: AxiosResponse) => {
-          this.$store.commit("update_current_dataset_readme", response.data);
-        })
-        .catch((error: AxiosError) => {
-          console.log(error);
-          this.readmeErrored = true;
-        })
-        .finally(() => {
-          this.readmeLoading = false;
-        });
-    },
-
-    updateAnnotations(): void {
-      console.log("Loading annotations");
-      this.annotationsLoading = true;
-      this.annotationsErrored = false;
-
-      const uri = this.uriQuery.uri;
-      if (!uri) {
-        // Check if uri is not null
-        console.log("No URI available for annotations.");
-        this.annotationsErrored = true;
-        this.annotationsLoading = false;
-        return; // Exit the method if no URI
-      }
-
-      const fullAnnotationsURL = `${this.annotationsURL}/${encodeURIComponent(
-        uri
-      )}`;
-
-      this.$http
-        .get(fullAnnotationsURL, {
-          headers: {
-            Authorization: this.auth_str,
-            Accept: "application/json",
-          },
-        })
-        .then((response: AxiosResponse) => {
-          this.$store.commit(
-            "update_current_dataset_annotations",
-            response.data
-          );
-        })
-        .catch((error: AxiosError) => {
-          console.log(error);
-          this.annotationsErrored = true;
-        })
-        .finally(() => {
-          this.annotationsLoading = false;
-        });
-    },
-
-    updateTags(): void {
-      console.log("Loading tags");
-      this.tagsLoading = true;
-      this.tagsErrored = false;
-
-      const uri = this.uriQuery.uri;
-      if (!uri) {
-        console.log("No URI available for tags.");
-        this.tagsErrored = true;
-        this.tagsLoading = false;
-        return; // Exit the method if no URI
-      }
-
-      const fullTagsURL = `${this.tagsURL}/${encodeURIComponent(uri)}`;
-
-      this.$http
-        .get(fullTagsURL, {
-          headers: {
-            Authorization: this.auth_str,
-            Accept: "application/json",
-          },
-        })
-        .then((response: AxiosResponse) => {
-          this.$store.commit("update_current_dataset_tags", response.data);
-        })
-        .catch((error: AxiosError) => {
-          console.error(error);
-          this.tagsErrored = true;
-        })
-        .finally(() => {
-          this.tagsLoading = false;
-        });
-    },
-
-    getconfiginfo(): void {
-      console.log("Loading ConfigInfo");
-
-      // Store the lookup URL in the store for components to use
-      this.$store.commit("update_lookup_url", this.lookup_url);
-
-      this.$http
-        .get(this.configInfoURL, {
-          headers: {
-            Authorization: this.auth_str,
-            "Content-Type": "application/json",
-          },
-        })
-        .then((response: AxiosResponse<ConfigInfo>) => {
-          this.getinfo = response.data;
-          // Store server versions in the store for components to access
-          if (response.data && response.data.versions) {
-            this.$store.commit(
-              "update_server_versions",
-              response.data.versions
-            );
-          }
-        })
-        .catch((error: AxiosError) => {
-          console.log(error);
-          console.log(error.response);
-        });
-    },
-
-    logout(): void {
-      this.token = "";
-      this.authenticationError = false;
-      this.searchErrorMessage = null;
-      this.searchErrored = false;
-      this.$store.commit("clear_all");
-    },
+  set(value: number) {
+    store.state.current_pageNumber = value;
   },
 });
+
+// Methods
+function showSnackbar(text: string, color: string = "success"): void {
+  snackbarText.value = text;
+  snackbarColor.value = color;
+  snackbar.value = true;
+}
+
+function onPageChange(): void {
+  searchDatasets();
+}
+
+function setTokenAndSearch(newToken: string): void {
+  token.value = newToken;
+  searchDatasets();
+}
+
+function searchDatasets(): void {
+  getconfiginfo();
+  console.log(getinfo.value);
+
+  console.log("Running search");
+  console.log(searchQuery.value);
+  store.commit("update_current_dataset_index", 0);
+  store.commit("update_current_dataset", null);
+  store.commit("update_current_dataset_manifest", null);
+  store.commit("update_current_dataset_readme", null);
+  store.commit("update_current_dataset_tags", null);
+  updateDataset();
+  searchLoading.value = true;
+  searchErrored.value = false;
+
+  let url = searchURL.value;
+  if (store.state.mongo_text) {
+    url = mongoSearchURL.value;
+  }
+
+  axios
+    .post(url, searchQuery.value, {
+      headers: {
+        Authorization: auth_str.value,
+        "Content-Type": "application/json",
+      },
+    })
+    .then((response: AxiosResponse<Dataset[]>) => {
+      datasetHits.value = response.data;
+      responseheaders.value = response.headers as ResponseHeaders;
+      store.commit("update_current_dataset", current_dataset.value);
+      store.commit("update_num_filtered", pagination.value.total);
+      updateDataset();
+    })
+    .catch((error: AxiosError) => {
+      console.log(error);
+      if (error.response && error.response.status === 401) {
+        console.log(
+          "401 Unauthorized - User not authenticated or not registered"
+        );
+        authenticationError.value = true;
+        searchErrorMessage.value =
+          "Authentication failed. Your user may not be registered on the server. Please contact an administrator.";
+        searchErrored.value = true;
+      } else if (error.response && error.response.status === 404) {
+        console.log("404 Not Found - Resetting pageNumber and retrying");
+        store.state.current_pageNumber = 1;
+        searchDatasets(); // Retry the search with pageNumber reset to 1
+      } else {
+        console.log(error.response);
+        searchErrorMessage.value =
+          "An error occurred while loading datasets.";
+        searchErrored.value = true;
+      }
+    })
+    .finally(() => {
+      searchLoading.value = false;
+    });
+}
+
+function updateDataset(): void {
+  updateManifest();
+  updateReadme();
+  updateAnnotations();
+  updateTags();
+}
+
+function updateManifest(): void {
+  console.log("Loading manifest");
+  manifestLoading.value = true;
+  manifestErrored.value = false;
+
+  const uri = uriQuery.value.uri;
+  if (!uri) {
+    console.log("No URI available for manifest.");
+    manifestErrored.value = true;
+    manifestLoading.value = false;
+    return;
+  }
+
+  const fullManifestURL = `${manifestURL.value}/${encodeURIComponent(uri)}`;
+
+  axios
+    .get(fullManifestURL, {
+      headers: {
+        Authorization: auth_str.value,
+        Accept: "application/json",
+      },
+    })
+    .then((response: AxiosResponse) => {
+      store.commit("update_current_dataset_manifest", response.data);
+    })
+    .catch((error: AxiosError) => {
+      console.log(error);
+      manifestErrored.value = true;
+    })
+    .finally(() => {
+      manifestLoading.value = false;
+    });
+}
+
+function updateReadme(): void {
+  console.log("Loading readme");
+  readmeLoading.value = true;
+  readmeErrored.value = false;
+
+  const uri = uriQuery.value.uri;
+  if (!uri) {
+    console.log("No URI available for readme.");
+    readmeErrored.value = true;
+    readmeLoading.value = false;
+    return;
+  }
+
+  const fullReadmeURL = `${readmeURL.value}/${encodeURIComponent(uri)}`;
+
+  axios
+    .get(fullReadmeURL, {
+      headers: {
+        Authorization: auth_str.value,
+        Accept: "application/json",
+      },
+    })
+    .then((response: AxiosResponse) => {
+      store.commit("update_current_dataset_readme", response.data);
+    })
+    .catch((error: AxiosError) => {
+      console.log(error);
+      readmeErrored.value = true;
+    })
+    .finally(() => {
+      readmeLoading.value = false;
+    });
+}
+
+function updateAnnotations(): void {
+  console.log("Loading annotations");
+  annotationsLoading.value = true;
+  annotationsErrored.value = false;
+
+  const uri = uriQuery.value.uri;
+  if (!uri) {
+    console.log("No URI available for annotations.");
+    annotationsErrored.value = true;
+    annotationsLoading.value = false;
+    return;
+  }
+
+  const fullAnnotationsURL = `${annotationsURL.value}/${encodeURIComponent(uri)}`;
+
+  axios
+    .get(fullAnnotationsURL, {
+      headers: {
+        Authorization: auth_str.value,
+        Accept: "application/json",
+      },
+    })
+    .then((response: AxiosResponse) => {
+      store.commit("update_current_dataset_annotations", response.data);
+    })
+    .catch((error: AxiosError) => {
+      console.log(error);
+      annotationsErrored.value = true;
+    })
+    .finally(() => {
+      annotationsLoading.value = false;
+    });
+}
+
+function updateTags(): void {
+  console.log("Loading tags");
+  tagsLoading.value = true;
+  tagsErrored.value = false;
+
+  const uri = uriQuery.value.uri;
+  if (!uri) {
+    console.log("No URI available for tags.");
+    tagsErrored.value = true;
+    tagsLoading.value = false;
+    return;
+  }
+
+  const fullTagsURL = `${tagsURL.value}/${encodeURIComponent(uri)}`;
+
+  axios
+    .get(fullTagsURL, {
+      headers: {
+        Authorization: auth_str.value,
+        Accept: "application/json",
+      },
+    })
+    .then((response: AxiosResponse) => {
+      store.commit("update_current_dataset_tags", response.data);
+    })
+    .catch((error: AxiosError) => {
+      console.error(error);
+      tagsErrored.value = true;
+    })
+    .finally(() => {
+      tagsLoading.value = false;
+    });
+}
+
+function getconfiginfo(): void {
+  console.log("Loading ConfigInfo");
+
+  // Store the lookup URL in the store for components to use
+  store.commit("update_lookup_url", lookup_url);
+
+  axios
+    .get(configInfoURL.value, {
+      headers: {
+        Authorization: auth_str.value,
+        "Content-Type": "application/json",
+      },
+    })
+    .then((response: AxiosResponse<ConfigInfo>) => {
+      getinfo.value = response.data;
+      // Store server versions in the store for components to access
+      if (response.data && response.data.versions) {
+        store.commit("update_server_versions", response.data.versions);
+      }
+    })
+    .catch((error: AxiosError) => {
+      console.log(error);
+      console.log(error.response);
+    });
+}
+
+function logout(): void {
+  token.value = "";
+  authenticationError.value = false;
+  searchErrorMessage.value = null;
+  searchErrored.value = false;
+  store.commit("clear_all");
+}
 </script>
 
 <style>

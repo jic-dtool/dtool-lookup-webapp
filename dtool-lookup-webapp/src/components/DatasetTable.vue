@@ -49,40 +49,32 @@
   </v-list>
 </template>
 
-<script lang="ts">
-import { defineComponent, type PropType } from "vue";
+<script setup lang="ts">
+import { computed } from "vue";
 import moment from "moment";
+import { useStore } from "@/store";
 import type { Dataset, ResponseHeaders } from "@/types";
 
-export default defineComponent({
-  name: "DatasetTable",
-  props: {
-    datasetHits: {
-      type: Array as PropType<Dataset[]>,
-      required: true,
-    },
-    responseheaders: {
-      type: Object as PropType<ResponseHeaders>,
-      default: () => ({}),
-    },
-  },
-  emits: ["update-dataset"],
-  computed: {
-    selected(): number {
-      return this.$store.state.current_dataset_index;
-    },
-  },
-  methods: {
-    moment(timestamp: number) {
-      return moment(timestamp);
-    },
-    updateSelectedDataset(index: number): void {
-      this.$store.commit("update_current_dataset_index", index);
-      this.$store.commit("update_current_dataset", this.datasetHits[index]);
-      this.$emit("update-dataset");
-    },
-  },
+const props = defineProps<{
+  datasetHits: Dataset[];
+  responseheaders?: ResponseHeaders;
+}>();
+
+const emit = defineEmits<{
+  (e: "update-dataset"): void;
+}>();
+
+const store = useStore();
+
+const selected = computed(() => {
+  return store.state.current_dataset_index;
 });
+
+function updateSelectedDataset(index: number): void {
+  store.commit("update_current_dataset_index", index);
+  store.commit("update_current_dataset", props.datasetHits[index]);
+  emit("update-dataset");
+}
 </script>
 
 <style scoped>

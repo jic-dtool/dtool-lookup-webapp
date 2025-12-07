@@ -140,65 +140,65 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useStore } from "@/store";
 import type { Annotations } from "@/types";
 
-export default defineComponent({
-  name: "DatasetAnnotations",
-  data() {
-    return {
-      newKey: "",
-      newValue: "",
-      editableValue: "",
-    };
-  },
-  computed: {
-    annotations(): Annotations {
-      return this.$store.state.current_dataset_annotations || {};
-    },
-    filteredAnnotations(): Annotations {
-      const filtered: Annotations = {};
-      for (const annotationName in this.annotations) {
-        if (this.hasNonEmptyValues(this.annotations[annotationName])) {
-          filtered[annotationName] = this.annotations[annotationName];
-        }
-      }
-      return filtered;
-    },
-    computedCreateCommand(): string {
-      if (!this.$store.state.current_dataset) return "";
-      return `dtool annotation set ${this.$store.state.current_dataset.uri} ${this.newKey} ${this.newValue}`;
-    },
-  },
-  methods: {
-    capitalizeFirstLetter(string: string): string {
-      return string.charAt(0).toUpperCase() + string.slice(1);
-    },
-    hasNonEmptyValues(annotation: Record<string, unknown>): boolean {
-      for (const key in annotation) {
-        if (annotation[key]) {
-          return true;
-        }
-      }
-      return false;
-    },
-    generateSetCommand(propertyName: string, value: string): string {
-      if (!this.$store.state.current_dataset) return "";
-      return `dtool annotation set ${this.$store.state.current_dataset.uri} ${propertyName} ${value}`;
-    },
-    resetEditableValue(): void {
-      this.editableValue = "";
-    },
-    async copyToClipboard(text: string): Promise<void> {
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch (err) {
-        console.error("Failed to copy:", err);
-      }
-    },
-  },
+const store = useStore();
+
+const newKey = ref("");
+const newValue = ref("");
+const editableValue = ref("");
+
+const annotations = computed<Annotations>(() => {
+  return store.state.current_dataset_annotations || {};
 });
+
+const filteredAnnotations = computed<Annotations>(() => {
+  const filtered: Annotations = {};
+  for (const annotationName in annotations.value) {
+    if (hasNonEmptyValues(annotations.value[annotationName])) {
+      filtered[annotationName] = annotations.value[annotationName];
+    }
+  }
+  return filtered;
+});
+
+const computedCreateCommand = computed(() => {
+  if (!store.state.current_dataset) return "";
+  return `dtool annotation set ${store.state.current_dataset.uri} ${newKey.value} ${newValue.value}`;
+});
+
+function capitalizeFirstLetter(string: string): string {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function hasNonEmptyValues(annotation: Record<string, unknown>): boolean {
+  for (const key in annotation) {
+    if (annotation[key]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function generateSetCommand(propertyName: string, value: string): string {
+  if (!store.state.current_dataset) return "";
+  return `dtool annotation set ${store.state.current_dataset.uri} ${propertyName} ${value}`;
+}
+
+function resetEditableValue(): void {
+  editableValue.value = "";
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    console.error("Failed to copy:", err);
+  }
+}
 </script>
 
 <style scoped>

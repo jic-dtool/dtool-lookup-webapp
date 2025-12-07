@@ -1,6 +1,6 @@
 import { createApp } from "vue";
 import App from "./App.vue";
-import { store } from "./store";
+import { store, key } from "./store";
 
 import axios from "axios";
 import VueAxios from "vue-axios";
@@ -53,6 +53,6 @@ const vuetify = createVuetify({
 const app = createApp(App);
 
 app.use(vuetify);
-app.use(store);
+app.use(store, key);
 app.use(VueAxios, axios);
 app.mount("#app");

@@ -5,7 +5,7 @@
     </v-card-title>
     <v-list density="compact" class="py-0" max-height="200" style="overflow-y: auto;">
       <v-list-item
-        v-for="(base_uri, index) in summary_info['base_uris']"
+        v-for="(base_uri, index) in summary_info.base_uris"
         :key="index"
         @click="toggleSelect(base_uri)"
         class="cursor-pointer"
@@ -21,7 +21,7 @@
         <v-list-item-title class="text-body-2">{{ base_uri }}</v-list-item-title>
         <template #append>
           <v-chip size="x-small" color="secondary" variant="flat">
-            {{ summary_info["datasets_per_base_uri"][base_uri] }}
+            {{ summary_info.datasets_per_base_uri[base_uri] }}
           </v-chip>
         </template>
       </v-list-item>
@@ -29,47 +29,33 @@
   </v-card>
 </template>
 
-<script lang="ts">
-import { defineComponent, type PropType } from "vue";
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useStore } from "@/store";
 import type { SummaryInfo } from "@/types";
 
-export default defineComponent({
-  name: "BaseUriFilter",
-  props: {
-    summary_info: {
-      type: Object as PropType<SummaryInfo>,
-      required: true,
-    },
-  },
-  emits: ["start-search"],
-  data() {
-    return {
-      selectedBaseURIs: [] as string[],
-    };
-  },
-  computed: {
-    canonicalSelectedBaseURIs(): string[] {
-      return this.$store.state.base_uris;
-    },
-  },
-  methods: {
-    toggleSelect(base_uri: string): void {
-      if (this.selectedBaseURIs.includes(base_uri)) {
-        console.log("Unset base URI");
-        // Remove item from array.
-        this.selectedBaseURIs.splice(
-          this.selectedBaseURIs.indexOf(base_uri),
-          1
-        );
-        this.$store.commit("update_base_uris", this.selectedBaseURIs);
-        this.$emit("start-search");
-      } else {
-        console.log("Set base URI");
-        this.selectedBaseURIs.push(base_uri);
-        this.$store.commit("update_base_uris", this.selectedBaseURIs);
-        this.$emit("start-search");
-      }
-    },
-  },
-});
+defineProps<{
+  summary_info: SummaryInfo;
+}>();
+
+const emit = defineEmits<{
+  (e: "start-search"): void;
+}>();
+
+const store = useStore();
+const selectedBaseURIs = ref<string[]>([]);
+
+const canonicalSelectedBaseURIs = computed(() => store.state.base_uris);
+
+function toggleSelect(base_uri: string): void {
+  if (selectedBaseURIs.value.includes(base_uri)) {
+    console.log("Unset base URI");
+    selectedBaseURIs.value.splice(selectedBaseURIs.value.indexOf(base_uri), 1);
+  } else {
+    console.log("Set base URI");
+    selectedBaseURIs.value.push(base_uri);
+  }
+  store.commit("update_base_uris", selectedBaseURIs.value);
+  emit("start-search");
+}
 </script>

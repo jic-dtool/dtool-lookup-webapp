@@ -189,118 +189,105 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
+import { ref, computed, onMounted, getCurrentInstance } from "vue";
 import type { AxiosError, AxiosResponse } from "axios";
 import { getUsernameFromJwt } from "@/utils/jwtUtils";
+import { useStore } from "@/store";
 import type { SummaryInfo } from "@/types";
 
-interface SummaryInfoData {
-  summary_info: SummaryInfo | null;
-  loading: boolean;
-  errored: boolean;
-  username: string;
-  selectedTags: string[];
-  selectedBaseUris: string[];
-  selectedCreators: string[];
+const props = defineProps<{
+  lookup_url: string;
+  auth_str: string;
+  token: string;
+}>();
+
+const emit = defineEmits<{
+  (e: "start-search"): void;
+}>();
+
+const store = useStore();
+const instance = getCurrentInstance();
+const axios = instance?.appContext.config.globalProperties.$http;
+
+const summary_info = ref<SummaryInfo | null>(null);
+const loading = ref(true);
+const errored = ref(false);
+const username = ref("");
+const selectedTags = ref<string[]>([]);
+const selectedBaseUris = ref<string[]>([]);
+const selectedCreators = ref<string[]>([]);
+
+const source = computed(() => {
+  return props.lookup_url + "/users/" + username.value + "/summary";
+});
+
+function load_summary(): void {
+  console.log("Loading summary info");
+  errored.value = false;
+  loading.value = true;
+  axios
+    .get(source.value, { headers: { Authorization: props.auth_str } })
+    .then((response: AxiosResponse<SummaryInfo>) => {
+      summary_info.value = response.data;
+    })
+    .catch((error: AxiosError) => {
+      console.log(error);
+      errored.value = true;
+    })
+    .finally(() => (loading.value = false));
 }
 
-export default defineComponent({
-  name: "SummaryInfo",
-  props: {
-    lookup_url: {
-      type: String,
-      required: true,
-    },
-    auth_str: {
-      type: String,
-      required: true,
-    },
-    token: {
-      type: String,
-      required: true,
-    },
-  },
-  emits: ["start-search"],
-  data(): SummaryInfoData {
-    return {
-      summary_info: null,
-      loading: true,
-      errored: false,
-      username: "",
-      selectedTags: [],
-      selectedBaseUris: [],
-      selectedCreators: [],
-    };
-  },
-  computed: {
-    source(): string {
-      return this.lookup_url + "/users/" + this.username + "/summary";
-    },
-  },
-  mounted() {
-    if (this.token) {
-      const username = getUsernameFromJwt(this.token);
-      this.username = username;
-      this.$store.commit("updateUsername", username);
-    }
-    this.load_summary();
-  },
-  methods: {
-    load_summary(): void {
-      console.log("Loading summary info");
-      this.errored = false;
-      this.loading = true;
-      this.$http
-        .get(this.source, { headers: { Authorization: this.auth_str } })
-        .then((response: AxiosResponse<SummaryInfo>) => {
-          this.summary_info = response.data;
-        })
-        .catch((error: AxiosError) => {
-          console.log(error);
-          this.errored = true;
-        })
-        .finally(() => (this.loading = false));
-    },
-    searchDatasets(): void {
-      this.$store.state.current_pageNumber = 1;
-      this.$emit("start-search");
-    },
-    clearFilters(): void {
-      this.selectedTags = [];
-      this.selectedBaseUris = [];
-      this.selectedCreators = [];
-      this.$store.commit("clear_all");
-      this.$emit("start-search");
-    },
-    toggleTag(tag: string): void {
-      if (this.selectedTags.includes(tag)) {
-        this.selectedTags.splice(this.selectedTags.indexOf(tag), 1);
-      } else {
-        this.selectedTags.push(tag);
-      }
-      this.$store.commit("update_tags", this.selectedTags);
-      this.searchDatasets();
-    },
-    toggleBaseUri(base_uri: string): void {
-      if (this.selectedBaseUris.includes(base_uri)) {
-        this.selectedBaseUris.splice(this.selectedBaseUris.indexOf(base_uri), 1);
-      } else {
-        this.selectedBaseUris.push(base_uri);
-      }
-      this.$store.commit("update_base_uris", this.selectedBaseUris);
-      this.searchDatasets();
-    },
-    toggleCreator(creator: string): void {
-      if (this.selectedCreators.includes(creator)) {
-        this.selectedCreators.splice(this.selectedCreators.indexOf(creator), 1);
-      } else {
-        this.selectedCreators.push(creator);
-      }
-      this.$store.commit("update_creator_usernames", this.selectedCreators);
-      this.searchDatasets();
-    },
-  },
+function searchDatasets(): void {
+  store.state.current_pageNumber = 1;
+  emit("start-search");
+}
+
+function clearFilters(): void {
+  selectedTags.value = [];
+  selectedBaseUris.value = [];
+  selectedCreators.value = [];
+  store.commit("clear_all");
+  emit("start-search");
+}
+
+function toggleTag(tag: string): void {
+  if (selectedTags.value.includes(tag)) {
+    selectedTags.value.splice(selectedTags.value.indexOf(tag), 1);
+  } else {
+    selectedTags.value.push(tag);
+  }
+  store.commit("update_tags", selectedTags.value);
+  searchDatasets();
+}
+
+function toggleBaseUri(base_uri: string): void {
+  if (selectedBaseUris.value.includes(base_uri)) {
+    selectedBaseUris.value.splice(selectedBaseUris.value.indexOf(base_uri), 1);
+  } else {
+    selectedBaseUris.value.push(base_uri);
+  }
+  store.commit("update_base_uris", selectedBaseUris.value);
+  searchDatasets();
+}
+
+function toggleCreator(creator: string): void {
+  if (selectedCreators.value.includes(creator)) {
+    selectedCreators.value.splice(selectedCreators.value.indexOf(creator), 1);
+  } else {
+    selectedCreators.value.push(creator);
+  }
+  store.commit("update_creator_usernames", selectedCreators.value);
+  searchDatasets();
+}
+
+onMounted(() => {
+  if (props.token) {
+    const extractedUsername = getUsernameFromJwt(props.token);
+    username.value = extractedUsername;
+    store.commit("updateUsername", extractedUsername);
+  }
+  load_summary();
 });
 </script>
 

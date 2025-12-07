@@ -1,4 +1,5 @@
-import { createStore } from "vuex";
+import { createStore, Store as VuexStore } from "vuex";
+import { InjectionKey } from "vue";
 import type {
   Dataset,
   Manifest,
@@ -28,6 +29,8 @@ export interface State {
   server_versions: ServerVersions;
   lookup_url: string | null;
 }
+
+export const key: InjectionKey<VuexStore<State>> = Symbol();
 
 export const store = createStore<State>({
   state: {
@@ -121,4 +124,6 @@ export const store = createStore<State>({
   actions: {},
 });
 
-export type Store = typeof store;
+export function useStore() {
+  return store;
+}

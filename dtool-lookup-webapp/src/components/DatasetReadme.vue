@@ -63,80 +63,80 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
+import { computed } from "vue";
+import { useStore } from "@/store";
 
-export default defineComponent({
-  name: "DatasetReadme",
-  computed: {
-    getReadmeContent(): string | null {
-      if (
-        !this.$store.state.current_dataset_readme ||
-        !this.$store.state.current_dataset_readme.readme
-      ) {
-        return null;
-      }
-      return this.$store.state.current_dataset_readme.readme.trim();
-    },
-    formattedReadme(): string {
-      if (!this.getReadmeContent) return "";
-      // Color-code YAML-like key: value pairs
-      return this.getReadmeContent
-        .split("\n")
-        .map((line) => this.formatLine(line))
-        .join("\n");
-    },
-    edit_command(): string {
-      if (!this.$store.state.current_dataset) return "";
-      return "dtool readme edit " + this.$store.state.current_dataset.uri;
-    },
-  },
-  methods: {
-    formatLine(line: string): string {
-      // Escape HTML first
-      const escaped = line
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+const store = useStore();
 
-      // Match YAML-like patterns: "key: value" or "  key: value"
-      const yamlMatch = escaped.match(
-        /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*):\s*(.*)$/
-      );
-      if (yamlMatch) {
-        const [, indent, key, value] = yamlMatch;
-        if (value) {
-          return `${indent}<span class="yaml-key">${key}:</span> <span class="yaml-value">${value}</span>`;
-        } else {
-          return `${indent}<span class="yaml-key">${key}:</span>`;
-        }
-      }
-
-      // Match list items: "- item" or "  - item"
-      const listMatch = escaped.match(/^(\s*)-\s+(.*)$/);
-      if (listMatch) {
-        const [, indent, content] = listMatch;
-        return `${indent}<span class="yaml-bullet">-</span> ${content}`;
-      }
-
-      // Match comments: "# comment"
-      const commentMatch = escaped.match(/^(\s*)(#.*)$/);
-      if (commentMatch) {
-        const [, indent, comment] = commentMatch;
-        return `${indent}<span class="yaml-comment">${comment}</span>`;
-      }
-
-      return escaped;
-    },
-    async copyToClipboard(text: string): Promise<void> {
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch (err) {
-        console.error("Failed to copy:", err);
-      }
-    },
-  },
+const getReadmeContent = computed<string | null>(() => {
+  if (
+    !store.state.current_dataset_readme ||
+    !store.state.current_dataset_readme.readme
+  ) {
+    return null;
+  }
+  return store.state.current_dataset_readme.readme.trim();
 });
+
+const formattedReadme = computed(() => {
+  if (!getReadmeContent.value) return "";
+  // Color-code YAML-like key: value pairs
+  return getReadmeContent.value
+    .split("\n")
+    .map((line) => formatLine(line))
+    .join("\n");
+});
+
+const edit_command = computed(() => {
+  if (!store.state.current_dataset) return "";
+  return "dtool readme edit " + store.state.current_dataset.uri;
+});
+
+function formatLine(line: string): string {
+  // Escape HTML first
+  const escaped = line
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Match YAML-like patterns: "key: value" or "  key: value"
+  const yamlMatch = escaped.match(
+    /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*):\s*(.*)$/
+  );
+  if (yamlMatch) {
+    const [, indent, key, value] = yamlMatch;
+    if (value) {
+      return `${indent}<span class="yaml-key">${key}:</span> <span class="yaml-value">${value}</span>`;
+    } else {
+      return `${indent}<span class="yaml-key">${key}:</span>`;
+    }
+  }
+
+  // Match list items: "- item" or "  - item"
+  const listMatch = escaped.match(/^(\s*)-\s+(.*)$/);
+  if (listMatch) {
+    const [, indent, content] = listMatch;
+    return `${indent}<span class="yaml-bullet">-</span> ${content}`;
+  }
+
+  // Match comments: "# comment"
+  const commentMatch = escaped.match(/^(\s*)(#.*)$/);
+  if (commentMatch) {
+    const [, indent, comment] = commentMatch;
+    return `${indent}<span class="yaml-comment">${comment}</span>`;
+  }
+
+  return escaped;
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    console.error("Failed to copy:", err);
+  }
+}
 </script>
 
 <style scoped>

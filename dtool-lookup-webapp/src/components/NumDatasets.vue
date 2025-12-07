@@ -19,7 +19,7 @@
           <div class="d-flex justify-space-between align-center w-100">
             <span class="text-body-2">Filtered</span>
             <v-chip size="small" color="secondary" variant="flat">
-              {{ $store.state.num_filtered }}
+              {{ numFiltered }}
             </v-chip>
           </div>
         </template>
@@ -28,24 +28,25 @@
   </v-card>
 </template>
 
-<script lang="ts">
-import { defineComponent, type PropType } from "vue";
+<script setup lang="ts">
+import { computed } from "vue";
+import { useStore } from "@/store";
 import type { SummaryInfo } from "@/types";
 
-export default defineComponent({
-  name: "NumDatasets",
-  props: {
-    summary_info: {
-      type: Object as PropType<SummaryInfo>,
-      required: true,
-    },
-  },
-  emits: ["start-search"],
-  methods: {
-    clearFilters(): void {
-      this.$store.commit("clear_all");
-      this.$emit("start-search");
-    },
-  },
-});
+defineProps<{
+  summary_info: SummaryInfo;
+}>();
+
+const emit = defineEmits<{
+  (e: "start-search"): void;
+}>();
+
+const store = useStore();
+
+const numFiltered = computed(() => store.state.num_filtered);
+
+function clearFilters(): void {
+  store.commit("clear_all");
+  emit("start-search");
+}
 </script>

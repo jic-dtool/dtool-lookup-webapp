@@ -5,7 +5,7 @@
     </v-card-title>
     <v-list density="compact" class="py-0" max-height="200" style="overflow-y: auto;">
       <v-list-item
-        v-for="(tag, index) in summary_info['tags']"
+        v-for="(tag, index) in summary_info.tags"
         :key="index"
         @click="toggleSelect(tag)"
         class="cursor-pointer"
@@ -21,7 +21,7 @@
         <v-list-item-title class="text-body-2">{{ tag }}</v-list-item-title>
         <template #append>
           <v-chip size="x-small" color="secondary" variant="flat">
-            {{ summary_info["datasets_per_tag"][tag] }}
+            {{ summary_info.datasets_per_tag[tag] }}
           </v-chip>
         </template>
       </v-list-item>
@@ -29,46 +29,33 @@
   </v-card>
 </template>
 
-<script lang="ts">
-import { defineComponent, type PropType } from "vue";
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useStore } from "@/store";
 import type { SummaryInfo } from "@/types";
 
-export default defineComponent({
-  name: "TagFilter",
-  props: {
-    summary_info: {
-      type: Object as PropType<SummaryInfo>,
-      required: true,
-    },
-  },
-  emits: ["start-search"],
-  data() {
-    return {
-      selectedTags: [] as string[],
-    };
-  },
-  computed: {
-    canonicalSelectedTags(): string[] {
-      return this.$store.state.tags;
-    },
-  },
-  methods: {
-    startSearch(): void {
-      this.$store.commit("update_tags", this.selectedTags);
-      this.$emit("start-search");
-    },
-    toggleSelect(tag: string): void {
-      if (this.selectedTags.includes(tag)) {
-        console.log("Unset tag?");
-        // Remove item from array.
-        this.selectedTags.splice(this.selectedTags.indexOf(tag), 1);
-        this.startSearch();
-      } else {
-        console.log("Set tag?");
-        this.selectedTags.push(tag);
-        this.startSearch();
-      }
-    },
-  },
-});
+defineProps<{
+  summary_info: SummaryInfo;
+}>();
+
+const emit = defineEmits<{
+  (e: "start-search"): void;
+}>();
+
+const store = useStore();
+const selectedTags = ref<string[]>([]);
+
+const canonicalSelectedTags = computed(() => store.state.tags);
+
+function toggleSelect(tag: string): void {
+  if (selectedTags.value.includes(tag)) {
+    console.log("Unset tag");
+    selectedTags.value.splice(selectedTags.value.indexOf(tag), 1);
+  } else {
+    console.log("Set tag");
+    selectedTags.value.push(tag);
+  }
+  store.commit("update_tags", selectedTags.value);
+  emit("start-search");
+}
 </script>

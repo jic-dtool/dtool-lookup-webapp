@@ -137,8 +137,8 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
+import { ref, computed, getCurrentInstance } from "vue";
 import type { AxiosError, AxiosResponse } from "axios";
 import type { ResourceLink } from "@/types";
 
@@ -146,126 +146,96 @@ interface TokenResponse {
   token?: string;
 }
 
-interface SignInData {
-  username: string | null;
-  password: string | null;
-  signInFailed: boolean;
-  signInInfo: TokenResponse | null;
-  signInLoading: boolean;
-  signInErrored: boolean;
-  rightPanelActive: boolean;
-  tokenGeneratorURL: string;
-  logoSrc: string;
-  firstContainerTitle: string;
-  secondContainerTitle: string;
-  secondContainerMessage: string;
-  thirdContainerHeading: string;
-  thirdContainerMessage: string;
-  fourthContainerHeading: string;
-  fourthContainerIntro: string;
-  fourthContainerResources: ResourceLink[];
+const emit = defineEmits<{
+  (e: "sign-in", token: string): void;
+}>();
+
+const instance = getCurrentInstance();
+const axios = instance?.appContext.config.globalProperties.$http;
+
+const username = ref<string | null>(null);
+const password = ref<string | null>(null);
+const signInFailed = ref(false);
+const signInInfo = ref<TokenResponse | null>(null);
+const signInLoading = ref(false);
+const signInErrored = ref(false);
+const rightPanelActive = ref(false);
+
+const tokenGeneratorURL = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL || "";
+const logoSrc = process.env.VUE_APP_LANDING_PAGE_ICON_PATH || "/icons/128x128/dtool_logo.png";
+const firstContainerTitle = process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In";
+const secondContainerTitle = process.env.VUE_APP_SECOND_CONTAINER_TITLE || "Welcome to Dtool";
+const secondContainerMessage = process.env.VUE_APP_SECOND_CONTAINER_MESSAGE ||
+  "Make your data more resilient, portable and easy to work with by packaging files & metadata into self-contained datasets.";
+const thirdContainerHeading = process.env.VUE_APP_THIRD_CONTAINER_HEADING || "Access Your Account";
+const thirdContainerMessage = process.env.VUE_APP_THIRD_CONTAINER_MESSAGE ||
+  "To log in, use the default credentials: Username - <strong>testuser</strong>, Password - <strong>test_password</strong>.";
+const fourthContainerHeading = process.env.VUE_APP_FOURTH_CONTAINER_HEADING || "Supporting Documentation";
+const fourthContainerIntro = process.env.VUE_APP_FOURTH_CONTAINER_INTRO ||
+  "Please refer to the following resources for more information:";
+const fourthContainerResources: ResourceLink[] = process.env.VUE_APP_FOURTH_CONTAINER_RESOURCES
+  ? JSON.parse(process.env.VUE_APP_FOURTH_CONTAINER_RESOURCES)
+  : [
+      {
+        text: "dtool-lookup-webapp repository",
+        url: "https://github.com/livMatS/dtool-lookup-webapp",
+      },
+      {
+        text: "dserver REST API documentation",
+        url: "https://demo.dtool.dev/lookup/doc/swagger",
+      },
+      {
+        text: "dtool documentation",
+        url: "https://dtool.readthedocs.io/",
+      },
+    ];
+
+const loginCredentials = computed(() => {
+  return { username: username.value, password: password.value };
+});
+
+const overlayGradient = computed(() => {
+  return {
+    background:
+      "linear-gradient(135deg, #6A1B9A 0%, #7B1FA2 50%, #9C27B0 75%, #AB47BC 100%)",
+  };
+});
+
+function signIn(token: string): void {
+  emit("sign-in", token);
 }
 
-export default defineComponent({
-  name: "SignIn",
-  emits: ["sign-in"],
-  data(): SignInData {
-    return {
-      username: null,
-      password: null,
-      signInFailed: false,
-      signInInfo: null,
-      signInLoading: false,
-      signInErrored: false,
-      rightPanelActive: false,
-      tokenGeneratorURL:
-        process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL || "",
+function getToken(): void {
+  console.log(process.env);
+  signInLoading.value = true;
+  axios
+    .post(tokenGeneratorURL, loginCredentials.value, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    .then((response: AxiosResponse<TokenResponse>) => {
+      signInInfo.value = response.data;
+      if (signInInfo.value && "token" in signInInfo.value && signInInfo.value.token) {
+        signIn(signInInfo.value.token);
+      } else {
+        signInFailed.value = true;
+      }
+    })
+    .catch((error: AxiosError) => {
+      console.log(error);
+      signInErrored.value = true;
+    })
+    .finally(() => (signInLoading.value = false));
+}
 
-      logoSrc:
-        process.env.VUE_APP_LANDING_PAGE_ICON_PATH ||
-        "/icons/128x128/dtool_logo.png",
+function activateRightPanel(): void {
+  rightPanelActive.value = true;
+}
 
-      firstContainerTitle: process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In",
-      secondContainerTitle:
-        process.env.VUE_APP_SECOND_CONTAINER_TITLE || "Welcome to Dtool",
-      secondContainerMessage:
-        process.env.VUE_APP_SECOND_CONTAINER_MESSAGE ||
-        "Make your data more resilient, portable and easy to work with by packaging files & metadata into self-contained datasets.",
-      thirdContainerHeading:
-        process.env.VUE_APP_THIRD_CONTAINER_HEADING || "Access Your Account",
-      thirdContainerMessage:
-        process.env.VUE_APP_THIRD_CONTAINER_MESSAGE ||
-        "To log in, use the default credentials: Username - <strong>testuser</strong>, Password - <strong>test_password</strong>.",
-      fourthContainerHeading:
-        process.env.VUE_APP_FOURTH_CONTAINER_HEADING ||
-        "Supporting Documentation",
-      fourthContainerIntro:
-        process.env.VUE_APP_FOURTH_CONTAINER_INTRO ||
-        "Please refer to the following resources for more information:",
-      fourthContainerResources: process.env.VUE_APP_FOURTH_CONTAINER_RESOURCES
-        ? JSON.parse(process.env.VUE_APP_FOURTH_CONTAINER_RESOURCES)
-        : [
-            {
-              text: "dtool-lookup-webapp repository",
-              url: "https://github.com/livMatS/dtool-lookup-webapp",
-            },
-            {
-              text: "dserver REST API documentation",
-              url: "https://demo.dtool.dev/lookup/doc/swagger",
-            },
-            {
-              text: "dtool documentation",
-              url: "https://dtool.readthedocs.io/",
-            },
-          ],
-    };
-  },
-  computed: {
-    loginCredentials(): { username: string | null; password: string | null } {
-      return { username: this.username, password: this.password };
-    },
-    overlayGradient(): { background: string } {
-      return {
-        background:
-          "linear-gradient(135deg, #6A1B9A 0%, #7B1FA2 50%, #9C27B0 75%, #AB47BC 100%)",
-      };
-    },
-  },
-  methods: {
-    signIn(token: string): void {
-      this.$emit("sign-in", token);
-    },
-    getToken(): void {
-      console.log(process.env);
-      this.signInLoading = true;
-      this.$http
-        .post(this.tokenGeneratorURL, this.loginCredentials, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-        .then((response: AxiosResponse<TokenResponse>) => {
-          this.signInInfo = response.data;
-          if (this.signInInfo && "token" in this.signInInfo && this.signInInfo.token) {
-            this.signIn(this.signInInfo.token);
-          } else {
-            this.signInFailed = true;
-          }
-        })
-        .catch((error: AxiosError) => {
-          console.log(error);
-          this.signInErrored = true;
-        })
-        .finally(() => (this.signInLoading = false));
-    },
-    activateRightPanel(): void {
-      this.rightPanelActive = true;
-    },
-    deactivateRightPanel(): void {
-      this.rightPanelActive = false;
-    },
-  },
-});
+function deactivateRightPanel(): void {
+  rightPanelActive.value = false;
+}
 </script>
 
 <style scoped>

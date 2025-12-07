@@ -32,48 +32,41 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useStore } from "@/store";
 
-export default defineComponent({
-  name: "TextSearch",
-  props: {
-    mongoplugin: {
-      type: String,
-      required: true,
-    },
-  },
-  emits: ["start-search"],
-  data() {
-    return {
-      textQuery: "",
-    };
-  },
-  computed: {
-    isJson(): boolean {
-      if (this.textQuery === "") {
-        return false;
-      }
-      try {
-        JSON.parse(this.textQuery);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    isJsonEnabled(): boolean {
-      return this.mongoplugin !== "N/A";
-    },
-  },
-  methods: {
-    startSearch(): void {
-      if (this.isJsonEnabled && this.isJson) {
-        this.$store.commit("update_mongo_text", this.textQuery);
-      } else {
-        this.$store.commit("update_free_text", this.textQuery);
-      }
-      this.$emit("start-search");
-    },
-  },
+const props = defineProps<{
+  mongoplugin: string;
+}>();
+
+const emit = defineEmits<{
+  (e: "start-search"): void;
+}>();
+
+const store = useStore();
+const textQuery = ref("");
+
+const isJson = computed(() => {
+  if (textQuery.value === "") {
+    return false;
+  }
+  try {
+    JSON.parse(textQuery.value);
+    return true;
+  } catch {
+    return false;
+  }
 });
+
+const isJsonEnabled = computed(() => props.mongoplugin !== "N/A");
+
+function startSearch(): void {
+  if (isJsonEnabled.value && isJson.value) {
+    store.commit("update_mongo_text", textQuery.value);
+  } else {
+    store.commit("update_free_text", textQuery.value);
+  }
+  emit("start-search");
+}
 </script>

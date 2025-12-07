@@ -41,8 +41,9 @@
   </v-row>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
+import { ref, computed, watch } from "vue";
+import { useStore } from "@/store";
 
 interface PerPageOption {
   text: string;
@@ -54,75 +55,75 @@ interface SortOption {
   value: string;
 }
 
-export default defineComponent({
-  name: "DatasetSorting",
-  emits: ["start-search"],
-  data() {
-    // Initialize selectedSortOption and sortDirection based on store state
-    let initialSortOption = this.$store.state.selected_sort_option;
-    const initialcontentsPerPage = this.$store.state.update_current_Per_Page;
+const emit = defineEmits<{
+  (e: "start-search"): void;
+}>();
 
-    let initialSortDirection: "asc" | "desc" = "asc";
-    if (initialSortOption.startsWith("-")) {
-      initialSortDirection = "desc";
-      initialSortOption = initialSortOption.substring(1);
-    }
-    return {
-      selectedSortOption: initialSortOption,
-      sortOptions: [
-        "frozen_at",
-        "created_at",
-        "name",
-        "uuid",
-        "creator_username",
-        "uri",
-        "base_uri",
-      ] as string[],
-      sortDirection: initialSortDirection,
-      selectedContentsPerPage: initialcontentsPerPage,
-      perPageOptions: [
-        { text: "10", value: 10 },
-        { text: "20", value: 20 },
-        { text: "50", value: 50 },
-        { text: "100", value: 100 },
-      ] as PerPageOption[],
-    };
-  },
-  computed: {
-    // Format sortOptions for display in the dropdown
-    formattedOptions(): SortOption[] {
-      return this.sortOptions.map((option) => ({
-        text: option
-          .replace(/_/g, " ")
-          .replace(/\b\w/g, (l) => l.toUpperCase()),
-        value: option,
-      }));
-    },
-    // Get the selectedSortValue with the correct prefix based on sortDirection
-    selectedSortValue(): string {
-      return this.sortDirection === "asc"
-        ? this.selectedSortOption
-        : `-${this.selectedSortOption}`;
-    },
-  },
-  watch: {
-    // Update the store and emit an event when selectedSortOption changes
-    selectedSortOption(): void {
-      this.$store.commit("update_selected_sort_option", this.selectedSortValue);
-      this.$emit("start-search");
-    },
-  },
-  methods: {
-    // Toggle the sortDirection and update the store and emit an event
-    toggleSortDirection(): void {
-      this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
-      this.$store.commit("update_selected_sort_option", this.selectedSortValue);
-      this.$emit("start-search");
-    },
-    updatePerPage(perpage: number): void {
-      this.$store.commit("update_current_Per_Page", perpage);
-      this.$emit("start-search");
-    },
-  },
+const store = useStore();
+
+// Initialize selectedSortOption and sortDirection based on store state
+const getInitialSortOption = (): string => {
+  const option = store.state.selected_sort_option;
+  return option.startsWith("-") ? option.substring(1) : option;
+};
+
+const getInitialSortDirection = (): "asc" | "desc" => {
+  return store.state.selected_sort_option.startsWith("-") ? "desc" : "asc";
+};
+
+const selectedSortOption = ref(getInitialSortOption());
+const sortDirection = ref<"asc" | "desc">(getInitialSortDirection());
+const selectedContentsPerPage = ref(store.state.update_current_Per_Page);
+
+const sortOptions = [
+  "frozen_at",
+  "created_at",
+  "name",
+  "uuid",
+  "creator_username",
+  "uri",
+  "base_uri",
+];
+
+const perPageOptions: PerPageOption[] = [
+  { text: "10", value: 10 },
+  { text: "20", value: 20 },
+  { text: "50", value: 50 },
+  { text: "100", value: 100 },
+];
+
+// Format sortOptions for display in the dropdown
+const formattedOptions = computed<SortOption[]>(() => {
+  return sortOptions.map((option) => ({
+    text: option
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase()),
+    value: option,
+  }));
 });
+
+// Get the selectedSortValue with the correct prefix based on sortDirection
+const selectedSortValue = computed(() => {
+  return sortDirection.value === "asc"
+    ? selectedSortOption.value
+    : `-${selectedSortOption.value}`;
+});
+
+// Watch for changes to selectedSortOption
+watch(selectedSortOption, () => {
+  store.commit("update_selected_sort_option", selectedSortValue.value);
+  emit("start-search");
+});
+
+// Toggle the sortDirection and update the store and emit an event
+function toggleSortDirection(): void {
+  sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+  store.commit("update_selected_sort_option", selectedSortValue.value);
+  emit("start-search");
+}
+
+function updatePerPage(perpage: number): void {
+  store.commit("update_current_Per_Page", perpage);
+  emit("start-search");
+}
 </script>

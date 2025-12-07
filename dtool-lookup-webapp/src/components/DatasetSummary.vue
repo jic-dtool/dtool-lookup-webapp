@@ -154,105 +154,103 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
-import { filesize } from "filesize";
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { filesize as filesizeLib } from "filesize";
 import moment from "moment";
+import { useStore } from "@/store";
 import type { Dataset, ManifestItem } from "@/types";
 
-export default defineComponent({
-  name: "DatasetSummary",
-  data() {
-    return {
-      tag_name: null as string | null,
-    };
-  },
-  computed: {
-    dataset(): Dataset | null {
-      return this.$store.state.current_dataset;
-    },
-    hasSignedUrlPlugin(): boolean {
-      // Check if dserver-signed-url-plugin is installed
-      const versions = this.$store.state.server_versions;
-      return !!(versions && versions.dserver_signed_url_plugin);
-    },
-    displayUri(): string {
-      // Show dserver:// URI if signed-url-plugin is present, otherwise show backend URI
-      if (!this.dataset) return "";
-      if (this.hasSignedUrlPlugin) {
-        // Construct dserver:// URI using the server URL and dataset UUID
-        const lookupUrl = this.$store.state.lookup_url;
-        if (lookupUrl) {
-          // Extract hostname from the lookup URL
-          try {
-            const url = new URL(lookupUrl);
-            return `dserver://${url.host}/${this.dataset.uuid}`;
-          } catch {
-            // Fallback to backend URI if URL parsing fails
-            return this.dataset.uri;
-          }
-        }
-      }
-      return this.dataset.uri;
-    },
-    numItems(): number {
-      return this.$store.state.current_dataset_manifest &&
-        this.$store.state.current_dataset_manifest.items
-        ? Object.values(this.$store.state.current_dataset_manifest.items).length
-        : 0;
-    },
-    total_size_in_bytes(): number {
-      if (
-        !this.$store.state.current_dataset_manifest ||
-        !this.$store.state.current_dataset_manifest.items
-      ) {
-        return 0;
-      }
-      let total = 0;
-      Object.values(
-        this.$store.state.current_dataset_manifest.items as Record<
-          string,
-          ManifestItem
-        >
-      ).forEach((item: ManifestItem) => {
-        total = total + item.size_in_bytes;
-      });
-      return total;
-    },
-    copy_command(): string {
-      if (!this.dataset) return "";
-      return "dtool cp " + this.displayUri + " .";
-    },
-    tag_command(): string {
-      if (!this.dataset) return "";
-      return "dtool tag set " + this.displayUri + " " + this.tag_name;
-    },
-    currentTags(): string[] {
-      if (
-        this.$store.state.current_dataset_tags &&
-        this.$store.state.current_dataset_tags.tags
-      ) {
-        return this.$store.state.current_dataset_tags.tags;
-      }
-      return [];
-    },
-  },
-  methods: {
-    filesize(bytes: number): string {
-      return filesize(bytes) as string;
-    },
-    moment(timestamp: number) {
-      return moment(timestamp);
-    },
-    async copyToClipboard(text: string): Promise<void> {
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch (err) {
-        console.error("Failed to copy:", err);
-      }
-    },
-  },
+const store = useStore();
+const tag_name = ref<string | null>(null);
+
+const dataset = computed<Dataset | null>(() => {
+  return store.state.current_dataset;
 });
+
+const hasSignedUrlPlugin = computed(() => {
+  // Check if dserver-signed-url-plugin is installed
+  const versions = store.state.server_versions;
+  return !!(versions && versions.dserver_signed_url_plugin);
+});
+
+const displayUri = computed(() => {
+  // Show dserver:// URI if signed-url-plugin is present, otherwise show backend URI
+  if (!dataset.value) return "";
+  if (hasSignedUrlPlugin.value) {
+    // Construct dserver:// URI using the server URL and dataset UUID
+    const lookupUrl = store.state.lookup_url;
+    if (lookupUrl) {
+      // Extract hostname from the lookup URL
+      try {
+        const url = new URL(lookupUrl);
+        return `dserver://${url.host}/${dataset.value.uuid}`;
+      } catch {
+        // Fallback to backend URI if URL parsing fails
+        return dataset.value.uri;
+      }
+    }
+  }
+  return dataset.value.uri;
+});
+
+const numItems = computed(() => {
+  return store.state.current_dataset_manifest &&
+    store.state.current_dataset_manifest.items
+    ? Object.values(store.state.current_dataset_manifest.items).length
+    : 0;
+});
+
+const total_size_in_bytes = computed(() => {
+  if (
+    !store.state.current_dataset_manifest ||
+    !store.state.current_dataset_manifest.items
+  ) {
+    return 0;
+  }
+  let total = 0;
+  Object.values(
+    store.state.current_dataset_manifest.items as Record<
+      string,
+      ManifestItem
+    >
+  ).forEach((item: ManifestItem) => {
+    total = total + item.size_in_bytes;
+  });
+  return total;
+});
+
+const copy_command = computed(() => {
+  if (!dataset.value) return "";
+  return "dtool cp " + displayUri.value + " .";
+});
+
+const tag_command = computed(() => {
+  if (!dataset.value) return "";
+  return "dtool tag set " + displayUri.value + " " + tag_name.value;
+});
+
+const currentTags = computed<string[]>(() => {
+  if (
+    store.state.current_dataset_tags &&
+    store.state.current_dataset_tags.tags
+  ) {
+    return store.state.current_dataset_tags.tags;
+  }
+  return [];
+});
+
+function filesize(bytes: number): string {
+  return filesizeLib(bytes) as string;
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    console.error("Failed to copy:", err);
+  }
+}
 </script>
 
 <style scoped>
