@@ -89,44 +89,47 @@
         </template>
         <v-card-title class="text-body-2 font-weight-medium">Tags</v-card-title>
         <template #append>
-          <v-menu location="bottom end" :close-on-content-click="false">
+          <v-menu v-model="addTagMenu" location="bottom end" :close-on-content-click="false">
             <template #activator="{ props }">
               <v-btn v-bind="props" size="small" variant="tonal" color="primary" prepend-icon="mdi-tag-plus">
                 Add Tag
               </v-btn>
             </template>
-            <v-card min-width="400" rounded="lg">
+            <v-card min-width="300" rounded="lg">
               <v-card-text class="text-body-2 pb-2">
                 Add a tag to this dataset:
               </v-card-text>
               <v-card-text class="pt-0">
                 <v-text-field
-                  v-model="tag_name"
+                  v-model="newTagName"
                   label="Tag name"
                   density="compact"
                   variant="outlined"
                   hide-details
                   rounded="lg"
                   class="mb-3"
+                  :disabled="tagSaving"
+                  @keyup.enter="addTag"
                 />
-                <v-text-field
-                  :model-value="tag_command"
-                  readonly
-                  density="compact"
-                  variant="outlined"
-                  hide-details
-                  rounded="lg"
-                  bg-color="grey-lighten-4"
-                >
-                  <template #append-inner>
-                    <v-btn
-                      icon="mdi-content-copy"
-                      size="small"
-                      variant="text"
-                      @click="copyToClipboard(tag_command)"
-                    />
-                  </template>
-                </v-text-field>
+                <div class="d-flex justify-end ga-2">
+                  <v-btn
+                    size="small"
+                    variant="text"
+                    @click="addTagMenu = false"
+                  >
+                    Cancel
+                  </v-btn>
+                  <v-btn
+                    size="small"
+                    variant="tonal"
+                    color="primary"
+                    :loading="tagSaving"
+                    :disabled="!newTagName?.trim()"
+                    @click="addTag"
+                  >
+                    Add
+                  </v-btn>
+                </div>
               </v-card-text>
             </v-card>
           </v-menu>
@@ -141,6 +144,9 @@
             color="primary"
             size="small"
             label
+            closable
+            :disabled="tagSaving"
+            @click:close="removeTag(tag)"
           >
             {{ tag }}
           </v-chip>
@@ -151,42 +157,51 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <!-- Snackbar for tag operations -->
+    <v-snackbar v-model="snackbar" :timeout="3000" :color="snackbarColor">
+      {{ snackbarText }}
+    </v-snackbar>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, getCurrentInstance } from "vue";
 import { filesize as filesizeLib } from "filesize";
 import moment from "moment";
 import { useStore } from "@/store";
 import type { Dataset, ManifestItem } from "@/types";
+import type { AxiosResponse, AxiosError } from "axios";
 
 const store = useStore();
-const tag_name = ref<string | null>(null);
+const instance = getCurrentInstance();
+const axios = instance?.appContext.config.globalProperties.$http;
+
+const newTagName = ref<string>("");
+const addTagMenu = ref(false);
+const tagSaving = ref(false);
+const snackbar = ref(false);
+const snackbarText = ref("");
+const snackbarColor = ref("success");
 
 const dataset = computed<Dataset | null>(() => {
   return store.current_dataset;
 });
 
 const hasSignedUrlPlugin = computed(() => {
-  // Check if dserver-signed-url-plugin is installed
   const versions = store.server_versions;
   return !!(versions && versions.dserver_signed_url_plugin);
 });
 
 const displayUri = computed(() => {
-  // Show dserver:// URI if signed-url-plugin is present, otherwise show backend URI
   if (!dataset.value) return "";
   if (hasSignedUrlPlugin.value) {
-    // Construct dserver:// URI using the server URL and dataset UUID
     const lookupUrl = store.lookup_url;
     if (lookupUrl) {
-      // Extract hostname from the lookup URL
       try {
         const url = new URL(lookupUrl);
         return `dserver://${url.host}/${dataset.value.uuid}`;
       } catch {
-        // Fallback to backend URI if URL parsing fails
         return dataset.value.uri;
       }
     }
@@ -225,11 +240,6 @@ const copy_command = computed(() => {
   return "dtool cp " + displayUri.value + " .";
 });
 
-const tag_command = computed(() => {
-  if (!dataset.value) return "";
-  return "dtool tag set " + displayUri.value + " " + tag_name.value;
-});
-
 const currentTags = computed<string[]>(() => {
   if (
     store.current_dataset_tags &&
@@ -238,6 +248,17 @@ const currentTags = computed<string[]>(() => {
     return store.current_dataset_tags.tags;
   }
   return [];
+});
+
+const tagsUrl = computed(() => {
+  const lookupUrl = store.lookup_url;
+  if (!lookupUrl || !dataset.value) return "";
+  return `${lookupUrl}/tags/${encodeURIComponent(dataset.value.uri)}`;
+});
+
+const authHeader = computed(() => {
+  const token = localStorage.getItem("token");
+  return token ? `Bearer ${token}` : "";
 });
 
 function filesize(bytes: number): string {
@@ -249,6 +270,82 @@ async function copyToClipboard(text: string): Promise<void> {
     await navigator.clipboard.writeText(text);
   } catch (err) {
     console.error("Failed to copy:", err);
+  }
+}
+
+function showSnackbar(text: string, color: string = "success"): void {
+  snackbarText.value = text;
+  snackbarColor.value = color;
+  snackbar.value = true;
+}
+
+async function addTag(): Promise<void> {
+  const tagToAdd = newTagName.value?.trim();
+  if (!tagToAdd || !dataset.value) return;
+
+  if (currentTags.value.includes(tagToAdd)) {
+    showSnackbar("Tag already exists", "warning");
+    return;
+  }
+
+  tagSaving.value = true;
+  const tagUrl = `${tagsUrl.value}/${encodeURIComponent(tagToAdd)}`;
+
+  try {
+    const response: AxiosResponse<{ tags: string[] }> = await axios.post(
+      tagUrl,
+      {},
+      {
+        headers: {
+          Authorization: authHeader.value,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    store.updateCurrentDatasetTags(response.data);
+    newTagName.value = "";
+    addTagMenu.value = false;
+    showSnackbar(`Tag "${tagToAdd}" added`);
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    console.error("Failed to add tag:", axiosError);
+    if (axiosError.response?.status === 403) {
+      showSnackbar("Permission denied. You may not have write access.", "error");
+    } else {
+      showSnackbar("Failed to add tag", "error");
+    }
+  } finally {
+    tagSaving.value = false;
+  }
+}
+
+async function removeTag(tag: string): Promise<void> {
+  if (!dataset.value) return;
+
+  tagSaving.value = true;
+  const tagUrl = `${tagsUrl.value}/${encodeURIComponent(tag)}`;
+
+  try {
+    const response: AxiosResponse<{ tags: string[] }> = await axios.delete(
+      tagUrl,
+      {
+        headers: {
+          Authorization: authHeader.value,
+        },
+      }
+    );
+    store.updateCurrentDatasetTags(response.data);
+    showSnackbar(`Tag "${tag}" removed`);
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    console.error("Failed to remove tag:", axiosError);
+    if (axiosError.response?.status === 403) {
+      showSnackbar("Permission denied. You may not have write access.", "error");
+    } else {
+      showSnackbar("Failed to remove tag", "error");
+    }
+  } finally {
+    tagSaving.value = false;
   }
 }
 </script>
