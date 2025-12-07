@@ -141,6 +141,7 @@
 import { ref, computed, getCurrentInstance } from "vue";
 import type { AxiosError, AxiosResponse } from "axios";
 import type { ResourceLink } from "@/types";
+import { useNotificationStore } from "@/stores/notifications";
 
 interface TokenResponse {
   token?: string;
@@ -152,13 +153,13 @@ const emit = defineEmits<{
 
 const instance = getCurrentInstance();
 const axios = instance?.appContext.config.globalProperties.$http;
+const notifications = useNotificationStore();
 
 const username = ref<string | null>(null);
 const password = ref<string | null>(null);
 const signInFailed = ref(false);
 const signInInfo = ref<TokenResponse | null>(null);
 const signInLoading = ref(false);
-const signInErrored = ref(false);
 const rightPanelActive = ref(false);
 
 const tokenGeneratorURL = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL || "";
@@ -208,6 +209,8 @@ function signIn(token: string): void {
 function getToken(): void {
   console.log(process.env);
   signInLoading.value = true;
+  signInFailed.value = false;
+
   axios
     .post(tokenGeneratorURL, loginCredentials.value, {
       headers: {
@@ -224,7 +227,22 @@ function getToken(): void {
     })
     .catch((error: AxiosError) => {
       console.log(error);
-      signInErrored.value = true;
+
+      // Determine error type and show appropriate message
+      if (error.code === "ERR_NETWORK") {
+        notifications.error(
+          "Unable to connect to authentication server. Please check that the token generator service is running.",
+          10000
+        );
+      } else if (error.response?.status === 401) {
+        signInFailed.value = true;
+      } else if (error.response?.status === 403) {
+        notifications.error("Access denied. Please check your credentials.");
+      } else if (error.response?.status === 500) {
+        notifications.error("Authentication server error. Please try again later.");
+      } else {
+        notifications.error(`Authentication failed: ${error.message}`);
+      }
     })
     .finally(() => (signInLoading.value = false));
 }

@@ -312,10 +312,6 @@
       </v-card-text>
     </v-card>
 
-    <!-- Snackbar for notifications -->
-    <v-snackbar v-model="snackbar" :timeout="3000" :color="snackbarColor">
-      {{ snackbarText }}
-    </v-snackbar>
   </div>
 </template>
 
@@ -324,10 +320,12 @@ import { ref, computed } from "vue";
 import { filesize as filesizeLib } from "filesize";
 import moment from "moment";
 import { useStore } from "@/store";
+import { useNotificationStore } from "@/stores/notifications";
 import { dserverApi } from "@/services/dserverApi";
 import type { Dataset, ManifestItem } from "@/types";
 
 const store = useStore();
+const notifications = useNotificationStore();
 
 // Form state
 const newTagName = ref<string>("");
@@ -337,9 +335,6 @@ const newAnnotationValue = ref<string>("");
 const addAnnotationMenu = ref(false);
 const editAnnotationValue = ref<string>("");
 const saving = ref(false);
-const snackbar = ref(false);
-const snackbarText = ref("");
-const snackbarColor = ref("success");
 
 // Computed properties
 const dataset = computed<Dataset | null>(() => {
@@ -427,16 +422,11 @@ function formatAnnotationValue(value: unknown): string {
 async function copyToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
-    showSnackbar("Copied to clipboard");
+    notifications.success("Copied to clipboard");
   } catch (err) {
     console.error("Failed to copy:", err);
+    notifications.error("Failed to copy to clipboard");
   }
-}
-
-function showSnackbar(text: string, color: string = "success"): void {
-  snackbarText.value = text;
-  snackbarColor.value = color;
-  snackbar.value = true;
 }
 
 // Tag operations
@@ -445,7 +435,7 @@ async function addTag(): Promise<void> {
   if (!tagToAdd || !dataset.value) return;
 
   if (currentTags.value.includes(tagToAdd)) {
-    showSnackbar("Tag already exists", "warning");
+    notifications.warning("Tag already exists");
     return;
   }
 
@@ -455,14 +445,14 @@ async function addTag(): Promise<void> {
     store.updateCurrentDatasetTags(result);
     newTagName.value = "";
     addTagMenu.value = false;
-    showSnackbar(`Tag "${tagToAdd}" added`);
+    notifications.success(`Tag "${tagToAdd}" added`);
   } catch (error) {
     console.error("Failed to add tag:", error);
     const err = error as { status?: number };
     if (err.status === 403) {
-      showSnackbar("Permission denied. You may not have write access.", "error");
+      notifications.error("Permission denied. You may not have write access.");
     } else {
-      showSnackbar("Failed to add tag", "error");
+      notifications.error("Failed to add tag");
     }
   } finally {
     saving.value = false;
@@ -476,14 +466,14 @@ async function removeTag(tag: string): Promise<void> {
   try {
     const result = await dserverApi.removeTag(dataset.value.uri, tag);
     store.updateCurrentDatasetTags(result);
-    showSnackbar(`Tag "${tag}" removed`);
+    notifications.success(`Tag "${tag}" removed`);
   } catch (error) {
     console.error("Failed to remove tag:", error);
     const err = error as { status?: number };
     if (err.status === 403) {
-      showSnackbar("Permission denied. You may not have write access.", "error");
+      notifications.error("Permission denied. You may not have write access.");
     } else {
-      showSnackbar("Failed to remove tag", "error");
+      notifications.error("Failed to remove tag");
     }
   } finally {
     saving.value = false;
@@ -510,14 +500,14 @@ async function addAnnotation(): Promise<void> {
     newAnnotationKey.value = "";
     newAnnotationValue.value = "";
     addAnnotationMenu.value = false;
-    showSnackbar(`Annotation "${key}" added`);
+    notifications.success(`Annotation "${key}" added`);
   } catch (error) {
     console.error("Failed to add annotation:", error);
     const err = error as { status?: number };
     if (err.status === 403) {
-      showSnackbar("Permission denied. You may not have write access.", "error");
+      notifications.error("Permission denied. You may not have write access.");
     } else {
-      showSnackbar("Failed to add annotation", "error");
+      notifications.error("Failed to add annotation");
     }
   } finally {
     saving.value = false;
@@ -540,14 +530,14 @@ async function updateAnnotation(key: string): Promise<void> {
     const result = await dserverApi.setAnnotation(dataset.value.uri, key, value);
     store.updateCurrentDatasetAnnotations(result);
     editAnnotationValue.value = "";
-    showSnackbar(`Annotation "${key}" updated`);
+    notifications.success(`Annotation "${key}" updated`);
   } catch (error) {
     console.error("Failed to update annotation:", error);
     const err = error as { status?: number };
     if (err.status === 403) {
-      showSnackbar("Permission denied. You may not have write access.", "error");
+      notifications.error("Permission denied. You may not have write access.");
     } else {
-      showSnackbar("Failed to update annotation", "error");
+      notifications.error("Failed to update annotation");
     }
   } finally {
     saving.value = false;
@@ -561,14 +551,14 @@ async function deleteAnnotation(key: string): Promise<void> {
   try {
     const result = await dserverApi.deleteAnnotation(dataset.value.uri, key);
     store.updateCurrentDatasetAnnotations(result);
-    showSnackbar(`Annotation "${key}" deleted`);
+    notifications.success(`Annotation "${key}" deleted`);
   } catch (error) {
     console.error("Failed to delete annotation:", error);
     const err = error as { status?: number };
     if (err.status === 403) {
-      showSnackbar("Permission denied. You may not have write access.", "error");
+      notifications.error("Permission denied. You may not have write access.");
     } else {
-      showSnackbar("Failed to delete annotation", "error");
+      notifications.error("Failed to delete annotation");
     }
   } finally {
     saving.value = false;

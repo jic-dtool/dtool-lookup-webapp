@@ -208,10 +208,8 @@
       <SignIn @sign-in="setTokenAndSearch" />
     </v-main>
 
-    <!-- Snackbar for notifications -->
-    <v-snackbar v-model="snackbar" :timeout="3000" :color="snackbarColor">
-      {{ snackbarText }}
-    </v-snackbar>
+    <!-- Global notifications -->
+    <NotificationSnackbar />
   </v-app>
 </template>
 
@@ -228,6 +226,7 @@ import Annotations from "./components/DatasetAnnotations.vue";
 import DatasetSummary from "./components/DatasetSummary.vue";
 import DatasetSorting from "./components/DatasetSorting.vue";
 import TemplateDownloader from "./components/TemplateDownloader.vue";
+import NotificationSnackbar from "./components/NotificationSnackbar.vue";
 import { useStore } from "./store";
 import { dserverApi } from "./services/dserverApi";
 import type {
@@ -266,9 +265,6 @@ const lookup_url = dserverApi.getBaseUrl();
 const token = ref<string | null>(null);
 const responseheaders = ref<ResponseHeaders>({});
 const getinfo = ref<ConfigInfo>({ versions: {} });
-const snackbar = ref(false);
-const snackbarText = ref("");
-const snackbarColor = ref("success");
 const paginationInfo = ref<PaginationInfo>({ total: 0, page: 1, per_page: 10, pages: 1 });
 
 // Computed properties
@@ -346,12 +342,6 @@ const currentPage = computed({
 });
 
 // Methods
-function showSnackbar(text: string, color: string = "success"): void {
-  snackbarText.value = text;
-  snackbarColor.value = color;
-  snackbar.value = true;
-}
-
 function onPageChange(): void {
   searchDatasets();
 }
