@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { ref } from "vue";
 import type {
   Dataset,
   Manifest,
@@ -8,111 +9,148 @@ import type {
   ServerVersions,
 } from "./types";
 
-export interface State {
-  free_text: string | null;
-  mongo_text: string | null;
-  creator_usernames: string[];
-  base_uris: string[];
-  tags: string[];
-  username: string | null;
-  current_dataset_index: number;
-  current_dataset: Dataset | null;
-  current_dataset_manifest: Manifest | null;
-  current_dataset_readme: Readme | null;
-  current_dataset_annotations: Annotations | null;
-  current_dataset_tags: Tags | null;
-  num_filtered: number;
-  update_current_Per_Page: number;
-  current_pageNumber: number;
-  selected_sort_option: string;
-  server_versions: ServerVersions;
-  lookup_url: string | null;
-}
+export const useStore = defineStore("main", () => {
+  // State
+  const free_text = ref<string | null>(null);
+  const mongo_text = ref<string | null>(null);
+  const creator_usernames = ref<string[]>([]);
+  const base_uris = ref<string[]>([]);
+  const tags = ref<string[]>([]);
+  const username = ref<string | null>(null);
+  const current_dataset_index = ref(0);
+  const current_dataset = ref<Dataset | null>(null);
+  const current_dataset_manifest = ref<Manifest | null>(null);
+  const current_dataset_readme = ref<Readme | null>(null);
+  const current_dataset_annotations = ref<Annotations | null>(null);
+  const current_dataset_tags = ref<Tags | null>(null);
+  const num_filtered = ref(0);
+  const update_current_Per_Page = ref(10);
+  const current_pageNumber = ref(1);
+  const selected_sort_option = ref("frozen_at");
+  const server_versions = ref<ServerVersions>({});
+  const lookup_url = ref<string | null>(null);
 
-export const useStore = defineStore("main", {
-  state: (): State => ({
-    free_text: null,
-    mongo_text: null,
-    creator_usernames: [],
-    base_uris: [],
-    tags: [],
-    username: null,
-    current_dataset_index: 0,
-    current_dataset: null,
-    current_dataset_manifest: null,
-    current_dataset_readme: null,
-    current_dataset_annotations: null,
-    current_dataset_tags: null,
-    num_filtered: 0,
-    update_current_Per_Page: 10,
-    current_pageNumber: 1,
-    selected_sort_option: "frozen_at",
-    server_versions: {},
-    lookup_url: null,
-  }),
+  // Actions
+  function updateFreeText(value: string | null) {
+    free_text.value = value;
+  }
 
-  actions: {
-    updateFreeText(free_text: string | null) {
-      this.free_text = free_text;
-    },
-    updateMongoText(mongo_text: string | null) {
-      this.mongo_text = mongo_text;
-    },
-    updateCreatorUsernames(creator_usernames: string[]) {
-      this.creator_usernames = creator_usernames;
-    },
-    updateBaseUris(base_uris: string[]) {
-      this.base_uris = base_uris;
-    },
-    updateTags(tags: string[]) {
-      this.tags = tags;
-    },
-    updateCurrentDatasetIndex(index: number) {
-      this.current_dataset_index = index;
-    },
-    updateCurrentPageNumber(pageNumber: number) {
-      this.current_pageNumber = pageNumber;
-    },
-    updateCurrentDataset(dataset: Dataset | null) {
-      this.current_dataset = dataset;
-    },
-    updateCurrentDatasetManifest(manifest: Manifest | null) {
-      this.current_dataset_manifest = manifest;
-    },
-    updateCurrentDatasetReadme(readme: Readme | null) {
-      this.current_dataset_readme = readme;
-    },
-    updateCurrentDatasetAnnotations(annotations: Annotations | null) {
-      this.current_dataset_annotations = annotations;
-    },
-    updateCurrentDatasetTags(tags: Tags | null) {
-      this.current_dataset_tags = tags;
-    },
-    updateNumFiltered(num_filtered: number) {
-      this.num_filtered = num_filtered;
-    },
-    updateCurrentPerPage(perpage: number) {
-      this.update_current_Per_Page = perpage;
-    },
-    updateUsername(username: string | null) {
-      this.username = username;
-    },
-    updateSelectedSortOption(selected_sort_option: string) {
-      this.selected_sort_option = selected_sort_option;
-    },
-    updateServerVersions(versions: ServerVersions) {
-      this.server_versions = versions;
-    },
-    updateLookupUrl(lookup_url: string | null) {
-      this.lookup_url = lookup_url;
-    },
-    clearAll() {
-      this.username = null;
-      this.free_text = null;
-      this.mongo_text = null;
-      this.creator_usernames = [];
-      this.tags = [];
-      this.base_uris = [];
-    },
-  },
+  function updateMongoText(value: string | null) {
+    mongo_text.value = value;
+  }
+
+  function updateCreatorUsernames(value: string[]) {
+    creator_usernames.value = value;
+  }
+
+  function updateBaseUris(value: string[]) {
+    base_uris.value = value;
+  }
+
+  function updateTags(value: string[]) {
+    tags.value = value;
+  }
+
+  function updateCurrentDatasetIndex(index: number) {
+    current_dataset_index.value = index;
+  }
+
+  function updateCurrentPageNumber(pageNumber: number) {
+    current_pageNumber.value = pageNumber;
+  }
+
+  function updateCurrentDataset(dataset: Dataset | null) {
+    current_dataset.value = dataset;
+  }
+
+  function updateCurrentDatasetManifest(manifest: Manifest | null) {
+    current_dataset_manifest.value = manifest;
+  }
+
+  function updateCurrentDatasetReadme(readme: Readme | null) {
+    current_dataset_readme.value = readme;
+  }
+
+  function updateCurrentDatasetAnnotations(annotations: Annotations | null) {
+    current_dataset_annotations.value = annotations;
+  }
+
+  function updateCurrentDatasetTags(value: Tags | null) {
+    current_dataset_tags.value = value;
+  }
+
+  function updateNumFiltered(value: number) {
+    num_filtered.value = value;
+  }
+
+  function updateCurrentPerPage(perpage: number) {
+    update_current_Per_Page.value = perpage;
+  }
+
+  function updateUsername(value: string | null) {
+    username.value = value;
+  }
+
+  function updateSelectedSortOption(value: string) {
+    selected_sort_option.value = value;
+  }
+
+  function updateServerVersions(versions: ServerVersions) {
+    server_versions.value = versions;
+  }
+
+  function updateLookupUrl(value: string | null) {
+    lookup_url.value = value;
+  }
+
+  function clearAll() {
+    username.value = null;
+    free_text.value = null;
+    mongo_text.value = null;
+    creator_usernames.value = [];
+    tags.value = [];
+    base_uris.value = [];
+  }
+
+  return {
+    // State
+    free_text,
+    mongo_text,
+    creator_usernames,
+    base_uris,
+    tags,
+    username,
+    current_dataset_index,
+    current_dataset,
+    current_dataset_manifest,
+    current_dataset_readme,
+    current_dataset_annotations,
+    current_dataset_tags,
+    num_filtered,
+    update_current_Per_Page,
+    current_pageNumber,
+    selected_sort_option,
+    server_versions,
+    lookup_url,
+    // Actions
+    updateFreeText,
+    updateMongoText,
+    updateCreatorUsernames,
+    updateBaseUris,
+    updateTags,
+    updateCurrentDatasetIndex,
+    updateCurrentPageNumber,
+    updateCurrentDataset,
+    updateCurrentDatasetManifest,
+    updateCurrentDatasetReadme,
+    updateCurrentDatasetAnnotations,
+    updateCurrentDatasetTags,
+    updateNumFiltered,
+    updateCurrentPerPage,
+    updateUsername,
+    updateSelectedSortOption,
+    updateServerVersions,
+    updateLookupUrl,
+    clearAll,
+  };
 });
