@@ -41,7 +41,18 @@
                 {{ filesize(item.size_in_bytes) }}
               </v-list-item-subtitle>
               <template #append>
-                <v-menu location="start" :close-on-content-click="false">
+                <!-- Direct download button when signed URL plugin is available -->
+                <v-btn
+                  v-if="hasSignedUrlPlugin"
+                  size="small"
+                  variant="tonal"
+                  color="primary"
+                  icon="mdi-download"
+                  :loading="downloadingItems[id as string]"
+                  @click="downloadItem(id as string, item.relpath)"
+                />
+                <!-- Fallback to dtool command menu when plugin not available -->
+                <v-menu v-else location="start" :close-on-content-click="false">
                   <template #activator="{ props }">
                     <v-btn
                       v-bind="props"
@@ -87,9 +98,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, reactive } from "vue";
 import { filesize as filesizeLib } from "filesize";
 import { useStore } from "@/store";
+import { dserverApi } from "@/services/dserverApi";
 import type { Manifest } from "@/types";
 
 interface FileIconMap {
@@ -98,6 +110,7 @@ interface FileIconMap {
 
 const store = useStore();
 const fetch_identifier = ref<string | null>(null);
+const downloadingItems = reactive<Record<string, boolean>>({});
 
 const manifest = computed<Manifest | null>(() => {
   return store.current_dataset_manifest;
@@ -117,6 +130,11 @@ const fetch_command = computed(() => {
     " " +
     fetch_identifier.value
   );
+});
+
+const hasSignedUrlPlugin = computed(() => {
+  const versions = store.server_versions;
+  return versions && "dserver_signed_url_plugin" in versions;
 });
 
 function filesize(bytes: number): string {
@@ -173,6 +191,46 @@ function getFileIcon(filename: string): string {
     npz: "mdi-database",
   };
   return iconMap[ext] || "mdi-file";
+}
+
+async function downloadItem(identifier: string, relpath: string): Promise<void> {
+  const uri = store.current_dataset?.uri;
+  if (!uri) return;
+
+  downloadingItems[identifier] = true;
+  try {
+    // Get signed URL for the item
+    const response = await dserverApi.getItemSignedUrl(uri, identifier);
+    const signedUrl = response.url;
+
+    // Fetch the item content from the signed URL
+    const itemResponse = await fetch(signedUrl);
+    if (!itemResponse.ok) {
+      throw new Error(`Failed to download item: ${itemResponse.statusText}`);
+    }
+
+    // Get the blob and create download link
+    const blob = await itemResponse.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+
+    // Extract filename from relpath
+    const filename = relpath.split("/").pop() || relpath;
+
+    // Create and trigger download
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clean up the URL
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (err) {
+    console.error("Failed to download item:", err);
+  } finally {
+    downloadingItems[identifier] = false;
+  }
 }
 
 async function copyToClipboard(text: string): Promise<void> {

@@ -21,6 +21,7 @@ import type {
   AuthenticationError,
   AuthorizationError,
   NotFoundError,
+  ItemSignedURLResponse,
 } from "dserver-client";
 
 // Re-export types for convenience
@@ -39,6 +40,7 @@ export type {
   AuthenticationError,
   AuthorizationError,
   NotFoundError,
+  ItemSignedURLResponse,
 };
 
 // Re-export error classes
@@ -176,6 +178,22 @@ class DServerApi {
 
   async deleteAnnotation(uri: string, name: string): Promise<AnnotationsResponse> {
     return this.ensureClient().deleteAnnotation(uri, name);
+  }
+
+  // =========================================================================
+  // README
+  // =========================================================================
+
+  async setReadme(uri: string, content: string): Promise<ReadmeResponse> {
+    return this.ensureClient().setReadme(uri, content);
+  }
+
+  // =========================================================================
+  // Signed URLs
+  // =========================================================================
+
+  async getItemSignedUrl(uri: string, identifier: string): Promise<ItemSignedURLResponse> {
+    return this.ensureClient().getItemSignedUrl(uri, identifier);
   }
 }
 

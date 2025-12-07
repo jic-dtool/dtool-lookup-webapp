@@ -148,7 +148,7 @@ interface TokenResponse {
 }
 
 const emit = defineEmits<{
-  (e: "sign-in", token: string): void;
+  (e: "sign-in", token: string, username: string): void;
 }>();
 
 const instance = getCurrentInstance();
@@ -204,7 +204,7 @@ const overlayGradient = computed(() => {
 });
 
 function signIn(token: string): void {
-  emit("sign-in", token);
+  emit("sign-in", token, username.value || "");
 }
 
 function getToken(): void {

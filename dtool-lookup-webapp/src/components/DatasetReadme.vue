@@ -10,7 +10,19 @@
             </div>
           </template>
           <template #actions="{ expanded }">
-            <v-menu location="bottom end" :close-on-content-click="false" @click.stop>
+            <!-- Edit button - shows inline editor if valid YAML, otherwise shows dtool command -->
+            <v-btn
+              v-if="isValidYaml"
+              size="small"
+              variant="tonal"
+              :color="isEditing ? 'grey' : 'primary'"
+              :prepend-icon="isEditing ? 'mdi-close' : 'mdi-pencil'"
+              class="mr-2"
+              @click.stop="toggleEdit"
+            >
+              {{ isEditing ? 'Cancel' : 'Edit' }}
+            </v-btn>
+            <v-menu v-else location="bottom end" :close-on-content-click="false" @click.stop>
               <template #activator="{ props }">
                 <v-btn
                   v-bind="props"
@@ -54,7 +66,42 @@
           </template>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <div class="readme-content">
+          <!-- Editor view -->
+          <div v-if="isEditing" class="readme-editor">
+            <v-textarea
+              v-model="editedContent"
+              variant="outlined"
+              density="compact"
+              rows="12"
+              hide-details="auto"
+              :error="!!yamlError"
+              :error-messages="yamlError"
+              class="yaml-editor-textarea"
+              @update:model-value="validateYaml"
+            />
+            <div class="d-flex justify-end mt-2 gap-2">
+              <v-btn
+                size="small"
+                variant="tonal"
+                color="grey"
+                @click="cancelEdit"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                size="small"
+                variant="tonal"
+                color="primary"
+                :loading="isSaving"
+                :disabled="!!yamlError"
+                @click="saveReadme"
+              >
+                Save
+              </v-btn>
+            </div>
+          </div>
+          <!-- Read-only view -->
+          <div v-else class="readme-content">
             <pre class="readme-pre"><code v-html="formattedReadme"></code></pre>
           </div>
         </v-expansion-panel-text>
@@ -64,10 +111,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useStore } from "@/store";
+import { dserverApi } from "@/services/dserverApi";
+import * as yaml from "yaml";
 
 const store = useStore();
+const isEditing = ref(false);
+const editedContent = ref("");
+const yamlError = ref<string | null>(null);
+const isSaving = ref(false);
 
 const getReadmeContent = computed<string | null>(() => {
   if (
@@ -77,6 +130,16 @@ const getReadmeContent = computed<string | null>(() => {
     return null;
   }
   return store.current_dataset_readme.readme.trim();
+});
+
+const isValidYaml = computed(() => {
+  if (!getReadmeContent.value) return false;
+  try {
+    yaml.parse(getReadmeContent.value);
+    return true;
+  } catch {
+    return false;
+  }
 });
 
 const formattedReadme = computed(() => {
@@ -92,6 +155,60 @@ const edit_command = computed(() => {
   if (!store.current_dataset) return "";
   return "dtool readme edit " + store.current_dataset.uri;
 });
+
+// Reset editing state when dataset changes
+watch(() => store.current_dataset?.uri, () => {
+  isEditing.value = false;
+  editedContent.value = "";
+  yamlError.value = null;
+});
+
+function toggleEdit(): void {
+  if (isEditing.value) {
+    cancelEdit();
+  } else {
+    startEdit();
+  }
+}
+
+function startEdit(): void {
+  editedContent.value = getReadmeContent.value || "";
+  yamlError.value = null;
+  isEditing.value = true;
+}
+
+function cancelEdit(): void {
+  isEditing.value = false;
+  editedContent.value = "";
+  yamlError.value = null;
+}
+
+function validateYaml(): void {
+  try {
+    yaml.parse(editedContent.value);
+    yamlError.value = null;
+  } catch (e) {
+    yamlError.value = e instanceof Error ? e.message : "Invalid YAML";
+  }
+}
+
+async function saveReadme(): Promise<void> {
+  const uri = store.current_dataset?.uri;
+  if (!uri || yamlError.value) return;
+
+  isSaving.value = true;
+  try {
+    const response = await dserverApi.setReadme(uri, editedContent.value);
+    // Update store with new readme
+    store.updateCurrentDatasetReadme(response);
+    isEditing.value = false;
+  } catch (err) {
+    console.error("Failed to save README:", err);
+    yamlError.value = "Failed to save README. Please try again.";
+  } finally {
+    isSaving.value = false;
+  }
+}
 
 function formatLine(line: string): string {
   // Escape HTML first
@@ -188,5 +305,23 @@ async function copyToClipboard(text: string): Promise<void> {
 .readme-pre :deep(.yaml-comment) {
   color: #6a737d;
   font-style: italic;
+}
+
+/* Editor styling */
+.readme-editor {
+  margin: -12px -16px;
+  padding: 12px;
+  background-color: #f6f8fa;
+  border-radius: 8px;
+}
+
+.yaml-editor-textarea :deep(textarea) {
+  font-family: "Roboto Mono", "Consolas", "Monaco", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.gap-2 {
+  gap: 8px;
 }
 </style>

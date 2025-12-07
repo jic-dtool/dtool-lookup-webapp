@@ -24,7 +24,7 @@
           class="mr-2"
         />
 
-        <template-downloader @logoutAction="logout" />
+        <UserMenu @logoutAction="logout" />
       </v-app-bar>
 
       <!-- Navigation Drawer for mobile -->
@@ -188,7 +188,7 @@
 
     <!-- Sign In view -->
     <v-main v-else>
-      <SignIn @sign-in="setTokenAndSearch" />
+      <SignIn @sign-in="handleSignIn" />
     </v-main>
 
     <!-- Global notifications -->
@@ -207,7 +207,7 @@ import Manifest from "./components/DatasetManifest.vue";
 import Readme from "./components/DatasetReadme.vue";
 import DatasetSummary from "./components/DatasetSummary.vue";
 import DatasetSorting from "./components/DatasetSorting.vue";
-import TemplateDownloader from "./components/TemplateDownloader.vue";
+import UserMenu from "./components/UserMenu.vue";
 import NotificationSnackbar from "./components/NotificationSnackbar.vue";
 import { useStore } from "./store";
 import { dserverApi } from "./services/dserverApi";
@@ -328,9 +328,10 @@ function onPageChange(): void {
   searchDatasets();
 }
 
-function setTokenAndSearch(newToken: string): void {
+function handleSignIn(newToken: string, username: string): void {
   token.value = newToken;
   dserverApi.setToken(newToken);
+  store.updateUsername(username);
   searchDatasets();
 }
 
