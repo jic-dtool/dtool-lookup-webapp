@@ -32,8 +32,10 @@
   </div>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from "vue";
+
+export default defineComponent({
   name: "TextSearch",
   props: {
     mongoplugin: {
@@ -41,29 +43,30 @@ export default {
       required: true,
     },
   },
+  emits: ["start-search"],
   data() {
     return {
       textQuery: "",
     };
   },
   computed: {
-    isJson() {
+    isJson(): boolean {
       if (this.textQuery === "") {
         return false;
       }
       try {
         JSON.parse(this.textQuery);
         return true;
-      } catch (e) {
+      } catch {
         return false;
       }
     },
-    isJsonEnabled() {
+    isJsonEnabled(): boolean {
       return this.mongoplugin !== "N/A";
     },
   },
   methods: {
-    startSearch() {
+    startSearch(): void {
       if (this.isJsonEnabled && this.isJson) {
         this.$store.commit("update_mongo_text", this.textQuery);
       } else {
@@ -72,5 +75,5 @@ export default {
       this.$emit("start-search");
     },
   },
-};
+});
 </script>

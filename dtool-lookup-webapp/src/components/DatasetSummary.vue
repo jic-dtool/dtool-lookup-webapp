@@ -154,27 +154,29 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from "vue";
 import { filesize } from "filesize";
 import moment from "moment";
+import type { Dataset, ManifestItem } from "@/types";
 
-export default {
+export default defineComponent({
   name: "DatasetSummary",
-  data: function () {
+  data() {
     return {
-      tag_name: null,
+      tag_name: null as string | null,
     };
   },
   computed: {
-    dataset: function () {
+    dataset(): Dataset | null {
       return this.$store.state.current_dataset;
     },
-    hasSignedUrlPlugin: function () {
+    hasSignedUrlPlugin(): boolean {
       // Check if dserver-signed-url-plugin is installed
       const versions = this.$store.state.server_versions;
-      return versions && versions.dserver_signed_url_plugin;
+      return !!(versions && versions.dserver_signed_url_plugin);
     },
-    displayUri: function () {
+    displayUri(): string {
       // Show dserver:// URI if signed-url-plugin is present, otherwise show backend URI
       if (!this.dataset) return "";
       if (this.hasSignedUrlPlugin) {
@@ -185,7 +187,7 @@ export default {
           try {
             const url = new URL(lookupUrl);
             return `dserver://${url.host}/${this.dataset.uuid}`;
-          } catch (e) {
+          } catch {
             // Fallback to backend URI if URL parsing fails
             return this.dataset.uri;
           }
@@ -193,34 +195,39 @@ export default {
       }
       return this.dataset.uri;
     },
-    numItems: function () {
+    numItems(): number {
       return this.$store.state.current_dataset_manifest &&
         this.$store.state.current_dataset_manifest.items
         ? Object.values(this.$store.state.current_dataset_manifest.items).length
         : 0;
     },
-    total_size_in_bytes: function () {
-      if (!this.$store.state.current_dataset_manifest ||
-          !this.$store.state.current_dataset_manifest.items) {
+    total_size_in_bytes(): number {
+      if (
+        !this.$store.state.current_dataset_manifest ||
+        !this.$store.state.current_dataset_manifest.items
+      ) {
         return 0;
       }
-      var total = 0;
-      Object.values(this.$store.state.current_dataset_manifest.items).forEach(
-        (item) => {
-          total = total + item.size_in_bytes;
-        }
-      );
+      let total = 0;
+      Object.values(
+        this.$store.state.current_dataset_manifest.items as Record<
+          string,
+          ManifestItem
+        >
+      ).forEach((item: ManifestItem) => {
+        total = total + item.size_in_bytes;
+      });
       return total;
     },
-    copy_command: function () {
+    copy_command(): string {
       if (!this.dataset) return "";
       return "dtool cp " + this.displayUri + " .";
     },
-    tag_command: function () {
+    tag_command(): string {
       if (!this.dataset) return "";
       return "dtool tag set " + this.displayUri + " " + this.tag_name;
     },
-    currentTags() {
+    currentTags(): string[] {
       if (
         this.$store.state.current_dataset_tags &&
         this.$store.state.current_dataset_tags.tags
@@ -231,21 +238,21 @@ export default {
     },
   },
   methods: {
-    filesize(bytes) {
-      return filesize(bytes);
+    filesize(bytes: number): string {
+      return filesize(bytes) as string;
     },
-    moment(timestamp) {
+    moment(timestamp: number) {
       return moment(timestamp);
     },
-    async copyToClipboard(text) {
+    async copyToClipboard(text: string): Promise<void> {
       try {
         await navigator.clipboard.writeText(text);
       } catch (err) {
-        console.error('Failed to copy:', err);
+        console.error("Failed to copy:", err);
       }
     },
   },
-};
+});
 </script>
 
 <style scoped>

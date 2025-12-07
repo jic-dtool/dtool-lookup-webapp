@@ -49,31 +49,40 @@
   </v-list>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent, type PropType } from "vue";
 import moment from "moment";
+import type { Dataset, ResponseHeaders } from "@/types";
 
-export default {
+export default defineComponent({
   name: "DatasetTable",
   props: {
-    datasetHits: Array,
-    responseheaders: {},
+    datasetHits: {
+      type: Array as PropType<Dataset[]>,
+      required: true,
+    },
+    responseheaders: {
+      type: Object as PropType<ResponseHeaders>,
+      default: () => ({}),
+    },
   },
+  emits: ["update-dataset"],
   computed: {
-    selected: function () {
+    selected(): number {
       return this.$store.state.current_dataset_index;
     },
   },
   methods: {
-    moment(timestamp) {
+    moment(timestamp: number) {
       return moment(timestamp);
     },
-    updateSelectedDataset: function (index) {
+    updateSelectedDataset(index: number): void {
       this.$store.commit("update_current_dataset_index", index);
       this.$store.commit("update_current_dataset", this.datasetHits[index]);
       this.$emit("update-dataset");
     },
   },
-};
+});
 </script>
 
 <style scoped>

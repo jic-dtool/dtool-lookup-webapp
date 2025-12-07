@@ -30,13 +30,13 @@
         <div class="d-flex justify-space-between align-center mb-2">
           <span class="text-body-2 text-grey-darken-1">Total Datasets</span>
           <v-chip size="small" color="primary" variant="flat">
-            {{ summary_info.number_of_datasets }}
+            {{ summary_info?.number_of_datasets ?? 0 }}
           </v-chip>
         </div>
         <div class="d-flex justify-space-between align-center">
           <span class="text-body-2 text-grey-darken-1">Filtered</span>
           <v-chip size="small" color="secondary" variant="flat">
-            {{ this.$store.state.num_filtered }}
+            {{ $store.state.num_filtered }}
           </v-chip>
         </div>
         <v-btn
@@ -55,7 +55,7 @@
       <!-- Filters -->
       <v-expansion-panels variant="accordion" multiple>
         <!-- Tags Filter -->
-        <v-expansion-panel v-if="summary_info.tags && summary_info.tags.length > 0">
+        <v-expansion-panel v-if="summary_info?.tags && summary_info.tags.length > 0">
           <v-expansion-panel-title class="text-body-2 font-weight-medium">
             <v-icon start size="small">mdi-tag-multiple</v-icon>
             Tags
@@ -98,7 +98,7 @@
         </v-expansion-panel>
 
         <!-- Locations Filter -->
-        <v-expansion-panel v-if="summary_info.base_uris && summary_info.base_uris.length > 0">
+        <v-expansion-panel v-if="summary_info?.base_uris && summary_info.base_uris.length > 0">
           <v-expansion-panel-title class="text-body-2 font-weight-medium">
             <v-icon start size="small">mdi-folder-marker</v-icon>
             Locations
@@ -143,7 +143,7 @@
         </v-expansion-panel>
 
         <!-- Creators Filter -->
-        <v-expansion-panel v-if="summary_info.creator_usernames && summary_info.creator_usernames.length > 0">
+        <v-expansion-panel v-if="summary_info?.creator_usernames && summary_info.creator_usernames.length > 0">
           <v-expansion-panel-title class="text-body-2 font-weight-medium">
             <v-icon start size="small">mdi-account-multiple</v-icon>
             Creators
@@ -189,17 +189,40 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from "vue";
+import type { AxiosError, AxiosResponse } from "axios";
 import { getUsernameFromJwt } from "@/utils/jwtUtils";
+import type { SummaryInfo } from "@/types";
 
-export default {
+interface SummaryInfoData {
+  summary_info: SummaryInfo | null;
+  loading: boolean;
+  errored: boolean;
+  username: string;
+  selectedTags: string[];
+  selectedBaseUris: string[];
+  selectedCreators: string[];
+}
+
+export default defineComponent({
   name: "SummaryInfo",
   props: {
-    lookup_url: String,
-    auth_str: String,
-    token: String,
+    lookup_url: {
+      type: String,
+      required: true,
+    },
+    auth_str: {
+      type: String,
+      required: true,
+    },
+    token: {
+      type: String,
+      required: true,
+    },
   },
-  data: function () {
+  emits: ["start-search"],
+  data(): SummaryInfoData {
     return {
       summary_info: null,
       loading: true,
@@ -211,61 +234,8 @@ export default {
     };
   },
   computed: {
-    source: function () {
+    source(): string {
       return this.lookup_url + "/users/" + this.username + "/summary";
-    },
-  },
-  methods: {
-    load_summary: function () {
-      console.log("Loading summary info");
-      this.errored = false;
-      this.loading = true;
-      this.$http
-        .get(this.source, { headers: { Authorization: this.auth_str } })
-        .then((response) => (this.summary_info = response.data))
-        .catch((error) => {
-          console.log(error);
-          this.errored = true;
-        })
-        .finally(() => (this.loading = false));
-    },
-    searchDatasets: function () {
-      this.$store.state.current_pageNumber = 1;
-      this.$emit("start-search");
-    },
-    clearFilters() {
-      this.selectedTags = [];
-      this.selectedBaseUris = [];
-      this.selectedCreators = [];
-      this.$store.commit("clear_all");
-      this.$emit("start-search");
-    },
-    toggleTag(tag) {
-      if (this.selectedTags.includes(tag)) {
-        this.selectedTags.splice(this.selectedTags.indexOf(tag), 1);
-      } else {
-        this.selectedTags.push(tag);
-      }
-      this.$store.commit("update_tags", this.selectedTags);
-      this.searchDatasets();
-    },
-    toggleBaseUri(base_uri) {
-      if (this.selectedBaseUris.includes(base_uri)) {
-        this.selectedBaseUris.splice(this.selectedBaseUris.indexOf(base_uri), 1);
-      } else {
-        this.selectedBaseUris.push(base_uri);
-      }
-      this.$store.commit("update_base_uris", this.selectedBaseUris);
-      this.searchDatasets();
-    },
-    toggleCreator(creator) {
-      if (this.selectedCreators.includes(creator)) {
-        this.selectedCreators.splice(this.selectedCreators.indexOf(creator), 1);
-      } else {
-        this.selectedCreators.push(creator);
-      }
-      this.$store.commit("update_creator_usernames", this.selectedCreators);
-      this.searchDatasets();
     },
   },
   mounted() {
@@ -276,7 +246,62 @@ export default {
     }
     this.load_summary();
   },
-};
+  methods: {
+    load_summary(): void {
+      console.log("Loading summary info");
+      this.errored = false;
+      this.loading = true;
+      this.$http
+        .get(this.source, { headers: { Authorization: this.auth_str } })
+        .then((response: AxiosResponse<SummaryInfo>) => {
+          this.summary_info = response.data;
+        })
+        .catch((error: AxiosError) => {
+          console.log(error);
+          this.errored = true;
+        })
+        .finally(() => (this.loading = false));
+    },
+    searchDatasets(): void {
+      this.$store.state.current_pageNumber = 1;
+      this.$emit("start-search");
+    },
+    clearFilters(): void {
+      this.selectedTags = [];
+      this.selectedBaseUris = [];
+      this.selectedCreators = [];
+      this.$store.commit("clear_all");
+      this.$emit("start-search");
+    },
+    toggleTag(tag: string): void {
+      if (this.selectedTags.includes(tag)) {
+        this.selectedTags.splice(this.selectedTags.indexOf(tag), 1);
+      } else {
+        this.selectedTags.push(tag);
+      }
+      this.$store.commit("update_tags", this.selectedTags);
+      this.searchDatasets();
+    },
+    toggleBaseUri(base_uri: string): void {
+      if (this.selectedBaseUris.includes(base_uri)) {
+        this.selectedBaseUris.splice(this.selectedBaseUris.indexOf(base_uri), 1);
+      } else {
+        this.selectedBaseUris.push(base_uri);
+      }
+      this.$store.commit("update_base_uris", this.selectedBaseUris);
+      this.searchDatasets();
+    },
+    toggleCreator(creator: string): void {
+      if (this.selectedCreators.includes(creator)) {
+        this.selectedCreators.splice(this.selectedCreators.indexOf(creator), 1);
+      } else {
+        this.selectedCreators.push(creator);
+      }
+      this.$store.commit("update_creator_usernames", this.selectedCreators);
+      this.searchDatasets();
+    },
+  },
+});
 </script>
 
 <style scoped>

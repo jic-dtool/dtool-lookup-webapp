@@ -137,10 +137,39 @@
   </div>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from "vue";
+import type { AxiosError, AxiosResponse } from "axios";
+import type { ResourceLink } from "@/types";
+
+interface TokenResponse {
+  token?: string;
+}
+
+interface SignInData {
+  username: string | null;
+  password: string | null;
+  signInFailed: boolean;
+  signInInfo: TokenResponse | null;
+  signInLoading: boolean;
+  signInErrored: boolean;
+  rightPanelActive: boolean;
+  tokenGeneratorURL: string;
+  logoSrc: string;
+  firstContainerTitle: string;
+  secondContainerTitle: string;
+  secondContainerMessage: string;
+  thirdContainerHeading: string;
+  thirdContainerMessage: string;
+  fourthContainerHeading: string;
+  fourthContainerIntro: string;
+  fourthContainerResources: ResourceLink[];
+}
+
+export default defineComponent({
   name: "SignIn",
-  data: function () {
+  emits: ["sign-in"],
+  data(): SignInData {
     return {
       username: null,
       password: null,
@@ -150,12 +179,13 @@ export default {
       signInErrored: false,
       rightPanelActive: false,
       tokenGeneratorURL:
-        process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL,
+        process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL || "",
 
-      logoSrc: process.env.VUE_APP_LANDING_PAGE_ICON_PATH || "/icons/128x128/dtool_logo.png",
+      logoSrc:
+        process.env.VUE_APP_LANDING_PAGE_ICON_PATH ||
+        "/icons/128x128/dtool_logo.png",
 
-      firstContainerTitle:
-        process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In",
+      firstContainerTitle: process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In",
       secondContainerTitle:
         process.env.VUE_APP_SECOND_CONTAINER_TITLE || "Welcome to Dtool",
       secondContainerMessage:
@@ -191,20 +221,21 @@ export default {
     };
   },
   computed: {
-    loginCredentials: function () {
+    loginCredentials(): { username: string | null; password: string | null } {
       return { username: this.username, password: this.password };
     },
-    overlayGradient() {
+    overlayGradient(): { background: string } {
       return {
-        background: 'linear-gradient(135deg, #6A1B9A 0%, #7B1FA2 50%, #9C27B0 75%, #AB47BC 100%)',
+        background:
+          "linear-gradient(135deg, #6A1B9A 0%, #7B1FA2 50%, #9C27B0 75%, #AB47BC 100%)",
       };
     },
   },
   methods: {
-    signIn: function (token) {
+    signIn(token: string): void {
       this.$emit("sign-in", token);
     },
-    getToken: function () {
+    getToken(): void {
       console.log(process.env);
       this.signInLoading = true;
       this.$http
@@ -213,28 +244,28 @@ export default {
             "Content-Type": "application/json",
           },
         })
-        .then((response) => {
+        .then((response: AxiosResponse<TokenResponse>) => {
           this.signInInfo = response.data;
-          if ("token" in this.signInInfo) {
+          if (this.signInInfo && "token" in this.signInInfo && this.signInInfo.token) {
             this.signIn(this.signInInfo.token);
           } else {
             this.signInFailed = true;
           }
         })
-        .catch((error) => {
+        .catch((error: AxiosError) => {
           console.log(error);
           this.signInErrored = true;
         })
         .finally(() => (this.signInLoading = false));
     },
-    activateRightPanel() {
+    activateRightPanel(): void {
       this.rightPanelActive = true;
     },
-    deactivateRightPanel() {
+    deactivateRightPanel(): void {
       this.rightPanelActive = false;
     },
   },
-};
+});
 </script>
 
 <style scoped>

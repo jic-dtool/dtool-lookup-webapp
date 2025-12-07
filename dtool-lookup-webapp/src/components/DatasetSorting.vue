@@ -41,15 +41,28 @@
   </v-row>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from "vue";
+
+interface PerPageOption {
+  text: string;
+  value: number;
+}
+
+interface SortOption {
+  text: string;
+  value: string;
+}
+
+export default defineComponent({
   name: "DatasetSorting",
+  emits: ["start-search"],
   data() {
     // Initialize selectedSortOption and sortDirection based on store state
     let initialSortOption = this.$store.state.selected_sort_option;
-    let initialcontentsPerPage = this.$store.state.update_current_Per_Page;
+    const initialcontentsPerPage = this.$store.state.update_current_Per_Page;
 
-    let initialSortDirection = "asc";
+    let initialSortDirection: "asc" | "desc" = "asc";
     if (initialSortOption.startsWith("-")) {
       initialSortDirection = "desc";
       initialSortOption = initialSortOption.substring(1);
@@ -64,7 +77,7 @@ export default {
         "creator_username",
         "uri",
         "base_uri",
-      ],
+      ] as string[],
       sortDirection: initialSortDirection,
       selectedContentsPerPage: initialcontentsPerPage,
       perPageOptions: [
@@ -72,12 +85,12 @@ export default {
         { text: "20", value: 20 },
         { text: "50", value: 50 },
         { text: "100", value: 100 },
-      ],
+      ] as PerPageOption[],
     };
   },
   computed: {
     // Format sortOptions for display in the dropdown
-    formattedOptions() {
+    formattedOptions(): SortOption[] {
       return this.sortOptions.map((option) => ({
         text: option
           .replace(/_/g, " ")
@@ -86,30 +99,30 @@ export default {
       }));
     },
     // Get the selectedSortValue with the correct prefix based on sortDirection
-    selectedSortValue() {
+    selectedSortValue(): string {
       return this.sortDirection === "asc"
         ? this.selectedSortOption
         : `-${this.selectedSortOption}`;
     },
   },
+  watch: {
+    // Update the store and emit an event when selectedSortOption changes
+    selectedSortOption(): void {
+      this.$store.commit("update_selected_sort_option", this.selectedSortValue);
+      this.$emit("start-search");
+    },
+  },
   methods: {
     // Toggle the sortDirection and update the store and emit an event
-    toggleSortDirection() {
+    toggleSortDirection(): void {
       this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
       this.$store.commit("update_selected_sort_option", this.selectedSortValue);
       this.$emit("start-search");
     },
-    updatePerPage(perpage) {
+    updatePerPage(perpage: number): void {
       this.$store.commit("update_current_Per_Page", perpage);
       this.$emit("start-search");
     },
   },
-  watch: {
-    // Update the store and emit an event when selectedSortOption changes
-    selectedSortOption() {
-      this.$store.commit("update_selected_sort_option", this.selectedSortValue);
-      this.$emit("start-search");
-    },
-  },
-};
+});
 </script>

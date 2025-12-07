@@ -1,25 +1,3 @@
-/**
- * Component: TemplateDownloader
- * Description: This component renders a button and a dropdown menu. The button is used for logout functionality, and the dropdown menu is used to download files and display information.
- *
- * Props:
- *   - None
- *
- * Data:
- *   - downloadReadmeYaml: A boolean indicating whether to offer the download of dtool_readme.yml file.
- *   - downloadReadmeJson: A boolean indicating whether to offer the download of dtool.json file.
- *   - showInfoMenuEntry: A boolean indicating whether to show the "Info" menu entry.
- *   - infoContent: A string containing the content to be displayed in the info modal.
- *
- * Events:
- *   - logoutAction: This event is emitted when the logout button is clicked.
- *
- * Methods:
- *   - logout: A method that emits the "logoutAction" event.
- *   - downloadFile: A method that downloads a file based on the provided file name.
- *   - showInfo: A method that shows the info modal.
- *
- */
 <template>
   <!-- Simple logout button if no download options -->
   <v-btn
@@ -88,36 +66,44 @@
   </v-dialog>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from "vue";
+
+export default defineComponent({
   name: "TemplateDownloader",
+  emits: ["logoutAction"],
   data() {
     return {
       infoDialog: false,
-      downloadReadmeYaml: process.env.VUE_APP_OFFER_DTOOL_README_YAML_DOWNLOAD === 'true',
-      downloadReadmeJson: process.env.VUE_APP_OFFER_DTOOL_JSON_DOWNLOAD === 'true',
-      showInfoMenuEntry: process.env.VUE_APP_SHOW_INFO_MENU_ENTRY === 'true',
+      downloadReadmeYaml:
+        process.env.VUE_APP_OFFER_DTOOL_README_YAML_DOWNLOAD === "true",
+      downloadReadmeJson:
+        process.env.VUE_APP_OFFER_DTOOL_JSON_DOWNLOAD === "true",
+      showInfoMenuEntry: process.env.VUE_APP_SHOW_INFO_MENU_ENTRY === "true",
       infoContent: process.env.VUE_APP_INFO_CONTENT || "Info Content",
     };
   },
   methods: {
-    logout() {
+    logout(): void {
       this.$emit("logoutAction");
     },
-    async downloadFile(fileName) {
-      let filePath = fileName === 'dtool.json' ?
-                     (process.env.VUE_APP_DTOOL_JSON_PATH || `data/templates/${fileName}`) :
-                     (process.env.VUE_APP_DTOOL_README_YAML_PATH || `data/templates/${fileName}`);
+    async downloadFile(fileName: string): Promise<void> {
+      const filePath =
+        fileName === "dtool.json"
+          ? process.env.VUE_APP_DTOOL_JSON_PATH ||
+            `data/templates/${fileName}`
+          : process.env.VUE_APP_DTOOL_README_YAML_PATH ||
+            `data/templates/${fileName}`;
 
       try {
-        let response = await fetch(filePath);
+        const response = await fetch(filePath);
         if (!response.ok) throw new Error("Network response was not ok");
 
-        let text = await response.text();
-        let blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-        let downloadUrl = window.URL.createObjectURL(blob);
+        const text = await response.text();
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const downloadUrl = window.URL.createObjectURL(blob);
 
-        let a = document.createElement("a");
+        const a = document.createElement("a");
         a.href = downloadUrl;
         a.download = fileName;
         document.body.appendChild(a);
@@ -128,6 +114,6 @@ export default {
         console.error("Failed to download file:", error);
       }
     },
-  }
-};
+  },
+});
 </script>

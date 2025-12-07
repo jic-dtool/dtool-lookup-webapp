@@ -63,40 +63,46 @@
   </div>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from "vue";
+
+export default defineComponent({
   name: "DatasetReadme",
   computed: {
-    getReadmeContent() {
-      if (!this.$store.state.current_dataset_readme ||
-          !this.$store.state.current_dataset_readme.readme) {
+    getReadmeContent(): string | null {
+      if (
+        !this.$store.state.current_dataset_readme ||
+        !this.$store.state.current_dataset_readme.readme
+      ) {
         return null;
       }
       return this.$store.state.current_dataset_readme.readme.trim();
     },
-    formattedReadme() {
+    formattedReadme(): string {
       if (!this.getReadmeContent) return "";
       // Color-code YAML-like key: value pairs
       return this.getReadmeContent
-        .split('\n')
-        .map(line => this.formatLine(line))
-        .join('\n');
+        .split("\n")
+        .map((line) => this.formatLine(line))
+        .join("\n");
     },
-    edit_command: function () {
+    edit_command(): string {
       if (!this.$store.state.current_dataset) return "";
       return "dtool readme edit " + this.$store.state.current_dataset.uri;
     },
   },
   methods: {
-    formatLine(line) {
+    formatLine(line: string): string {
       // Escape HTML first
       const escaped = line
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
 
       // Match YAML-like patterns: "key: value" or "  key: value"
-      const yamlMatch = escaped.match(/^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*):\s*(.*)$/);
+      const yamlMatch = escaped.match(
+        /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*):\s*(.*)$/
+      );
       if (yamlMatch) {
         const [, indent, key, value] = yamlMatch;
         if (value) {
@@ -122,15 +128,15 @@ export default {
 
       return escaped;
     },
-    async copyToClipboard(text) {
+    async copyToClipboard(text: string): Promise<void> {
       try {
         await navigator.clipboard.writeText(text);
       } catch (err) {
-        console.error('Failed to copy:', err);
+        console.error("Failed to copy:", err);
       }
     },
   },
-};
+});
 </script>
 
 <style scoped>

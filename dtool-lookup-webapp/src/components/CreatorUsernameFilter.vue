@@ -29,28 +29,38 @@
   </v-card>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent, type PropType } from "vue";
+import type { SummaryInfo } from "@/types";
+
+export default defineComponent({
   name: "CreatorUsernameFilter",
   props: {
-    summary_info: Object
+    summary_info: {
+      type: Object as PropType<SummaryInfo>,
+      required: true,
+    },
   },
-  data: function() {
+  emits: ["start-search"],
+  data() {
     return {
-      selectedCreators: []
+      selectedCreators: [] as string[],
     };
   },
   computed: {
-    canonicalSelectedCreators: function() {
+    canonicalSelectedCreators(): string[] {
       return this.$store.state.creator_usernames;
-    }
+    },
   },
   methods: {
-    toggleSelect: function(creator) {
+    toggleSelect(creator: string): void {
       if (this.selectedCreators.includes(creator)) {
         console.log("Unset creator username");
         // Remove item from array.
-        this.selectedCreators.splice(this.selectedCreators.indexOf(creator), 1);
+        this.selectedCreators.splice(
+          this.selectedCreators.indexOf(creator),
+          1
+        );
         this.$store.commit("update_creator_usernames", this.selectedCreators);
         this.$emit("start-search");
       } else {
@@ -59,7 +69,7 @@ export default {
         this.$store.commit("update_creator_usernames", this.selectedCreators);
         this.$emit("start-search");
       }
-    }
-  }
-};
+    },
+  },
+});
 </script>

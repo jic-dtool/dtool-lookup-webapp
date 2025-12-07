@@ -215,7 +215,9 @@
   </v-app>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from "vue";
+import type { AxiosError, AxiosResponse } from "axios";
 import SignIn from "./components/SignIn.vue";
 import SummaryInfo from "./components/SummaryInfo.vue";
 import TextSearch from "./components/TextSearch.vue";
@@ -226,10 +228,54 @@ import Annotations from "./components/DatasetAnnotations.vue";
 import DatasetSummary from "./components/DatasetSummary.vue";
 import DatasetSorting from "./components/DatasetSorting.vue";
 import TemplateDownloader from "./components/TemplateDownloader.vue";
+import type {
+  Dataset,
+  ConfigInfo,
+  SearchQuery,
+  PaginationInfo,
+  ResponseHeaders,
+} from "./types";
 
-export default {
-  name: "app",
-  data: function () {
+interface AppData {
+  drawer: boolean;
+  datasetHits: Dataset[];
+  searchLoading: boolean;
+  searchErrored: boolean;
+  searchErrorMessage: string | null;
+  authenticationError: boolean;
+  manifestLoading: boolean;
+  manifestErrored: boolean;
+  readmeLoading: boolean;
+  readmeErrored: boolean;
+  tagsLoading: boolean;
+  tagsErrored: boolean;
+  annotationsLoading: boolean;
+  annotationsErrored: boolean;
+  lookup_url: string;
+  token: string | null;
+  perPage: number;
+  responseheaders: ResponseHeaders;
+  getinfo: ConfigInfo;
+  snackbar: boolean;
+  snackbarText: string;
+  snackbarColor: string;
+}
+
+export default defineComponent({
+  name: "App",
+  components: {
+    SignIn,
+    SummaryInfo,
+    TextSearch,
+    DatasetTable,
+    Manifest,
+    Readme,
+    Annotations,
+    DatasetSummary,
+    DatasetSorting,
+    TemplateDownloader,
+  },
+  data(): AppData {
     return {
       drawer: false,
       datasetHits: [],
@@ -245,10 +291,10 @@ export default {
       tagsErrored: false,
       annotationsLoading: false,
       annotationsErrored: false,
-      lookup_url: process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL,
+      lookup_url: process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "",
       token: null,
       perPage: this.$store.state.update_current_Per_Page,
-      responseheaders: Array,
+      responseheaders: {},
       getinfo: {
         versions: {},
       },
@@ -258,13 +304,13 @@ export default {
     };
   },
   computed: {
-    datasetLoaded: function () {
+    datasetLoaded(): Dataset | null {
       return this.$store.state.current_dataset;
     },
-    current_dataset: function () {
+    current_dataset(): Dataset | undefined {
       return this.datasetHits[this.$store.state.current_dataset_index];
     },
-    searchURL: function () {
+    searchURL(): string {
       return (
         this.lookup_url +
         "/uris?page=" +
@@ -275,30 +321,29 @@ export default {
         this.$store.state.selected_sort_option
       );
     },
-    mongoSearchURL: function () {
+    mongoSearchURL(): string {
       return this.lookup_url + "/mongo/query";
     },
-    manifestURL: function () {
+    manifestURL(): string {
       return this.lookup_url + "/manifests";
     },
-    configInfoURL: function () {
+    configInfoURL(): string {
       return this.lookup_url + "/config/versions";
     },
-    readmeURL: function () {
+    readmeURL(): string {
       return this.lookup_url + "/readmes";
     },
-    annotationsURL: function () {
+    annotationsURL(): string {
       return this.lookup_url + "/annotations";
     },
-    tagsURL: function () {
+    tagsURL(): string {
       return this.lookup_url + "/tags";
     },
-    auth_str: function () {
-      return "Bearer ".concat(this.token);
+    auth_str(): string {
+      return "Bearer ".concat(this.token || "");
     },
-
-    searchQuery: function () {
-      var query = {};
+    searchQuery(): SearchQuery {
+      const query: SearchQuery = {};
 
       if (this.$store.state.mongo_text) {
         query.query = JSON.parse(this.$store.state.mongo_text);
@@ -319,65 +364,64 @@ export default {
       }
       return query;
     },
-    uriQuery: function () {
+    uriQuery(): { uri: string | null } {
       if (this.datasetHits.length > 0) {
         return {
-          uri: this.datasetHits[this.$store.state.current_dataset_index].uri,
+          uri: this.datasetHits[this.$store.state.current_dataset_index]?.uri ?? null,
         };
       } else {
         return { uri: null };
       }
     },
-    pagination: function () {
-      return this.responseheaders["x-pagination"]
-        ? JSON.parse(this.responseheaders["x-pagination"])
-        : {};
+    pagination(): PaginationInfo {
+      const paginationHeader = this.responseheaders["x-pagination"];
+      return paginationHeader
+        ? JSON.parse(paginationHeader)
+        : { total: 0, page: 1, per_page: 10, pages: 1 };
     },
-
-    totalPageContents() {
+    totalPageContents(): number {
       return this.pagination.total;
     },
-
-    totalPages() {
+    totalPages(): number {
       if (this.pagination.total && this.$store.state.update_current_Per_Page) {
-        return Math.ceil(this.pagination.total / this.$store.state.update_current_Per_Page);
+        return Math.ceil(
+          this.pagination.total / this.$store.state.update_current_Per_Page
+        );
       }
       return 1;
     },
-
-    shouldShowPagination() {
+    shouldShowPagination(): boolean {
       return this.pagination.total > this.$store.state.update_current_Per_Page;
     },
-
-    safeMongoPlugin() {
+    safeMongoPlugin(): string {
       return this.getinfo.versions.dserver_direct_mongo_plugin || "N/A";
     },
     currentPage: {
-      get() {
+      get(): number {
         return this.$store.state.current_pageNumber;
       },
-      set(value) {
+      set(value: number) {
         this.$store.state.current_pageNumber = value;
       },
     },
-    perPageValue() {
+    perPageValue(): number {
       return this.$store.state.update_current_Per_Page;
     },
   },
   methods: {
-    showSnackbar(text, color = "success") {
+    showSnackbar(text: string, color: string = "success"): void {
       this.snackbarText = text;
       this.snackbarColor = color;
       this.snackbar = true;
     },
-    onPageChange() {
+    onPageChange(): void {
       this.searchDatasets();
     },
-    setTokenAndSearch: function (token) {
+    setTokenAndSearch(token: string): void {
       this.token = token;
       this.searchDatasets();
     },
-    searchDatasets: function () {
+    searchDatasets(): void {
       this.getconfiginfo();
       console.log(this.getinfo);
 
@@ -404,19 +448,22 @@ export default {
             "Content-Type": "application/json",
           },
         })
-        .then((response) => {
+        .then((response: AxiosResponse<Dataset[]>) => {
           this.datasetHits = response.data;
-          this.responseheaders = response.headers;
+          this.responseheaders = response.headers as ResponseHeaders;
           this.$store.commit("update_current_dataset", this.current_dataset);
           this.$store.commit("update_num_filtered", this.pagination.total);
           this.updateDataset();
         })
-        .catch((error) => {
+        .catch((error: AxiosError) => {
           console.log(error);
           if (error.response && error.response.status === 401) {
-            console.log("401 Unauthorized - User not authenticated or not registered");
+            console.log(
+              "401 Unauthorized - User not authenticated or not registered"
+            );
             this.authenticationError = true;
-            this.searchErrorMessage = "Authentication failed. Your user may not be registered on the server. Please contact an administrator.";
+            this.searchErrorMessage =
+              "Authentication failed. Your user may not be registered on the server. Please contact an administrator.";
             this.searchErrored = true;
           } else if (error.response && error.response.status === 404) {
             console.log("404 Not Found - Resetting pageNumber and retrying");
@@ -424,7 +471,8 @@ export default {
             this.searchDatasets(); // Retry the search with pageNumber reset to 1
           } else {
             console.log(error.response);
-            this.searchErrorMessage = "An error occurred while loading datasets.";
+            this.searchErrorMessage =
+              "An error occurred while loading datasets.";
             this.searchErrored = true;
           }
         })
@@ -433,13 +481,13 @@ export default {
         });
     },
 
-    updateDataset: function () {
+    updateDataset(): void {
       this.updateManifest();
       this.updateReadme();
       this.updateAnnotations();
       this.updateTags();
     },
-    updateManifest: function () {
+    updateManifest(): void {
       console.log("Loading manifest");
       this.manifestLoading = true;
       this.manifestErrored = false;
@@ -462,10 +510,10 @@ export default {
             Accept: "application/json",
           },
         })
-        .then((response) => {
+        .then((response: AxiosResponse) => {
           this.$store.commit("update_current_dataset_manifest", response.data);
         })
-        .catch((error) => {
+        .catch((error: AxiosError) => {
           console.log(error);
           this.manifestErrored = true;
         })
@@ -474,7 +522,7 @@ export default {
         });
     },
 
-    updateReadme: function () {
+    updateReadme(): void {
       console.log("Loading readme");
       this.readmeLoading = true;
       this.readmeErrored = false;
@@ -497,10 +545,10 @@ export default {
             Accept: "application/json",
           },
         })
-        .then((response) => {
+        .then((response: AxiosResponse) => {
           this.$store.commit("update_current_dataset_readme", response.data);
         })
-        .catch((error) => {
+        .catch((error: AxiosError) => {
           console.log(error);
           this.readmeErrored = true;
         })
@@ -509,7 +557,7 @@ export default {
         });
     },
 
-    updateAnnotations: function () {
+    updateAnnotations(): void {
       console.log("Loading annotations");
       this.annotationsLoading = true;
       this.annotationsErrored = false;
@@ -534,13 +582,13 @@ export default {
             Accept: "application/json",
           },
         })
-        .then((response) => {
+        .then((response: AxiosResponse) => {
           this.$store.commit(
             "update_current_dataset_annotations",
             response.data
           );
         })
-        .catch((error) => {
+        .catch((error: AxiosError) => {
           console.log(error);
           this.annotationsErrored = true;
         })
@@ -549,7 +597,7 @@ export default {
         });
     },
 
-    updateTags: function () {
+    updateTags(): void {
       console.log("Loading tags");
       this.tagsLoading = true;
       this.tagsErrored = false;
@@ -571,10 +619,10 @@ export default {
             Accept: "application/json",
           },
         })
-        .then((response) => {
-          this.$store.commit("update_current_dataset_tags", response.data); // Assuming you have a mutation named 'update_current_dataset_tags'
+        .then((response: AxiosResponse) => {
+          this.$store.commit("update_current_dataset_tags", response.data);
         })
-        .catch((error) => {
+        .catch((error: AxiosError) => {
           console.error(error);
           this.tagsErrored = true;
         })
@@ -583,7 +631,7 @@ export default {
         });
     },
 
-    getconfiginfo: function () {
+    getconfiginfo(): void {
       console.log("Loading ConfigInfo");
 
       // Store the lookup URL in the store for components to use
@@ -596,20 +644,23 @@ export default {
             "Content-Type": "application/json",
           },
         })
-        .then((response) => {
+        .then((response: AxiosResponse<ConfigInfo>) => {
           this.getinfo = response.data;
           // Store server versions in the store for components to access
           if (response.data && response.data.versions) {
-            this.$store.commit("update_server_versions", response.data.versions);
+            this.$store.commit(
+              "update_server_versions",
+              response.data.versions
+            );
           }
         })
-        .catch((error) => {
+        .catch((error: AxiosError) => {
           console.log(error);
           console.log(error.response);
         });
     },
 
-    logout: function () {
+    logout(): void {
       this.token = "";
       this.authenticationError = false;
       this.searchErrorMessage = null;
@@ -617,20 +668,7 @@ export default {
       this.$store.commit("clear_all");
     },
   },
-
-  components: {
-    SignIn,
-    SummaryInfo,
-    TextSearch,
-    DatasetTable,
-    Manifest,
-    Readme,
-    Annotations,
-    DatasetSummary,
-    DatasetSorting,
-    TemplateDownloader,
-  },
-};
+});
 </script>
 
 <style>

@@ -29,24 +29,31 @@
   </v-card>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent, type PropType } from "vue";
+import type { SummaryInfo } from "@/types";
+
+export default defineComponent({
   name: "BaseUriFilter",
   props: {
-    summary_info: Object,
+    summary_info: {
+      type: Object as PropType<SummaryInfo>,
+      required: true,
+    },
   },
-  data: function () {
+  emits: ["start-search"],
+  data() {
     return {
-      selectedBaseURIs: [],
+      selectedBaseURIs: [] as string[],
     };
   },
   computed: {
-    canonicalSelectedBaseURIs: function () {
+    canonicalSelectedBaseURIs(): string[] {
       return this.$store.state.base_uris;
     },
   },
   methods: {
-    toggleSelect: function (base_uri) {
+    toggleSelect(base_uri: string): void {
       if (this.selectedBaseURIs.includes(base_uri)) {
         console.log("Unset base URI");
         // Remove item from array.
@@ -64,5 +71,5 @@ export default {
       }
     },
   },
-};
+});
 </script>

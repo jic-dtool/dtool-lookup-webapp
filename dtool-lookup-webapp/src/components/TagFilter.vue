@@ -29,28 +29,35 @@
   </v-card>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent, type PropType } from "vue";
+import type { SummaryInfo } from "@/types";
+
+export default defineComponent({
   name: "TagFilter",
   props: {
-    summary_info: Object
+    summary_info: {
+      type: Object as PropType<SummaryInfo>,
+      required: true,
+    },
   },
-  data: function() {
+  emits: ["start-search"],
+  data() {
     return {
-      selectedTags: []
+      selectedTags: [] as string[],
     };
   },
   computed: {
-    canonicalSelectedTags: function() {
+    canonicalSelectedTags(): string[] {
       return this.$store.state.tags;
-    }
+    },
   },
   methods: {
-    startSearch: function() {
+    startSearch(): void {
       this.$store.commit("update_tags", this.selectedTags);
       this.$emit("start-search");
     },
-    toggleSelect: function(tag) {
+    toggleSelect(tag: string): void {
       if (this.selectedTags.includes(tag)) {
         console.log("Unset tag?");
         // Remove item from array.
@@ -61,7 +68,7 @@ export default {
         this.selectedTags.push(tag);
         this.startSearch();
       }
-    }
-  }
-};
+    },
+  },
+});
 </script>

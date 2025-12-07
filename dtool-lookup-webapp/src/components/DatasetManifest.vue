@@ -27,7 +27,7 @@
               :key="id"
               rounded="lg"
               class="manifest-item mb-1"
-              @mouseenter="update_fetch_identifier(id)"
+              @mouseenter="update_fetch_identifier(id as string)"
             >
               <template #prepend>
                 <v-avatar size="32" color="grey-lighten-3" rounded="lg" class="mr-3">
@@ -86,26 +86,32 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from "vue";
 import { filesize } from "filesize";
+import type { Manifest } from "@/types";
 
-export default {
+interface FileIconMap {
+  [key: string]: string;
+}
+
+export default defineComponent({
   name: "DatasetManifest",
-  data: function () {
+  data() {
     return {
-      fetch_identifier: null,
+      fetch_identifier: null as string | null,
     };
   },
   computed: {
-    manifest: function () {
+    manifest(): Manifest | null {
       return this.$store.state.current_dataset_manifest;
     },
-    numItems: function () {
+    numItems(): number {
       return this.manifest && this.manifest.items
         ? Object.values(this.manifest.items).length
         : 0;
     },
-    fetch_command: function () {
+    fetch_command(): string {
       if (!this.$store.state.current_dataset) return "";
       return (
         "dtool item fetch " +
@@ -116,68 +122,68 @@ export default {
     },
   },
   methods: {
-    filesize(bytes) {
-      return filesize(bytes);
+    filesize(bytes: number): string {
+      return filesize(bytes) as string;
     },
-    update_fetch_identifier(identifier) {
+    update_fetch_identifier(identifier: string): void {
       this.fetch_identifier = identifier;
     },
-    getFileIcon(filename) {
-      const ext = filename.split('.').pop().toLowerCase();
-      const iconMap = {
+    getFileIcon(filename: string): string {
+      const ext = filename.split(".").pop()?.toLowerCase() || "";
+      const iconMap: FileIconMap = {
         // Images
-        png: 'mdi-file-image',
-        jpg: 'mdi-file-image',
-        jpeg: 'mdi-file-image',
-        gif: 'mdi-file-image',
-        svg: 'mdi-file-image',
-        webp: 'mdi-file-image',
+        png: "mdi-file-image",
+        jpg: "mdi-file-image",
+        jpeg: "mdi-file-image",
+        gif: "mdi-file-image",
+        svg: "mdi-file-image",
+        webp: "mdi-file-image",
         // Documents
-        pdf: 'mdi-file-pdf-box',
-        doc: 'mdi-file-word',
-        docx: 'mdi-file-word',
-        xls: 'mdi-file-excel',
-        xlsx: 'mdi-file-excel',
-        ppt: 'mdi-file-powerpoint',
-        pptx: 'mdi-file-powerpoint',
+        pdf: "mdi-file-pdf-box",
+        doc: "mdi-file-word",
+        docx: "mdi-file-word",
+        xls: "mdi-file-excel",
+        xlsx: "mdi-file-excel",
+        ppt: "mdi-file-powerpoint",
+        pptx: "mdi-file-powerpoint",
         // Code
-        py: 'mdi-language-python',
-        js: 'mdi-language-javascript',
-        ts: 'mdi-language-typescript',
-        html: 'mdi-language-html5',
-        css: 'mdi-language-css3',
-        json: 'mdi-code-json',
-        xml: 'mdi-file-xml-box',
-        yaml: 'mdi-file-code',
-        yml: 'mdi-file-code',
+        py: "mdi-language-python",
+        js: "mdi-language-javascript",
+        ts: "mdi-language-typescript",
+        html: "mdi-language-html5",
+        css: "mdi-language-css3",
+        json: "mdi-code-json",
+        xml: "mdi-file-xml-box",
+        yaml: "mdi-file-code",
+        yml: "mdi-file-code",
         // Data
-        csv: 'mdi-file-delimited',
-        txt: 'mdi-file-document',
-        md: 'mdi-language-markdown',
+        csv: "mdi-file-delimited",
+        txt: "mdi-file-document",
+        md: "mdi-language-markdown",
         // Archives
-        zip: 'mdi-folder-zip',
-        tar: 'mdi-folder-zip',
-        gz: 'mdi-folder-zip',
-        rar: 'mdi-folder-zip',
-        '7z': 'mdi-folder-zip',
+        zip: "mdi-folder-zip",
+        tar: "mdi-folder-zip",
+        gz: "mdi-folder-zip",
+        rar: "mdi-folder-zip",
+        "7z": "mdi-folder-zip",
         // Scientific
-        hdf5: 'mdi-database',
-        h5: 'mdi-database',
-        nc: 'mdi-database',
-        npy: 'mdi-database',
-        npz: 'mdi-database',
+        hdf5: "mdi-database",
+        h5: "mdi-database",
+        nc: "mdi-database",
+        npy: "mdi-database",
+        npz: "mdi-database",
       };
-      return iconMap[ext] || 'mdi-file';
+      return iconMap[ext] || "mdi-file";
     },
-    async copyToClipboard(text) {
+    async copyToClipboard(text: string): Promise<void> {
       try {
         await navigator.clipboard.writeText(text);
       } catch (err) {
-        console.error('Failed to copy:', err);
+        console.error("Failed to copy:", err);
       }
     },
   },
-};
+});
 </script>
 
 <style scoped>

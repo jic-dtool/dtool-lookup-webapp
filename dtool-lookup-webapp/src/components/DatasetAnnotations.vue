@@ -2,7 +2,7 @@
   <div v-if="Object.keys(filteredAnnotations).length > 0" class="annotations-section">
     <div
       v-for="(details, annotationName, index) in filteredAnnotations"
-      :key="annotationName || index"
+      :key="String(annotationName) || index"
       class="mb-4"
     >
       <v-card variant="outlined" rounded="lg">
@@ -11,7 +11,7 @@
             <v-icon size="small" color="primary">mdi-tag-text</v-icon>
           </template>
           <v-card-title class="text-body-2 font-weight-medium">
-            {{ capitalizeFirstLetter(annotationName) }}
+            {{ capitalizeFirstLetter(String(annotationName)) }}
           </v-card-title>
           <template #append>
             <v-menu location="bottom end" :close-on-content-click="false">
@@ -103,7 +103,7 @@
                   <v-card-text class="pt-0">
                     <v-text-field
                       v-model="editableValue"
-                      :label="propertyName"
+                      :label="String(propertyName)"
                       :placeholder="String(value)"
                       density="compact"
                       variant="outlined"
@@ -112,7 +112,7 @@
                       class="mb-3"
                     />
                     <v-text-field
-                      :model-value="generateSetCommand(propertyName, editableValue || value)"
+                      :model-value="generateSetCommand(String(propertyName), editableValue || String(value))"
                       readonly
                       density="compact"
                       variant="outlined"
@@ -125,7 +125,7 @@
                           icon="mdi-content-copy"
                           size="small"
                           variant="text"
-                          @click="copyToClipboard(generateSetCommand(propertyName, editableValue || value))"
+                          @click="copyToClipboard(generateSetCommand(String(propertyName), editableValue || String(value)))"
                         />
                       </template>
                     </v-text-field>
@@ -140,8 +140,11 @@
   </div>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from "vue";
+import type { Annotations } from "@/types";
+
+export default defineComponent({
   name: "DatasetAnnotations",
   data() {
     return {
@@ -151,51 +154,51 @@ export default {
     };
   },
   computed: {
-    annotations() {
+    annotations(): Annotations {
       return this.$store.state.current_dataset_annotations || {};
     },
-    filteredAnnotations() {
-      let filtered = {};
-      for (let annotationName in this.annotations) {
+    filteredAnnotations(): Annotations {
+      const filtered: Annotations = {};
+      for (const annotationName in this.annotations) {
         if (this.hasNonEmptyValues(this.annotations[annotationName])) {
           filtered[annotationName] = this.annotations[annotationName];
         }
       }
       return filtered;
     },
-    computedCreateCommand() {
+    computedCreateCommand(): string {
       if (!this.$store.state.current_dataset) return "";
       return `dtool annotation set ${this.$store.state.current_dataset.uri} ${this.newKey} ${this.newValue}`;
     },
   },
   methods: {
-    capitalizeFirstLetter(string) {
+    capitalizeFirstLetter(string: string): string {
       return string.charAt(0).toUpperCase() + string.slice(1);
     },
-    hasNonEmptyValues(annotation) {
-      for (let key in annotation) {
+    hasNonEmptyValues(annotation: Record<string, unknown>): boolean {
+      for (const key in annotation) {
         if (annotation[key]) {
           return true;
         }
       }
       return false;
     },
-    generateSetCommand(propertyName, value) {
+    generateSetCommand(propertyName: string, value: string): string {
       if (!this.$store.state.current_dataset) return "";
       return `dtool annotation set ${this.$store.state.current_dataset.uri} ${propertyName} ${value}`;
     },
-    resetEditableValue() {
+    resetEditableValue(): void {
       this.editableValue = "";
     },
-    async copyToClipboard(text) {
+    async copyToClipboard(text: string): Promise<void> {
       try {
         await navigator.clipboard.writeText(text);
       } catch (err) {
-        console.error('Failed to copy:', err);
+        console.error("Failed to copy:", err);
       }
     },
   },
-};
+});
 </script>
 
 <style scoped>
