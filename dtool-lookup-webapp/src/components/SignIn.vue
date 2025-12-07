@@ -162,7 +162,8 @@ const signInInfo = ref<TokenResponse | null>(null);
 const signInLoading = ref(false);
 const rightPanelActive = ref(false);
 
-const tokenGeneratorURL = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL || "";
+const tokenGeneratorURL = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL ||
+  `${process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "http://localhost:5000"}/token/token`;
 const logoSrc = process.env.VUE_APP_LANDING_PAGE_ICON_PATH || "/icons/128x128/dtool_logo.png";
 const firstContainerTitle = process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In";
 const secondContainerTitle = process.env.VUE_APP_SECOND_CONTAINER_TITLE || "Welcome to Dtool";
