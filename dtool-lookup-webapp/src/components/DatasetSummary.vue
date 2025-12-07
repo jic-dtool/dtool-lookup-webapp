@@ -77,7 +77,7 @@
         </template>
       </v-card-item>
       <v-card-text class="pt-0">
-        <code class="uri-text text-body-2">{{ dataset.uri }}</code>
+        <code class="uri-text text-body-2">{{ displayUri }}</code>
       </v-card-text>
     </v-card>
 
@@ -169,6 +169,30 @@ export default {
     dataset: function () {
       return this.$store.state.current_dataset;
     },
+    hasSignedUrlPlugin: function () {
+      // Check if dserver-signed-url-plugin is installed
+      const versions = this.$store.state.server_versions;
+      return versions && versions.dserver_signed_url_plugin;
+    },
+    displayUri: function () {
+      // Show dserver:// URI if signed-url-plugin is present, otherwise show backend URI
+      if (!this.dataset) return "";
+      if (this.hasSignedUrlPlugin) {
+        // Construct dserver:// URI using the server URL and dataset UUID
+        const lookupUrl = this.$store.state.lookup_url;
+        if (lookupUrl) {
+          // Extract hostname from the lookup URL
+          try {
+            const url = new URL(lookupUrl);
+            return `dserver://${url.host}/${this.dataset.uuid}`;
+          } catch (e) {
+            // Fallback to backend URI if URL parsing fails
+            return this.dataset.uri;
+          }
+        }
+      }
+      return this.dataset.uri;
+    },
     numItems: function () {
       return this.$store.state.current_dataset_manifest &&
         this.$store.state.current_dataset_manifest.items
@@ -190,11 +214,11 @@ export default {
     },
     copy_command: function () {
       if (!this.dataset) return "";
-      return "dtool cp " + this.dataset.uri + " .";
+      return "dtool cp " + this.displayUri + " .";
     },
     tag_command: function () {
       if (!this.dataset) return "";
-      return "dtool tag set " + this.dataset.uri + " " + this.tag_name;
+      return "dtool tag set " + this.displayUri + " " + this.tag_name;
     },
     currentTags() {
       if (

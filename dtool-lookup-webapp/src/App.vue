@@ -586,6 +586,9 @@ export default {
     getconfiginfo: function () {
       console.log("Loading ConfigInfo");
 
+      // Store the lookup URL in the store for components to use
+      this.$store.commit("update_lookup_url", this.lookup_url);
+
       this.$http
         .get(this.configInfoURL, {
           headers: {
@@ -595,6 +598,10 @@ export default {
         })
         .then((response) => {
           this.getinfo = response.data;
+          // Store server versions in the store for components to access
+          if (response.data && response.data.versions) {
+            this.$store.commit("update_server_versions", response.data.versions);
+          }
         })
         .catch((error) => {
           console.log(error);

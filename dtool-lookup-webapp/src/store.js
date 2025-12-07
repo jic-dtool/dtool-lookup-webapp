@@ -17,7 +17,9 @@ export const store = createStore({
     num_filtered: 0,
     update_current_Per_Page: 10,
     current_pageNumber:1,
-    selected_sort_option: "uri",
+    selected_sort_option: "frozen_at",
+    server_versions: {},
+    lookup_url: null,
   },
   mutations: {
     update_free_text(state, free_text) {
@@ -67,6 +69,12 @@ export const store = createStore({
     },
     update_selected_sort_option(state, selected_sort_option) {
       state.selected_sort_option = selected_sort_option;
+    },
+    update_server_versions(state, versions) {
+      state.server_versions = versions;
+    },
+    update_lookup_url(state, lookup_url) {
+      state.lookup_url = lookup_url;
     },
 
     clear_all(state) {

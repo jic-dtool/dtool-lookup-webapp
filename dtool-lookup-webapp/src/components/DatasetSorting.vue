@@ -57,13 +57,13 @@ export default {
     return {
       selectedSortOption: initialSortOption,
       sortOptions: [
-        "uri",
-        "base_uri",
-        "created_at",
-        "creator_username",
         "frozen_at",
+        "created_at",
         "name",
         "uuid",
+        "creator_username",
+        "uri",
+        "base_uri",
       ],
       sortDirection: initialSortDirection,
       selectedContentsPerPage: initialcontentsPerPage,
