@@ -160,23 +160,6 @@
                     </v-btn>
                   </div>
                   <Readme v-else :getinfo="getinfo" />
-
-                  <!-- Annotations Section -->
-                  <div v-if="annotationsLoading" class="d-flex justify-center py-4">
-                    <v-progress-circular indeterminate color="primary" size="24" />
-                  </div>
-                  <div v-else-if="annotationsErrored">
-                    <v-alert type="error" density="compact" class="mb-2">
-                      Unable to load annotations please try again.
-                    </v-alert>
-                    <v-btn size="small" color="secondary" class="mr-2" @click="updateAnnotations()">
-                      Try again
-                    </v-btn>
-                    <v-btn size="small" color="secondary" @click="logout()">
-                      Logout
-                    </v-btn>
-                  </div>
-                  <Annotations v-else />
                 </div>
 
                 <!-- Card Footer - Manifest -->
@@ -222,7 +205,6 @@ import TextSearch from "./components/TextSearch.vue";
 import DatasetTable from "./components/DatasetTable.vue";
 import Manifest from "./components/DatasetManifest.vue";
 import Readme from "./components/DatasetReadme.vue";
-import Annotations from "./components/DatasetAnnotations.vue";
 import DatasetSummary from "./components/DatasetSummary.vue";
 import DatasetSorting from "./components/DatasetSorting.vue";
 import TemplateDownloader from "./components/TemplateDownloader.vue";
