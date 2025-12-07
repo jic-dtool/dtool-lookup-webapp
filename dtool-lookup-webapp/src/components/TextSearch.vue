@@ -1,11 +1,11 @@
 <template>
-  <div class="d-flex align-center">
+  <div class="search-container" :class="{ 'search-expanded': isFocused }">
     <v-tooltip
       v-if="textQuery !== ''"
       location="bottom"
     >
       <template #activator="{ props }">
-        <span v-bind="props" class="text-caption text-primary mr-2" style="white-space: nowrap;">
+        <span v-bind="props" class="text-caption text-primary mr-2 search-label" style="white-space: nowrap;">
           {{
             isJsonEnabled
               ? isJson
@@ -20,14 +20,19 @@
 
     <v-text-field
       v-model="textQuery"
-      placeholder="Search..."
+      placeholder="Search datasets..."
       prepend-inner-icon="mdi-magnify"
       density="compact"
       variant="outlined"
       hide-details
       single-line
-      style="min-width: 200px; max-width: 300px;"
+      rounded
+      clearable
+      class="search-field"
       @keyup.enter="startSearch"
+      @click:clear="clearSearch"
+      @focus="isFocused = true"
+      @blur="isFocused = false"
     />
   </div>
 </template>
@@ -46,6 +51,7 @@ const emit = defineEmits<{
 
 const store = useStore();
 const textQuery = ref("");
+const isFocused = ref(false);
 
 const isJson = computed(() => {
   if (textQuery.value === "") {
@@ -69,4 +75,57 @@ function startSearch(): void {
   }
   emit("start-search");
 }
+
+function clearSearch(): void {
+  textQuery.value = "";
+  store.updateFreeText(null);
+  store.updateMongoText(null);
+  emit("start-search");
+}
 </script>
+
+<style scoped>
+.search-container {
+  display: flex;
+  align-items: center;
+  width: 280px;
+  transition: width 0.3s ease;
+}
+
+.search-container.search-expanded {
+  width: 480px;
+}
+
+.search-field {
+  flex: 1;
+}
+
+.search-label {
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .search-container {
+    width: 200px;
+  }
+
+  .search-container.search-expanded {
+    width: 320px;
+  }
+}
+
+@media (max-width: 600px) {
+  .search-container {
+    width: 150px;
+  }
+
+  .search-container.search-expanded {
+    width: 220px;
+  }
+
+  .search-label {
+    display: none;
+  }
+}
+</style>

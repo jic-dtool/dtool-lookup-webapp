@@ -12,7 +12,7 @@
         <v-avatar size="36" class="ml-2 mr-2">
           <v-img src="/icons/128x128/dtool_logo.png" alt="dtool Logo" />
         </v-avatar>
-        <v-app-bar-title class="text-primary font-weight-bold">
+        <v-app-bar-title class="text-primary font-weight-bold flex-grow-0">
           dtool
         </v-app-bar-title>
 
@@ -21,8 +21,9 @@
         <TextSearch
           :mongoplugin="safeMongoPlugin"
           @start-search="searchDatasets"
-          class="mr-2"
         />
+
+        <v-spacer />
 
         <UserMenu @logoutAction="logout" />
       </v-app-bar>
