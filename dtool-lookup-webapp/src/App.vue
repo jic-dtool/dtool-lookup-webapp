@@ -229,11 +229,17 @@ import DatasetSummary from "./components/DatasetSummary.vue";
 import DatasetSorting from "./components/DatasetSorting.vue";
 import TemplateDownloader from "./components/TemplateDownloader.vue";
 import { useStore } from "./store";
+import { dserverApi } from "./services/dserverApi";
+import type {
+  DatasetEntry,
+  SearchQuery as DServerSearchQuery,
+  PaginationInfo,
+  AuthenticationError as AuthError,
+} from "./services/dserverApi";
 import type {
   Dataset,
   ConfigInfo,
   SearchQuery,
-  PaginationInfo,
   ResponseHeaders,
 } from "./types";
 
@@ -256,13 +262,14 @@ const tagsLoading = ref(false);
 const tagsErrored = ref(false);
 const annotationsLoading = ref(false);
 const annotationsErrored = ref(false);
-const lookup_url = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "";
+const lookup_url = dserverApi.getBaseUrl();
 const token = ref<string | null>(null);
 const responseheaders = ref<ResponseHeaders>({});
 const getinfo = ref<ConfigInfo>({ versions: {} });
 const snackbar = ref(false);
 const snackbarText = ref("");
 const snackbarColor = ref("success");
+const paginationInfo = ref<PaginationInfo>({ total: 0, page: 1, per_page: 10, pages: 1 });
 
 // Computed properties
 const datasetLoaded = computed<Dataset | null>(() => {
@@ -273,66 +280,32 @@ const current_dataset = computed<Dataset | undefined>(() => {
   return datasetHits.value[store.current_dataset_index];
 });
 
-const searchURL = computed(() => {
-  return (
-    lookup_url +
-    "/uris?page=" +
-    store.current_pageNumber +
-    "&page_size=" +
-    store.update_current_Per_Page +
-    "&sort=" +
-    store.selected_sort_option
-  );
-});
-
+// For backward compatibility with mongo search (still uses axios)
 const mongoSearchURL = computed(() => {
   return lookup_url + "/mongo/query";
-});
-
-const manifestURL = computed(() => {
-  return lookup_url + "/manifests";
-});
-
-const configInfoURL = computed(() => {
-  return lookup_url + "/config/versions";
-});
-
-const readmeURL = computed(() => {
-  return lookup_url + "/readmes";
-});
-
-const annotationsURL = computed(() => {
-  return lookup_url + "/annotations";
-});
-
-const tagsURL = computed(() => {
-  return lookup_url + "/tags";
 });
 
 const auth_str = computed(() => {
   return "Bearer ".concat(token.value || "");
 });
 
-const searchQuery = computed<SearchQuery>(() => {
-  const query: SearchQuery = {};
+const searchQuery = computed<DServerSearchQuery>(() => {
+  const query: DServerSearchQuery = {};
 
-  if (store.mongo_text) {
-    query.query = JSON.parse(store.mongo_text);
-  } else {
-    if (store.free_text) {
-      query.free_text = store.free_text;
-    }
-
-    if (store.creator_usernames.length > 0) {
-      query.creator_usernames = store.creator_usernames;
-    }
-    if (store.base_uris.length > 0) {
-      query.base_uris = store.base_uris;
-    }
-    if (store.tags.length > 0) {
-      query.tags = store.tags;
-    }
+  if (store.free_text) {
+    query.free_text = store.free_text;
   }
+
+  if (store.creator_usernames.length > 0) {
+    query.creator_usernames = store.creator_usernames;
+  }
+  if (store.base_uris.length > 0) {
+    query.base_uris = store.base_uris;
+  }
+  if (store.tags.length > 0) {
+    query.tags = store.tags;
+  }
+
   return query;
 });
 
@@ -346,24 +319,17 @@ const uriQuery = computed<{ uri: string | null }>(() => {
   }
 });
 
-const pagination = computed<PaginationInfo>(() => {
-  const paginationHeader = responseheaders.value["x-pagination"];
-  return paginationHeader
-    ? JSON.parse(paginationHeader)
-    : { total: 0, page: 1, per_page: 10, pages: 1 };
-});
-
 const totalPages = computed(() => {
-  if (pagination.value.total && store.update_current_Per_Page) {
+  if (paginationInfo.value.total && store.update_current_Per_Page) {
     return Math.ceil(
-      pagination.value.total / store.update_current_Per_Page
+      paginationInfo.value.total / store.update_current_Per_Page
     );
   }
   return 1;
 });
 
 const shouldShowPagination = computed(() => {
-  return pagination.value.total > store.update_current_Per_Page;
+  return paginationInfo.value.total > store.update_current_Per_Page;
 });
 
 const safeMongoPlugin = computed(() => {
@@ -392,10 +358,11 @@ function onPageChange(): void {
 
 function setTokenAndSearch(newToken: string): void {
   token.value = newToken;
+  dserverApi.setToken(newToken);
   searchDatasets();
 }
 
-function searchDatasets(): void {
+async function searchDatasets(): Promise<void> {
   getconfiginfo();
   console.log(getinfo.value);
 
@@ -406,53 +373,79 @@ function searchDatasets(): void {
   store.updateCurrentDatasetManifest(null);
   store.updateCurrentDatasetReadme(null);
   store.updateCurrentDatasetTags(null);
+  store.updateCurrentDatasetAnnotations(null);
   updateDataset();
   searchLoading.value = true;
   searchErrored.value = false;
 
-  let url = searchURL.value;
+  // Handle mongo query separately (legacy)
   if (store.mongo_text) {
-    url = mongoSearchURL.value;
+    try {
+      const response = await axios.post(
+        mongoSearchURL.value,
+        { query: JSON.parse(store.mongo_text) },
+        {
+          headers: {
+            Authorization: auth_str.value,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      datasetHits.value = response.data;
+      const paginationHeader = response.headers["x-pagination"];
+      paginationInfo.value = paginationHeader
+        ? JSON.parse(paginationHeader)
+        : { total: response.data.length, page: 1, per_page: response.data.length, pages: 1 };
+      store.updateCurrentDataset(current_dataset.value ?? null);
+      store.updateNumFiltered(paginationInfo.value.total);
+      updateDataset();
+    } catch (error) {
+      handleSearchError(error);
+    } finally {
+      searchLoading.value = false;
+    }
+    return;
   }
 
-  axios
-    .post(url, searchQuery.value, {
-      headers: {
-        Authorization: auth_str.value,
-        "Content-Type": "application/json",
-      },
-    })
-    .then((response: AxiosResponse<Dataset[]>) => {
-      datasetHits.value = response.data;
-      responseheaders.value = response.headers as ResponseHeaders;
-      store.updateCurrentDataset(current_dataset.value ?? null);
-      store.updateNumFiltered(pagination.value.total);
-      updateDataset();
-    })
-    .catch((error: AxiosError) => {
-      console.log(error);
-      if (error.response && error.response.status === 401) {
-        console.log(
-          "401 Unauthorized - User not authenticated or not registered"
-        );
-        authenticationError.value = true;
-        searchErrorMessage.value =
-          "Authentication failed. Your user may not be registered on the server. Please contact an administrator.";
-        searchErrored.value = true;
-      } else if (error.response && error.response.status === 404) {
-        console.log("404 Not Found - Resetting pageNumber and retrying");
-        store.current_pageNumber = 1;
-        searchDatasets(); // Retry the search with pageNumber reset to 1
-      } else {
-        console.log(error.response);
-        searchErrorMessage.value =
-          "An error occurred while loading datasets.";
-        searchErrored.value = true;
-      }
-    })
-    .finally(() => {
-      searchLoading.value = false;
+  // Use dserverApi for standard search
+  try {
+    const result = await dserverApi.searchDatasets(searchQuery.value, {
+      page: store.current_pageNumber,
+      page_size: store.update_current_Per_Page,
+      sort: store.selected_sort_option,
     });
+
+    datasetHits.value = result.data as Dataset[];
+    paginationInfo.value = result.pagination;
+    store.updateCurrentDataset(current_dataset.value ?? null);
+    store.updateNumFiltered(result.pagination.total);
+    updateDataset();
+  } catch (error) {
+    handleSearchError(error);
+  } finally {
+    searchLoading.value = false;
+  }
+}
+
+function handleSearchError(error: unknown): void {
+  console.log(error);
+  const err = error as { status?: number; response?: { status?: number } };
+  const status = err.status || err.response?.status;
+
+  if (status === 401) {
+    console.log("401 Unauthorized - User not authenticated or not registered");
+    authenticationError.value = true;
+    searchErrorMessage.value =
+      "Authentication failed. Your user may not be registered on the server. Please contact an administrator.";
+    searchErrored.value = true;
+  } else if (status === 404) {
+    console.log("404 Not Found - Resetting pageNumber and retrying");
+    store.current_pageNumber = 1;
+    searchDatasets();
+  } else {
+    searchErrorMessage.value = "An error occurred while loading datasets.";
+    searchErrored.value = true;
+  }
 }
 
 function updateDataset(): void {
@@ -462,7 +455,7 @@ function updateDataset(): void {
   updateTags();
 }
 
-function updateManifest(): void {
+async function updateManifest(): Promise<void> {
   console.log("Loading manifest");
   manifestLoading.value = true;
   manifestErrored.value = false;
@@ -475,28 +468,18 @@ function updateManifest(): void {
     return;
   }
 
-  const fullManifestURL = `${manifestURL.value}/${encodeURIComponent(uri)}`;
-
-  axios
-    .get(fullManifestURL, {
-      headers: {
-        Authorization: auth_str.value,
-        Accept: "application/json",
-      },
-    })
-    .then((response: AxiosResponse) => {
-      store.updateCurrentDatasetManifest(response.data);
-    })
-    .catch((error: AxiosError) => {
-      console.log(error);
-      manifestErrored.value = true;
-    })
-    .finally(() => {
-      manifestLoading.value = false;
-    });
+  try {
+    const manifest = await dserverApi.getManifest(uri);
+    store.updateCurrentDatasetManifest(manifest);
+  } catch (error) {
+    console.log(error);
+    manifestErrored.value = true;
+  } finally {
+    manifestLoading.value = false;
+  }
 }
 
-function updateReadme(): void {
+async function updateReadme(): Promise<void> {
   console.log("Loading readme");
   readmeLoading.value = true;
   readmeErrored.value = false;
@@ -509,28 +492,18 @@ function updateReadme(): void {
     return;
   }
 
-  const fullReadmeURL = `${readmeURL.value}/${encodeURIComponent(uri)}`;
-
-  axios
-    .get(fullReadmeURL, {
-      headers: {
-        Authorization: auth_str.value,
-        Accept: "application/json",
-      },
-    })
-    .then((response: AxiosResponse) => {
-      store.updateCurrentDatasetReadme(response.data);
-    })
-    .catch((error: AxiosError) => {
-      console.log(error);
-      readmeErrored.value = true;
-    })
-    .finally(() => {
-      readmeLoading.value = false;
-    });
+  try {
+    const readme = await dserverApi.getReadme(uri);
+    store.updateCurrentDatasetReadme(readme);
+  } catch (error) {
+    console.log(error);
+    readmeErrored.value = true;
+  } finally {
+    readmeLoading.value = false;
+  }
 }
 
-function updateAnnotations(): void {
+async function updateAnnotations(): Promise<void> {
   console.log("Loading annotations");
   annotationsLoading.value = true;
   annotationsErrored.value = false;
@@ -543,28 +516,18 @@ function updateAnnotations(): void {
     return;
   }
 
-  const fullAnnotationsURL = `${annotationsURL.value}/${encodeURIComponent(uri)}`;
-
-  axios
-    .get(fullAnnotationsURL, {
-      headers: {
-        Authorization: auth_str.value,
-        Accept: "application/json",
-      },
-    })
-    .then((response: AxiosResponse) => {
-      store.updateCurrentDatasetAnnotations(response.data);
-    })
-    .catch((error: AxiosError) => {
-      console.log(error);
-      annotationsErrored.value = true;
-    })
-    .finally(() => {
-      annotationsLoading.value = false;
-    });
+  try {
+    const annotations = await dserverApi.getAnnotations(uri);
+    store.updateCurrentDatasetAnnotations(annotations);
+  } catch (error) {
+    console.log(error);
+    annotationsErrored.value = true;
+  } finally {
+    annotationsLoading.value = false;
+  }
 }
 
-function updateTags(): void {
+async function updateTags(): Promise<void> {
   console.log("Loading tags");
   tagsLoading.value = true;
   tagsErrored.value = false;
@@ -577,51 +540,30 @@ function updateTags(): void {
     return;
   }
 
-  const fullTagsURL = `${tagsURL.value}/${encodeURIComponent(uri)}`;
-
-  axios
-    .get(fullTagsURL, {
-      headers: {
-        Authorization: auth_str.value,
-        Accept: "application/json",
-      },
-    })
-    .then((response: AxiosResponse) => {
-      store.updateCurrentDatasetTags(response.data);
-    })
-    .catch((error: AxiosError) => {
-      console.error(error);
-      tagsErrored.value = true;
-    })
-    .finally(() => {
-      tagsLoading.value = false;
-    });
+  try {
+    const tags = await dserverApi.getTags(uri);
+    store.updateCurrentDatasetTags(tags);
+  } catch (error) {
+    console.error(error);
+    tagsErrored.value = true;
+  } finally {
+    tagsLoading.value = false;
+  }
 }
 
-function getconfiginfo(): void {
+async function getconfiginfo(): Promise<void> {
   console.log("Loading ConfigInfo");
 
   // Store the lookup URL in the store for components to use
   store.updateLookupUrl(lookup_url);
 
-  axios
-    .get(configInfoURL.value, {
-      headers: {
-        Authorization: auth_str.value,
-        "Content-Type": "application/json",
-      },
-    })
-    .then((response: AxiosResponse<ConfigInfo>) => {
-      getinfo.value = response.data;
-      // Store server versions in the store for components to access
-      if (response.data && response.data.versions) {
-        store.updateServerVersions(response.data.versions);
-      }
-    })
-    .catch((error: AxiosError) => {
-      console.log(error);
-      console.log(error.response);
-    });
+  try {
+    const versions = await dserverApi.getServerVersions();
+    getinfo.value = { versions };
+    store.updateServerVersions(versions);
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 function logout(): void {

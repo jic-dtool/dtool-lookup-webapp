@@ -13,6 +13,7 @@
     "@mdi/font": "^7.4.47",
     "axios": "^1.7.9",
     "core-js": "^3.39.0",
+    "dserver-client": "file:../../dserver-client-js",
     "filesize": "^10.1.6",
     "highlight.js": "^11.11.1",
     "json2yaml": "^1.1.0",
