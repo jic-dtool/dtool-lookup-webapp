@@ -30,6 +30,14 @@
       <v-divider />
 
       <v-list density="compact" nav>
+        <!-- Copy Token to Clipboard -->
+        <v-list-item
+          prepend-icon="mdi-content-copy"
+          @click="copyTokenToClipboard"
+        >
+          <v-list-item-title>Copy token to clipboard</v-list-item-title>
+        </v-list-item>
+
         <!-- Server Configuration -->
         <v-list-item
           prepend-icon="mdi-server"
@@ -151,6 +159,7 @@
 import { ref, computed } from "vue";
 import { useStore } from "@/store";
 import { useAuthStore } from "@/stores/auth";
+import { useNotificationStore } from "@/stores/notifications";
 
 const emit = defineEmits<{
   (e: "logoutAction"): void;
@@ -158,6 +167,7 @@ const emit = defineEmits<{
 
 const store = useStore();
 const auth = useAuthStore();
+const notifications = useNotificationStore();
 const showServerConfigDialog = ref(false);
 const infoDialog = ref(false);
 
@@ -181,6 +191,21 @@ function formatPluginName(name: string): string {
 
 function logout(): void {
   emit("logoutAction");
+}
+
+async function copyTokenToClipboard(): Promise<void> {
+  if (!auth.token) {
+    notifications.error("No token available");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(auth.token);
+    notifications.success("Token copied to clipboard");
+  } catch (error) {
+    console.error("Failed to copy token:", error);
+    notifications.error("Failed to copy token to clipboard");
+  }
 }
 
 async function downloadFile(fileName: string): Promise<void> {
