@@ -21,8 +21,8 @@
             <v-icon color="white">mdi-account</v-icon>
           </v-avatar>
           <div class="ml-3">
-            <div class="text-body-1 font-weight-medium">{{ username || 'User' }}</div>
-            <div class="text-caption text-medium-emphasis">Logged in</div>
+            <div class="text-body-1 font-weight-medium">{{ auth.displayName || 'User' }}</div>
+            <div class="text-caption text-medium-emphasis">{{ auth.username }}</div>
           </div>
         </div>
       </div>
@@ -150,12 +150,14 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useStore } from "@/store";
+import { useAuthStore } from "@/stores/auth";
 
 const emit = defineEmits<{
   (e: "logoutAction"): void;
 }>();
 
 const store = useStore();
+const auth = useAuthStore();
 const showServerConfigDialog = ref(false);
 const infoDialog = ref(false);
 
@@ -165,8 +167,8 @@ const downloadReadmeJson = process.env.VUE_APP_OFFER_DTOOL_JSON_DOWNLOAD === "tr
 const showInfoMenuEntry = process.env.VUE_APP_SHOW_INFO_MENU_ENTRY === "true";
 const infoContent = process.env.VUE_APP_INFO_CONTENT || "Info Content";
 
-// Computed properties
-const username = computed(() => store.username);
+// Computed properties - use auth store for username
+const username = computed(() => auth.displayName || auth.username);
 const serverVersions = computed(() => store.server_versions);
 const lookupUrl = computed(() => store.lookup_url);
 

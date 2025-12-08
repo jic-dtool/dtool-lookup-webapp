@@ -1,7 +1,63 @@
 <template>
   <v-app>
-    <!-- Authenticated view -->
-    <template v-if="token">
+    <!-- Loading State - Checking server health and auth -->
+    <template v-if="isInitializing">
+      <v-main class="d-flex align-center justify-center bg-grey-lighten-4">
+        <v-card class="pa-8 text-center" max-width="400">
+          <v-progress-circular indeterminate color="primary" size="64" class="mb-4" />
+          <p class="text-body-1 text-grey-darken-1">
+            Connecting to server...
+          </p>
+        </v-card>
+      </v-main>
+    </template>
+
+    <!-- Server Unhealthy Guard -->
+    <template v-else-if="serverHealth.isUnhealthy">
+      <v-main class="d-flex align-center justify-center bg-grey-lighten-4">
+        <v-card class="pa-8" max-width="500">
+          <div class="text-center mb-6">
+            <v-icon icon="mdi-server-off" size="80" color="error" />
+          </div>
+          <h1 class="text-h5 font-weight-bold text-center mb-4 text-error">
+            Server Unavailable
+          </h1>
+          <v-alert type="error" variant="tonal" class="mb-4">
+            {{ serverHealth.errorMessage || "Unable to connect to the dserver." }}
+          </v-alert>
+          <p class="text-body-2 text-grey-darken-1 mb-4">
+            The dtool lookup server is not responding. This could be due to:
+          </p>
+          <ul class="text-body-2 text-grey-darken-1 mb-6 ml-4">
+            <li>Server maintenance or downtime</li>
+            <li>Network connectivity issues</li>
+            <li>Server configuration problems</li>
+          </ul>
+          <v-btn
+            color="primary"
+            block
+            :loading="serverHealth.isChecking"
+            @click="retryServerConnection"
+          >
+            <v-icon icon="mdi-refresh" class="mr-2" />
+            Retry Connection
+          </v-btn>
+          <p class="text-caption text-grey mt-4 text-center">
+            Server URL: {{ serverHealth.serverUrl }}
+          </p>
+        </v-card>
+      </v-main>
+    </template>
+
+    <!-- Authentication Guard - Show Sign In -->
+    <template v-else-if="!auth.isAuthenticated">
+      <v-main>
+        <SignIn />
+      </v-main>
+    </template>
+
+    <!-- Authenticated View - Main Application -->
+    <template v-else>
       <!-- App Bar -->
       <v-app-bar color="grey-lighten-3" elevation="2">
         <v-app-bar-nav-icon
@@ -25,7 +81,7 @@
 
         <v-spacer />
 
-        <UserMenu @logoutAction="logout" />
+        <UserMenu @logoutAction="handleLogout" />
       </v-app-bar>
 
       <!-- Navigation Drawer for mobile -->
@@ -37,7 +93,7 @@
         <SummaryInfo
           :auth_str="auth_str"
           :lookup_url="lookup_url"
-          :token="token"
+          :token="auth.token || ''"
           @start-search="searchDatasets"
         />
       </v-navigation-drawer>
@@ -51,7 +107,7 @@
               <SummaryInfo
                 :auth_str="auth_str"
                 :lookup_url="lookup_url"
-                :token="token"
+                :token="auth.token || ''"
                 @start-search="searchDatasets"
               />
             </v-card>
@@ -67,28 +123,13 @@
 
               <!-- Error State -->
               <div v-else-if="searchErrored" class="pa-4">
-                <v-alert
-                  v-if="authenticationError"
-                  type="error"
-                  prominent
-                  class="mb-4"
-                >
-                  <template #title>Authentication Error (401)</template>
-                  <p>{{ searchErrorMessage }}</p>
-                  <v-divider class="my-2" />
-                  <p class="mb-0">
-                    This usually means your username is not registered on the dserver.
-                    Try logging in with username <strong>admin</strong> or contact an administrator
-                    to register your user.
-                  </p>
-                </v-alert>
-                <v-alert v-else type="error" class="mb-4">
+                <v-alert type="error" class="mb-4">
                   {{ searchErrorMessage || "Unable to load datasets please try again." }}
                 </v-alert>
                 <v-btn color="secondary" class="mr-2" @click="searchDatasets()">
                   Try again
                 </v-btn>
-                <v-btn color="secondary" @click="logout()">
+                <v-btn color="secondary" @click="handleLogout()">
                   Logout
                 </v-btn>
               </div>
@@ -136,7 +177,7 @@
                     <v-btn size="small" color="secondary" class="mr-2" @click="updateManifest()">
                       Try again
                     </v-btn>
-                    <v-btn size="small" color="secondary" @click="logout()">
+                    <v-btn size="small" color="secondary" @click="handleLogout()">
                       Logout
                     </v-btn>
                   </div>
@@ -156,7 +197,7 @@
                     <v-btn size="small" color="secondary" class="mr-2" @click="updateReadme()">
                       Try again
                     </v-btn>
-                    <v-btn size="small" color="secondary" @click="logout()">
+                    <v-btn size="small" color="secondary" @click="handleLogout()">
                       Logout
                     </v-btn>
                   </div>
@@ -175,7 +216,7 @@
                     <v-btn size="small" color="secondary" class="mr-2" @click="updateManifest()">
                       Try again
                     </v-btn>
-                    <v-btn size="small" color="secondary" @click="logout()">
+                    <v-btn size="small" color="secondary" @click="handleLogout()">
                       Logout
                     </v-btn>
                   </div>
@@ -187,19 +228,13 @@
       </v-main>
     </template>
 
-    <!-- Sign In view -->
-    <v-main v-else>
-      <SignIn @sign-in="handleSignIn" />
-    </v-main>
-
     <!-- Global notifications -->
     <NotificationSnackbar />
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, getCurrentInstance } from "vue";
-import type { AxiosError, AxiosResponse } from "axios";
+import { ref, computed, getCurrentInstance, onMounted, watch } from "vue";
 import SignIn from "./components/SignIn.vue";
 import SummaryInfo from "./components/SummaryInfo.vue";
 import TextSearch from "./components/TextSearch.vue";
@@ -211,23 +246,29 @@ import DatasetSorting from "./components/DatasetSorting.vue";
 import UserMenu from "./components/UserMenu.vue";
 import NotificationSnackbar from "./components/NotificationSnackbar.vue";
 import { useStore } from "./store";
+import { useAuthStore } from "./stores/auth";
+import { useServerHealthStore } from "./stores/serverHealth";
 import { dserverApi } from "./services/dserverApi";
 import type {
   DatasetEntry,
   SearchQuery as DServerSearchQuery,
-  PaginationInfo,
-  AuthenticationError as AuthError,
 } from "./services/dserverApi";
 import type {
   Dataset,
   ConfigInfo,
-  SearchQuery,
   ResponseHeaders,
 } from "./types";
 
+// Stores
 const store = useStore();
+const auth = useAuthStore();
+const serverHealth = useServerHealthStore();
+
 const instance = getCurrentInstance();
 const axios = instance?.appContext.config.globalProperties.$http;
+
+// App initialization state
+const isInitializing = ref(true);
 
 // Reactive state
 const drawer = ref(false);
@@ -235,7 +276,6 @@ const datasetHits = ref<Dataset[]>([]);
 const searchLoading = ref(true);
 const searchErrored = ref(false);
 const searchErrorMessage = ref<string | null>(null);
-const authenticationError = ref(false);
 const manifestLoading = ref(false);
 const manifestErrored = ref(false);
 const readmeLoading = ref(false);
@@ -245,9 +285,16 @@ const tagsErrored = ref(false);
 const annotationsLoading = ref(false);
 const annotationsErrored = ref(false);
 const lookup_url = dserverApi.getBaseUrl();
-const token = ref<string | null>(null);
 const responseheaders = ref<ResponseHeaders>({});
 const getinfo = ref<ConfigInfo>({ versions: {} });
+
+interface PaginationInfo {
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
 const paginationInfo = ref<PaginationInfo>({ total: 0, page: 1, per_page: 10, pages: 1 });
 
 // Computed properties
@@ -265,7 +312,7 @@ const mongoSearchURL = computed(() => {
 });
 
 const auth_str = computed(() => {
-  return "Bearer ".concat(token.value || "");
+  return "Bearer ".concat(auth.token || "");
 });
 
 const searchQuery = computed<DServerSearchQuery>(() => {
@@ -326,13 +373,6 @@ const currentPage = computed({
 
 // Methods
 function onPageChange(): void {
-  searchDatasets();
-}
-
-function handleSignIn(newToken: string, username: string): void {
-  token.value = newToken;
-  dserverApi.setToken(newToken);
-  store.updateUsername(username);
   searchDatasets();
 }
 
@@ -403,15 +443,14 @@ async function searchDatasets(): Promise<void> {
 
 function handleSearchError(error: unknown): void {
   console.log(error);
-  const err = error as { status?: number; response?: { status?: number } };
+  const err = error as { status?: number; response?: { status?: number }; name?: string };
   const status = err.status || err.response?.status;
+  const isAuthError = status === 401 || err.name === "AuthenticationError";
 
-  if (status === 401) {
+  if (isAuthError) {
     console.log("401 Unauthorized - User not authenticated or not registered");
-    authenticationError.value = true;
-    searchErrorMessage.value =
-      "Authentication failed. Your user may not be registered on the server. Please contact an administrator.";
-    searchErrored.value = true;
+    // Auth store will handle this - logout the user
+    auth.logout();
   } else if (status === 404) {
     console.log("404 Not Found - Resetting pageNumber and retrying");
     store.current_pageNumber = 1;
@@ -540,13 +579,54 @@ async function getconfiginfo(): Promise<void> {
   }
 }
 
-function logout(): void {
-  token.value = "";
-  authenticationError.value = false;
+function handleLogout(): void {
+  auth.logout();
   searchErrorMessage.value = null;
   searchErrored.value = false;
   store.clearAll();
 }
+
+async function retryServerConnection(): Promise<void> {
+  const healthy = await serverHealth.checkHealth();
+  if (healthy) {
+    serverHealth.startPolling();
+    // Re-initialize auth if server is back
+    await auth.initialize();
+    isInitializing.value = false;
+  }
+}
+
+// Watch for authentication state changes
+watch(
+  () => auth.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      // User just logged in, start search
+      searchDatasets();
+    }
+  }
+);
+
+// Initialize the app
+onMounted(async () => {
+  // First check server health
+  const serverHealthy = await serverHealth.initialize();
+
+  if (!serverHealthy) {
+    isInitializing.value = false;
+    return;
+  }
+
+  // Then initialize auth (will check for existing token or OAuth2 callback)
+  await auth.initialize();
+
+  isInitializing.value = false;
+
+  // If already authenticated, start search
+  if (auth.isAuthenticated) {
+    searchDatasets();
+  }
+});
 </script>
 
 <style>

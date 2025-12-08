@@ -25,50 +25,87 @@
                   ></h1>
 
                   <!-- Sign In Form (shown when not right panel active) -->
-                  <v-form v-if="!rightPanelActive" @submit.prevent="getToken">
-                    <v-text-field
-                      v-model="username"
-                      label="Username"
-                      prepend-inner-icon="mdi-account"
-                      variant="outlined"
-                      density="comfortable"
-                      class="mb-3"
-                      :disabled="signInLoading"
-                      required
-                    />
-
-                    <v-text-field
-                      v-model="password"
-                      label="Password"
-                      prepend-inner-icon="mdi-lock"
-                      type="password"
-                      variant="outlined"
-                      density="comfortable"
-                      class="mb-3"
-                      :disabled="signInLoading"
-                      required
-                    />
-
+                  <div v-if="!rightPanelActive">
+                    <!-- Auth store error message for unauthorized users (ORCID login but not registered) -->
                     <v-alert
-                      v-if="signInFailed"
-                      type="error"
-                      density="compact"
+                      v-if="auth.status === 'unauthorized' && auth.error"
+                      type="warning"
                       class="mb-4"
+                      closable
+                      @click:close="auth.clearError()"
                     >
-                      Invalid username or password
+                      <template #title>
+                        {{ auth.error.message }}
+                      </template>
+                      {{ auth.error.details }}
                     </v-alert>
 
-                    <v-btn
-                      type="submit"
-                      color="primary"
-                      size="large"
-                      block
-                      :loading="signInLoading"
-                      :disabled="signInLoading"
-                    >
-                      Sign In
-                    </v-btn>
-                  </v-form>
+                    <!-- OAuth2 Login Button (if enabled) -->
+                    <div v-if="oauth2Enabled" class="mb-4">
+                      <v-btn
+                        color="primary"
+                        size="large"
+                        block
+                        :href="oauth2LoginUrl"
+                        :loading="auth.isLoading"
+                        prepend-icon="mdi-login"
+                      >
+                        Sign in with {{ oauth2ProviderName }}
+                      </v-btn>
+
+                      <div v-if="showUsernamePasswordForm" class="d-flex align-center my-4">
+                        <v-divider />
+                        <span class="mx-3 text-grey">or</span>
+                        <v-divider />
+                      </div>
+                    </div>
+
+                    <!-- Username/Password Form (if enabled) -->
+                    <v-form v-if="showUsernamePasswordForm" @submit.prevent="handleUsernamePasswordLogin">
+                      <v-text-field
+                        v-model="username"
+                        label="Username"
+                        prepend-inner-icon="mdi-account"
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-3"
+                        :disabled="signInLoading"
+                        required
+                      />
+
+                      <v-text-field
+                        v-model="password"
+                        label="Password"
+                        prepend-inner-icon="mdi-lock"
+                        type="password"
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-3"
+                        :disabled="signInLoading"
+                        required
+                      />
+
+                      <v-alert
+                        v-if="signInFailed"
+                        type="error"
+                        density="compact"
+                        class="mb-4"
+                      >
+                        Invalid username or password
+                      </v-alert>
+
+                      <v-btn
+                        type="submit"
+                        color="primary"
+                        size="large"
+                        block
+                        :loading="signInLoading"
+                        :disabled="signInLoading"
+                      >
+                        Sign In
+                      </v-btn>
+                    </v-form>
+                  </div>
 
                   <!-- Resources (shown when right panel active) -->
                   <div v-else>
@@ -142,18 +179,16 @@ import { ref, computed, getCurrentInstance } from "vue";
 import type { AxiosError, AxiosResponse } from "axios";
 import type { ResourceLink } from "@/types";
 import { useNotificationStore } from "@/stores/notifications";
+import { useAuthStore } from "@/stores/auth";
 
 interface TokenResponse {
   token?: string;
 }
 
-const emit = defineEmits<{
-  (e: "sign-in", token: string, username: string): void;
-}>();
-
 const instance = getCurrentInstance();
 const axios = instance?.appContext.config.globalProperties.$http;
 const notifications = useNotificationStore();
+const auth = useAuthStore();
 
 const username = ref<string | null>(null);
 const password = ref<string | null>(null);
@@ -165,6 +200,14 @@ const rightPanelActive = ref(false);
 const tokenGeneratorURL = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL ||
   `${process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "http://localhost:5000"}/auth/token`;
 const logoSrc = process.env.VUE_APP_LANDING_PAGE_ICON_PATH || "/icons/128x128/dtool_logo.png";
+
+// OAuth2 configuration
+const dserverUrl = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "http://localhost:5000";
+const oauth2Enabled = process.env.VUE_APP_OAUTH2_ENABLED === "true";
+const oauth2ProviderName = process.env.VUE_APP_OAUTH2_PROVIDER_NAME || "OAuth2";
+const oauth2LoginUrl = `${dserverUrl}/auth/login`;
+// Show username/password form if OAuth2 is disabled or if explicitly enabled
+const showUsernamePasswordForm = !oauth2Enabled || process.env.VUE_APP_SHOW_USERNAME_PASSWORD_FORM === "true";
 const firstContainerTitle = process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In";
 const secondContainerTitle = process.env.VUE_APP_SECOND_CONTAINER_TITLE || "Welcome to Dtool";
 const secondContainerMessage = process.env.VUE_APP_SECOND_CONTAINER_MESSAGE ||
@@ -203,49 +246,56 @@ const overlayGradient = computed(() => {
   };
 });
 
-function signIn(token: string): void {
-  emit("sign-in", token, username.value || "");
-}
-
-function getToken(): void {
+async function handleUsernamePasswordLogin(): Promise<void> {
   console.log(process.env);
   signInLoading.value = true;
   signInFailed.value = false;
+  auth.clearError();
 
-  axios
-    .post(tokenGeneratorURL, loginCredentials.value, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-    .then((response: AxiosResponse<TokenResponse>) => {
-      signInInfo.value = response.data;
-      if (signInInfo.value && "token" in signInInfo.value && signInInfo.value.token) {
-        signIn(signInInfo.value.token);
-      } else {
+  try {
+    const response: AxiosResponse<TokenResponse> = await axios.post(
+      tokenGeneratorURL,
+      loginCredentials.value,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    signInInfo.value = response.data;
+    if (signInInfo.value && "token" in signInInfo.value && signInInfo.value.token) {
+      // Use auth store to login (this verifies the token works)
+      const success = await auth.login(signInInfo.value.token);
+      if (!success) {
+        // Auth store will have set the error
         signInFailed.value = true;
       }
-    })
-    .catch((error: AxiosError) => {
-      console.log(error);
+    } else {
+      signInFailed.value = true;
+    }
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    console.log(axiosError);
 
-      // Determine error type and show appropriate message
-      if (error.code === "ERR_NETWORK") {
-        notifications.error(
-          "Unable to connect to authentication server. Please check that the token generator service is running.",
-          10000
-        );
-      } else if (error.response?.status === 401) {
-        signInFailed.value = true;
-      } else if (error.response?.status === 403) {
-        notifications.error("Access denied. Please check your credentials.");
-      } else if (error.response?.status === 500) {
-        notifications.error("Authentication server error. Please try again later.");
-      } else {
-        notifications.error(`Authentication failed: ${error.message}`);
-      }
-    })
-    .finally(() => (signInLoading.value = false));
+    // Determine error type and show appropriate message
+    if (axiosError.code === "ERR_NETWORK") {
+      notifications.error(
+        "Unable to connect to authentication server. Please check that the token generator service is running.",
+        10000
+      );
+    } else if (axiosError.response?.status === 401) {
+      signInFailed.value = true;
+    } else if (axiosError.response?.status === 403) {
+      notifications.error("Access denied. Please check your credentials.");
+    } else if (axiosError.response?.status === 500) {
+      notifications.error("Authentication server error. Please try again later.");
+    } else {
+      notifications.error(`Authentication failed: ${axiosError.message}`);
+    }
+  } finally {
+    signInLoading.value = false;
+  }
 }
 
 function activateRightPanel(): void {
