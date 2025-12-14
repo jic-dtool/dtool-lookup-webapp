@@ -25,6 +25,7 @@ import type {
   UserInfo,
   UserRequest,
   BaseURIInfo,
+  GraphDatasetEntry,
 } from "dserver-client";
 
 // Re-export types for convenience
@@ -47,6 +48,7 @@ export type {
   UserInfo,
   UserRequest,
   BaseURIInfo,
+  GraphDatasetEntry,
 };
 
 // Re-export error classes
@@ -264,6 +266,14 @@ class DServerApi {
 
   async revokeRegisterPermission(username: string, baseUri: string): Promise<UserInfo> {
     return this.ensureClient().revokeRegisterPermission(username, baseUri);
+  }
+
+  // =========================================================================
+  // Dependency Graph (requires dserver-dependency-graph-plugin)
+  // =========================================================================
+
+  async getDependencyGraph(uuid: string): Promise<GraphDatasetEntry[]> {
+    return this.ensureClient().getDependencyGraph(uuid);
   }
 }
 

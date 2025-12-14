@@ -220,6 +220,10 @@
                       {{ itemCount }}
                     </v-chip>
                   </v-tab>
+                  <v-tab v-if="hasDependencyGraphPlugin" value="dependencies">
+                    <v-icon size="small" class="mr-2">mdi-graph-outline</v-icon>
+                    Dependencies
+                  </v-tab>
                 </v-tabs>
 
                 <!-- Tab Content -->
@@ -272,6 +276,13 @@
                       <Manifest v-else class="w-100" />
                     </div>
                   </v-tabs-window-item>
+
+                  <!-- Dependencies Tab -->
+                  <v-tabs-window-item v-if="hasDependencyGraphPlugin" value="dependencies" class="fill-height">
+                    <div class="pa-4 fill-height">
+                      <DatasetDependencies @select-dataset="handleDependencyNavigation" />
+                    </div>
+                  </v-tabs-window-item>
                 </v-tabs-window>
               </v-card>
             </div>
@@ -298,6 +309,7 @@ import DatasetSorting from "./components/DatasetSorting.vue";
 import UserMenu from "./components/UserMenu.vue";
 import NotificationSnackbar from "./components/NotificationSnackbar.vue";
 import UserManagement from "./components/UserManagement.vue";
+import DatasetDependencies from "./components/DatasetDependencies.vue";
 import { useStore } from "./store";
 import { useAuthStore } from "./stores/auth";
 import { useServerHealthStore } from "./stores/serverHealth";
@@ -417,6 +429,10 @@ const safeMongoPlugin = computed(() => {
   return getinfo.value.versions.dserver_direct_mongo_plugin || "N/A";
 });
 
+const hasDependencyGraphPlugin = computed(() => {
+  return !!(getinfo.value.versions.dserver_dependency_graph_plugin);
+});
+
 const itemCount = computed(() => {
   const manifest = store.current_dataset_manifest;
   if (manifest && manifest.items) {
@@ -529,6 +545,24 @@ function updateDataset(): void {
   updateReadme();
   updateAnnotations();
   updateTags();
+}
+
+async function handleDependencyNavigation(uuid: string, uri: string): Promise<void> {
+  // Navigate to a dataset from the dependency graph
+  try {
+    const result = await dserverApi.searchDatasets({ uuids: [uuid] });
+    if (result.data.length > 0) {
+      datasetHits.value = result.data as Dataset[];
+      paginationInfo.value = result.pagination;
+      store.updateCurrentDatasetIndex(0);
+      store.updateCurrentDataset(result.data[0] as Dataset);
+      store.updateNumFiltered(result.pagination.total);
+      updateDataset();
+      detailTab.value = "dataset"; // Switch to dataset tab
+    }
+  } catch (error) {
+    console.error("Failed to navigate to dataset:", error);
+  }
 }
 
 async function updateManifest(): Promise<void> {

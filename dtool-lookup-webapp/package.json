@@ -13,8 +13,10 @@
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
+    "@types/d3": "^7.4.3",
     "axios": "^1.13.2",
     "core-js": "^3.47.0",
+    "d3": "^7.9.0",
     "dserver-client": "file:../../dserver-client-js",
     "filesize": "^10.1.6",
     "highlight.js": "^11.11.1",
