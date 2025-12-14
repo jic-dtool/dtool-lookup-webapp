@@ -549,16 +549,26 @@ function updateDataset(): void {
 
 async function handleDependencyNavigation(uuid: string, uri: string): Promise<void> {
   // Navigate to a dataset from the dependency graph
+  // Keep the Dependencies tab open so user can continue exploring the graph
+  console.log("handleDependencyNavigation called:", { uuid, uri });
   try {
-    const result = await dserverApi.searchDatasets({ uuids: [uuid] });
+    // Search using free text with the UUID to find the dataset
+    const result = await dserverApi.searchDatasets({ free_text: uuid });
+    console.log("Search result:", result);
     if (result.data.length > 0) {
+      // Find the exact match by UUID
+      const exactMatch = result.data.find(d => d.uuid === uuid);
+      const dataset = exactMatch || result.data[0];
+
       datasetHits.value = result.data as Dataset[];
       paginationInfo.value = result.pagination;
-      store.updateCurrentDatasetIndex(0);
-      store.updateCurrentDataset(result.data[0] as Dataset);
+
+      const datasetIndex = result.data.findIndex(d => d.uuid === uuid);
+      store.updateCurrentDatasetIndex(datasetIndex >= 0 ? datasetIndex : 0);
+      store.updateCurrentDataset(dataset as Dataset);
       store.updateNumFiltered(result.pagination.total);
       updateDataset();
-      detailTab.value = "dataset"; // Switch to dataset tab
+      // Keep the dependencies tab open (don't switch tabs)
     }
   } catch (error) {
     console.error("Failed to navigate to dataset:", error);

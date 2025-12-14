@@ -136,6 +136,14 @@ watch(() => currentDataset.value?.uuid, async (newUuid) => {
   }
 }, { immediate: true });
 
+// Watch for when the graph container becomes available (tab becomes visible)
+watch([graphContainer, svgElement], ([container, svg]) => {
+  if (container && svg && graphData.value.length > 0) {
+    console.log("Container/SVG now available, rendering graph");
+    renderGraph();
+  }
+});
+
 async function loadGraph(): Promise<void> {
   const uuid = currentDataset.value?.uuid;
   if (!uuid) return;
@@ -145,6 +153,8 @@ async function loadGraph(): Promise<void> {
 
   try {
     graphData.value = await dserverApi.getDependencyGraph(uuid);
+    console.log("Graph data loaded:", graphData.value);
+    console.log("Has connections:", hasConnections.value);
     await nextTick();
     renderGraph();
   } catch (err) {
@@ -157,6 +167,11 @@ async function loadGraph(): Promise<void> {
 }
 
 function renderGraph(): void {
+  console.log("renderGraph called", {
+    svgElement: svgElement.value,
+    graphContainer: graphContainer.value,
+    dataLength: graphData.value.length
+  });
   if (!svgElement.value || !graphContainer.value || graphData.value.length === 0) return;
 
   // Clear previous graph
@@ -166,6 +181,7 @@ function renderGraph(): void {
   const container = graphContainer.value;
   const width = container.clientWidth;
   const height = Math.max(400, container.clientHeight);
+  console.log("Container dimensions:", { width, height });
 
   const svg = d3.select(svgElement.value)
     .attr("width", width)
@@ -185,17 +201,20 @@ function renderGraph(): void {
   const g = svg.append("g");
 
   // Define arrow marker for directed edges
-  svg.append("defs").append("marker")
+  const defs = svg.append("defs");
+  defs.append("marker")
     .attr("id", "arrowhead")
-    .attr("viewBox", "-0 -5 10 10")
-    .attr("refX", 25)
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 20)  // Position relative to target node (accounting for radius ~15)
     .attr("refY", 0)
     .attr("orient", "auto")
-    .attr("markerWidth", 6)
-    .attr("markerHeight", 6)
+    .attr("markerWidth", 8)
+    .attr("markerHeight", 8)
+    .attr("xoverflow", "visible")
     .append("path")
-    .attr("d", "M 0,-5 L 10,0 L 0,5")
-    .attr("fill", "#999");
+    .attr("d", "M 0,-4 L 8,0 L 0,4")
+    .attr("fill", "#666")
+    .attr("stroke", "none");
 
   // Build nodes and links
   const currentUuid = currentDataset.value?.uuid;
@@ -218,18 +237,28 @@ function renderGraph(): void {
 
   // Build directed links from derived_from relationships
   // Arrow points from source (parent) to target (derived dataset)
+  // Note: derived_from contains UUID strings, not objects
   graphData.value.forEach(dataset => {
     if (dataset.derived_from) {
-      dataset.derived_from.forEach(dep => {
-        if (nodeMap.has(dep.uuid)) {
+      dataset.derived_from.forEach(depUuid => {
+        // depUuid is a string (the parent dataset's UUID)
+        if (typeof depUuid === 'string' && nodeMap.has(depUuid)) {
           links.push({
-            source: dep.uuid,
+            source: depUuid,
             target: dataset.uuid,
           });
         }
       });
     }
   });
+
+  console.log("Nodes:", nodes);
+  console.log("Links:", links);
+  console.log("Raw graph data derived_from fields:", JSON.stringify(graphData.value.map(d => ({
+    name: d.name,
+    uuid: d.uuid,
+    derived_from: d.derived_from
+  })), null, 2));
 
   // Create simulation
   simulation = d3.forceSimulation<GraphNode>(nodes)
@@ -246,8 +275,8 @@ function renderGraph(): void {
     .selectAll("line")
     .data(links)
     .join("line")
-    .attr("stroke", "#999")
-    .attr("stroke-opacity", 0.6)
+    .attr("stroke", "#666")
+    .attr("stroke-opacity", 0.8)
     .attr("stroke-width", 2)
     .attr("marker-end", "url(#arrowhead)");
 
@@ -289,13 +318,28 @@ function renderGraph(): void {
       hoveredNode.value = null;
     })
     .on("click", (event, d) => {
+      console.log("Node clicked:", d);
       if (!d.isCurrent) {
+        console.log("Emitting select-dataset", d.uuid, d.uri);
         emit("select-dataset", d.uuid, d.uri);
       }
     });
 
   // Update positions on tick
+  let tickCount = 0;
   simulation.on("tick", () => {
+    if (tickCount === 0) {
+      console.log("First tick - link data:", links.map(l => ({
+        source: (l.source as GraphNode).uuid,
+        target: (l.target as GraphNode).uuid,
+        x1: (l.source as GraphNode).x,
+        y1: (l.source as GraphNode).y,
+        x2: (l.target as GraphNode).x,
+        y2: (l.target as GraphNode).y,
+      })));
+    }
+    tickCount++;
+
     link
       .attr("x1", d => (d.source as GraphNode).x!)
       .attr("y1", d => (d.source as GraphNode).y!)
@@ -458,7 +502,7 @@ onUnmounted(() => {
 
 .legend-arrow {
   font-size: 16px;
-  color: #999;
+  color: #666;
 }
 
 /* D3 node styling */
