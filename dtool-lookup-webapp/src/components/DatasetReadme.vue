@@ -1,112 +1,106 @@
 <template>
-  <div v-if="getReadmeContent">
-    <v-expansion-panels variant="accordion">
-      <v-expansion-panel rounded="lg">
-        <v-expansion-panel-title class="readme-panel-title">
-          <template #default>
-            <div class="d-flex align-center">
-              <v-icon size="small" color="primary" class="mr-2">mdi-file-document-outline</v-icon>
-              <span class="text-body-2 font-weight-medium">README</span>
-            </div>
-          </template>
-          <template #actions="{ expanded }">
-            <!-- Edit button - shows inline editor if valid YAML, otherwise shows dtool command -->
-            <v-btn
-              v-if="isValidYaml"
-              size="small"
-              variant="tonal"
-              :color="isEditing ? 'grey' : 'primary'"
-              :prepend-icon="isEditing ? 'mdi-close' : 'mdi-pencil'"
-              class="mr-2"
-              @click.stop="toggleEdit"
-            >
-              {{ isEditing ? 'Cancel' : 'Edit' }}
-            </v-btn>
-            <v-menu v-else location="bottom end" :close-on-content-click="false" @click.stop>
-              <template #activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  size="small"
-                  variant="tonal"
-                  color="primary"
-                  prepend-icon="mdi-pencil"
-                  class="mr-2"
-                  @click.stop
-                >
-                  Edit
-                </v-btn>
-              </template>
-              <v-card min-width="440" rounded="lg">
-                <v-card-text class="text-body-2 pb-2">
-                  Edit the README and update it in the dataset:
-                </v-card-text>
-                <v-card-text class="pt-0">
-                  <v-text-field
-                    :model-value="edit_command"
-                    readonly
-                    density="compact"
-                    variant="outlined"
-                    hide-details
-                    rounded="lg"
-                    bg-color="grey-lighten-4"
-                  >
-                    <template #append-inner>
-                      <v-btn
-                        icon="mdi-content-copy"
-                        size="small"
-                        variant="text"
-                        @click="copyToClipboard(edit_command)"
-                      />
-                    </template>
-                  </v-text-field>
-                </v-card-text>
-              </v-card>
-            </v-menu>
-            <v-icon :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
-          </template>
-        </v-expansion-panel-title>
-        <v-expansion-panel-text>
-          <!-- Editor view -->
-          <div v-if="isEditing" class="readme-editor">
-            <v-textarea
-              v-model="editedContent"
-              variant="outlined"
+  <div class="readme-section">
+    <!-- Header with Edit button -->
+    <div class="d-flex align-center justify-space-between mb-3">
+      <div class="text-body-2 text-medium-emphasis">
+        Dataset README (YAML)
+      </div>
+      <!-- Edit button - shows inline editor if valid YAML, otherwise shows dtool command -->
+      <v-btn
+        v-if="isValidYaml && getReadmeContent"
+        size="small"
+        variant="tonal"
+        :color="isEditing ? 'grey' : 'primary'"
+        :prepend-icon="isEditing ? 'mdi-close' : 'mdi-pencil'"
+        @click="toggleEdit"
+      >
+        {{ isEditing ? 'Cancel' : 'Edit' }}
+      </v-btn>
+      <v-menu v-else-if="getReadmeContent" location="bottom end" :close-on-content-click="false">
+        <template #activator="{ props }">
+          <v-btn
+            v-bind="props"
+            size="small"
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-pencil"
+          >
+            Edit
+          </v-btn>
+        </template>
+        <v-card min-width="440" rounded="lg">
+          <v-card-text class="text-body-2 pb-2">
+            Edit the README and update it in the dataset:
+          </v-card-text>
+          <v-card-text class="pt-0">
+            <v-text-field
+              :model-value="edit_command"
+              readonly
               density="compact"
-              rows="12"
-              hide-details="auto"
-              :error="!!yamlError"
-              :error-messages="yamlError"
-              class="yaml-editor-textarea"
-              @update:model-value="validateYaml"
-            />
-            <div class="d-flex justify-end mt-2 gap-2">
-              <v-btn
-                size="small"
-                variant="tonal"
-                color="grey"
-                @click="cancelEdit"
-              >
-                Cancel
-              </v-btn>
-              <v-btn
-                size="small"
-                variant="tonal"
-                color="primary"
-                :loading="isSaving"
-                :disabled="!!yamlError"
-                @click="saveReadme"
-              >
-                Save
-              </v-btn>
-            </div>
-          </div>
-          <!-- Read-only view -->
-          <div v-else class="readme-content">
-            <pre class="readme-pre"><code v-html="formattedReadme"></code></pre>
-          </div>
-        </v-expansion-panel-text>
-      </v-expansion-panel>
-    </v-expansion-panels>
+              variant="outlined"
+              hide-details
+              rounded="lg"
+              bg-color="grey-lighten-4"
+            >
+              <template #append-inner>
+                <v-btn
+                  icon="mdi-content-copy"
+                  size="small"
+                  variant="text"
+                  @click="copyToClipboard(edit_command)"
+                />
+              </template>
+            </v-text-field>
+          </v-card-text>
+        </v-card>
+      </v-menu>
+    </div>
+
+    <!-- Editor view -->
+    <div v-if="isEditing" class="readme-editor">
+      <v-textarea
+        v-model="editedContent"
+        variant="outlined"
+        density="compact"
+        rows="16"
+        hide-details="auto"
+        :error="!!yamlError"
+        :error-messages="yamlError"
+        class="yaml-editor-textarea"
+        @update:model-value="validateYaml"
+      />
+      <div class="d-flex justify-end mt-2 gap-2">
+        <v-btn
+          size="small"
+          variant="tonal"
+          color="grey"
+          @click="cancelEdit"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          size="small"
+          variant="tonal"
+          color="primary"
+          :loading="isSaving"
+          :disabled="!!yamlError"
+          @click="saveReadme"
+        >
+          Save
+        </v-btn>
+      </div>
+    </div>
+
+    <!-- Read-only view -->
+    <div v-else-if="getReadmeContent" class="readme-content">
+      <pre class="readme-pre"><code v-html="formattedReadme"></code></pre>
+    </div>
+
+    <!-- Empty state -->
+    <div v-else class="text-center py-8 text-medium-emphasis">
+      <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-file-document-outline</v-icon>
+      <p class="text-body-2">No README content</p>
+    </div>
   </div>
 </template>
 
@@ -257,17 +251,17 @@ async function copyToClipboard(text: string): Promise<void> {
 </script>
 
 <style scoped>
-.readme-panel-title {
-  min-height: 48px;
+.readme-section {
+  /* Parent container handles spacing */
 }
 
 .readme-content {
-  max-height: 350px;
+  max-height: calc(100vh - 400px);
+  min-height: 200px;
   overflow-y: auto;
   overflow-x: auto;
   background-color: #f6f8fa;
   border-radius: 8px;
-  margin: -12px -16px;
 }
 
 .readme-pre {
@@ -309,10 +303,9 @@ async function copyToClipboard(text: string): Promise<void> {
 
 /* Editor styling */
 .readme-editor {
-  margin: -12px -16px;
-  padding: 12px;
   background-color: #f6f8fa;
   border-radius: 8px;
+  padding: 12px;
 }
 
 .yaml-editor-textarea :deep(textarea) {

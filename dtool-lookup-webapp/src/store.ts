@@ -26,7 +26,7 @@ export const useStore = defineStore("main", () => {
   const num_filtered = ref(0);
   const update_current_Per_Page = ref(10);
   const current_pageNumber = ref(1);
-  const selected_sort_option = ref("frozen_at");
+  const selected_sort_option = ref("-frozen_at");
   const server_versions = ref<ServerVersions>({});
   const lookup_url = ref<string | null>(null);
 

@@ -1,108 +1,122 @@
 <template>
   <div v-if="manifest" class="manifest-section">
-    <v-expansion-panels variant="accordion">
-      <v-expansion-panel rounded="lg">
-        <v-expansion-panel-title class="manifest-panel-title">
-          <template #default>
-            <div class="d-flex align-center">
-              <v-icon size="small" color="primary" class="mr-2">mdi-file-tree</v-icon>
-              <span class="text-body-2 font-weight-medium">Items</span>
-              <v-chip size="x-small" variant="tonal" color="primary" class="ml-2">
-                {{ numItems }}
-              </v-chip>
-            </div>
-          </template>
-          <template #actions="{ expanded }">
-            <v-icon :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
-          </template>
-        </v-expansion-panel-title>
-        <v-expansion-panel-text>
-          <v-list
-            v-if="manifest.items"
-            class="manifest-list"
-            bg-color="transparent"
-          >
-            <v-list-item
-              v-for="(item, id) in manifest.items"
-              :key="id"
-              rounded="lg"
-              class="manifest-item mb-1"
-              @mouseenter="update_fetch_identifier(id as string)"
-            >
-              <template #prepend>
-                <v-avatar size="32" color="grey-lighten-3" rounded="lg" class="mr-3">
-                  <v-icon size="16" color="grey-darken-1">{{ getFileIcon(item.relpath) }}</v-icon>
-                </v-avatar>
-              </template>
-              <v-list-item-title class="text-body-2 font-weight-medium">
-                {{ item.relpath }}
-              </v-list-item-title>
-              <v-list-item-subtitle class="text-caption text-medium-emphasis">
-                {{ filesize(item.size_in_bytes) }}
-              </v-list-item-subtitle>
-              <template #append>
-                <!-- Direct download button when signed URL plugin is available -->
-                <v-btn
-                  v-if="hasSignedUrlPlugin"
-                  size="small"
-                  variant="tonal"
-                  color="primary"
-                  icon="mdi-download"
-                  :loading="downloadingItems[id as string]"
-                  @click="downloadItem(id as string, item.relpath)"
-                />
-                <!-- Fallback to dtool command menu when plugin not available -->
-                <v-menu v-else location="start" :close-on-content-click="false">
-                  <template #activator="{ props }">
+    <!-- Items per page selector and info -->
+    <div class="d-flex align-center justify-space-between mb-3">
+      <div class="text-body-2 text-medium-emphasis">
+        Showing {{ displayStart }}-{{ displayEnd }} of {{ numItems }} items
+      </div>
+      <v-select
+        v-model="itemsPerPage"
+        :items="perPageOptions"
+        density="compact"
+        variant="outlined"
+        hide-details
+        class="items-per-page-select"
+        style="max-width: 120px;"
+      />
+    </div>
+
+    <!-- Items List -->
+    <v-list
+      v-if="manifest.items && numItems > 0"
+      class="manifest-list"
+      bg-color="transparent"
+    >
+      <v-list-item
+        v-for="[id, item] in paginatedItems"
+        :key="id"
+        rounded="lg"
+        class="manifest-item mb-1"
+        @mouseenter="update_fetch_identifier(id)"
+      >
+        <template #prepend>
+          <v-avatar size="32" color="grey-lighten-3" rounded="lg" class="mr-3">
+            <v-icon size="16" color="grey-darken-1">{{ getFileIcon(item.relpath) }}</v-icon>
+          </v-avatar>
+        </template>
+        <v-list-item-title class="text-body-2 font-weight-medium">
+          {{ item.relpath }}
+        </v-list-item-title>
+        <v-list-item-subtitle class="text-caption text-medium-emphasis">
+          {{ filesize(item.size_in_bytes) }}
+        </v-list-item-subtitle>
+        <template #append>
+          <!-- Direct download button when signed URL plugin is available -->
+          <v-btn
+            v-if="hasSignedUrlPlugin"
+            size="small"
+            variant="tonal"
+            color="primary"
+            icon="mdi-download"
+            :loading="downloadingItems[id]"
+            @click="downloadItem(id, item.relpath)"
+          />
+          <!-- Fallback to dtool command menu when plugin not available -->
+          <v-menu v-else location="start" :close-on-content-click="false">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                size="small"
+                variant="tonal"
+                color="primary"
+                icon="mdi-download"
+              />
+            </template>
+            <v-card min-width="440" rounded="lg">
+              <v-card-text class="text-body-2 pb-2">
+                Fetch this item to get an absolute path on disk:
+              </v-card-text>
+              <v-card-text class="pt-0">
+                <v-text-field
+                  :model-value="fetch_command"
+                  readonly
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  rounded="lg"
+                  bg-color="grey-lighten-4"
+                >
+                  <template #append-inner>
                     <v-btn
-                      v-bind="props"
+                      icon="mdi-content-copy"
                       size="small"
-                      variant="tonal"
-                      color="primary"
-                      icon="mdi-download"
+                      variant="text"
+                      @click="copyToClipboard(fetch_command)"
                     />
                   </template>
-                  <v-card min-width="440" rounded="lg">
-                    <v-card-text class="text-body-2 pb-2">
-                      Fetch this item to get an absolute path on disk:
-                    </v-card-text>
-                    <v-card-text class="pt-0">
-                      <v-text-field
-                        :model-value="fetch_command"
-                        readonly
-                        density="compact"
-                        variant="outlined"
-                        hide-details
-                        rounded="lg"
-                        bg-color="grey-lighten-4"
-                      >
-                        <template #append-inner>
-                          <v-btn
-                            icon="mdi-content-copy"
-                            size="small"
-                            variant="text"
-                            @click="copyToClipboard(fetch_command)"
-                          />
-                        </template>
-                      </v-text-field>
-                    </v-card-text>
-                  </v-card>
-                </v-menu>
-              </template>
-            </v-list-item>
-          </v-list>
-        </v-expansion-panel-text>
-      </v-expansion-panel>
-    </v-expansion-panels>
+                </v-text-field>
+              </v-card-text>
+            </v-card>
+          </v-menu>
+        </template>
+      </v-list-item>
+    </v-list>
+
+    <!-- Empty state -->
+    <div v-if="numItems === 0" class="text-center py-8 text-medium-emphasis">
+      <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-file-tree</v-icon>
+      <p class="text-body-2">No items in this dataset</p>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="d-flex justify-center mt-4">
+      <v-pagination
+        v-model="currentPage"
+        :length="totalPages"
+        :total-visible="5"
+        density="compact"
+        rounded
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from "vue";
+import { ref, computed, reactive, watch } from "vue";
 import { filesize as filesizeLib } from "filesize";
 import { useStore } from "@/store";
 import { dserverApi } from "@/services/dserverApi";
-import type { Manifest } from "@/types";
+import type { Manifest, ManifestItem } from "@/types";
 
 interface FileIconMap {
   [key: string]: string;
@@ -112,6 +126,11 @@ const store = useStore();
 const fetch_identifier = ref<string | null>(null);
 const downloadingItems = reactive<Record<string, boolean>>({});
 
+// Pagination state
+const currentPage = ref(1);
+const itemsPerPage = ref(20);
+const perPageOptions = [10, 20, 50, 100];
+
 const manifest = computed<Manifest | null>(() => {
   return store.current_dataset_manifest;
 });
@@ -120,6 +139,47 @@ const numItems = computed(() => {
   return manifest.value && manifest.value.items
     ? Object.values(manifest.value.items).length
     : 0;
+});
+
+// Get all items as array of [id, item] tuples for easier pagination
+const allItems = computed<[string, ManifestItem][]>(() => {
+  if (!manifest.value || !manifest.value.items) return [];
+  return Object.entries(manifest.value.items);
+});
+
+// Calculate pagination
+const totalPages = computed(() => {
+  return Math.ceil(numItems.value / itemsPerPage.value);
+});
+
+const startIndex = computed(() => {
+  return (currentPage.value - 1) * itemsPerPage.value;
+});
+
+const endIndex = computed(() => {
+  return Math.min(startIndex.value + itemsPerPage.value, numItems.value);
+});
+
+const displayStart = computed(() => {
+  return numItems.value > 0 ? startIndex.value + 1 : 0;
+});
+
+const displayEnd = computed(() => {
+  return endIndex.value;
+});
+
+const paginatedItems = computed<[string, ManifestItem][]>(() => {
+  return allItems.value.slice(startIndex.value, endIndex.value);
+});
+
+// Reset page when dataset changes
+watch(() => store.current_dataset?.uri, () => {
+  currentPage.value = 1;
+});
+
+// Reset page when items per page changes
+watch(itemsPerPage, () => {
+  currentPage.value = 1;
 });
 
 const fetch_command = computed(() => {
@@ -247,15 +307,10 @@ async function copyToClipboard(text: string): Promise<void> {
   /* Parent container handles spacing */
 }
 
-.manifest-panel-title {
-  min-height: 48px;
-}
-
 .manifest-list {
-  max-height: 350px;
+  max-height: calc(100vh - 450px);
+  min-height: 200px;
   overflow-y: auto;
-  margin: -12px -16px;
-  padding: 8px;
 }
 
 .manifest-item {
@@ -265,5 +320,10 @@ async function copyToClipboard(text: string): Promise<void> {
 
 .manifest-item:hover {
   background-color: rgba(var(--v-theme-primary), 0.04);
+}
+
+.items-per-page-select :deep(.v-field__input) {
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
 </style>

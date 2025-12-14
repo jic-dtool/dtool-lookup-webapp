@@ -75,11 +75,24 @@
         <v-spacer />
 
         <TextSearch
+          v-if="currentView === 'datasets'"
           :mongoplugin="safeMongoPlugin"
           @start-search="searchDatasets"
         />
 
         <v-spacer />
+
+        <!-- Admin: User Management Toggle -->
+        <v-btn
+          v-if="auth.isAdmin"
+          :variant="currentView === 'users' ? 'tonal' : 'text'"
+          :color="currentView === 'users' ? 'primary' : undefined"
+          class="mr-2"
+          @click="currentView = currentView === 'users' ? 'datasets' : 'users'"
+        >
+          <v-icon class="mr-1">mdi-account-cog</v-icon>
+          <span class="d-none d-sm-inline">Users</span>
+        </v-btn>
 
         <UserMenu @logoutAction="handleLogout" />
       </v-app-bar>
@@ -100,7 +113,13 @@
 
       <!-- Main Content -->
       <v-main class="bg-grey-lighten-4">
-        <div class="main-layout pa-4">
+        <!-- User Management View (Admin Only) -->
+        <div v-if="currentView === 'users' && auth.isAdmin" class="pa-4 fill-height">
+          <UserManagement />
+        </div>
+
+        <!-- Dataset Browser View -->
+        <div v-else class="main-layout pa-4">
           <!-- Left Sidebar - Navigation Rail (hidden on mobile, shown on md+) -->
           <div class="nav-column d-none d-md-flex">
             <v-card class="fill-height overflow-auto" variant="flat" rounded="lg">
@@ -164,9 +183,9 @@
 
           <!-- Right Column - Dataset Details -->
           <div v-if="datasetLoaded" class="detail-column">
-            <v-card class="fill-height overflow-auto" variant="elevated" rounded="lg">
-                <!-- Card Header - Dataset Summary -->
-                <div class="pa-4">
+            <v-card class="fill-height d-flex flex-column" variant="elevated" rounded="lg">
+                <!-- Card Header - Dataset Summary (always visible) -->
+                <div class="pa-4 border-b">
                   <div v-if="manifestLoading" class="d-flex justify-center">
                     <v-progress-circular indeterminate color="primary" size="24" />
                   </div>
@@ -184,44 +203,65 @@
                   <DatasetSummary v-else />
                 </div>
 
-                <!-- Card Body - Readme & Annotations -->
-                <div class="pa-4 pt-0">
-                  <!-- Readme Section -->
-                  <div v-if="readmeLoading" class="d-flex justify-center py-4">
-                    <v-progress-circular indeterminate color="primary" size="24" />
-                  </div>
-                  <div v-else-if="readmeErrored">
-                    <v-alert type="error" density="compact" class="mb-2">
-                      Unable to load readme please try again.
-                    </v-alert>
-                    <v-btn size="small" color="secondary" class="mr-2" @click="updateReadme()">
-                      Try again
-                    </v-btn>
-                    <v-btn size="small" color="secondary" @click="handleLogout()">
-                      Logout
-                    </v-btn>
-                  </div>
-                  <Readme v-else :getinfo="getinfo" />
-                </div>
+                <!-- Tabs for README and Items -->
+                <v-tabs v-model="detailTab" color="primary" class="border-b">
+                  <v-tab value="readme">
+                    <v-icon size="small" class="mr-2">mdi-file-document-outline</v-icon>
+                    README
+                  </v-tab>
+                  <v-tab value="items">
+                    <v-icon size="small" class="mr-2">mdi-file-tree</v-icon>
+                    Items
+                    <v-chip v-if="itemCount > 0" size="x-small" variant="tonal" color="primary" class="ml-2">
+                      {{ itemCount }}
+                    </v-chip>
+                  </v-tab>
+                </v-tabs>
 
-                <!-- Card Footer - Manifest -->
-                <div class="pa-4 pt-0">
-                  <div v-if="manifestLoading" class="d-flex justify-center w-100 py-2">
-                    <v-progress-circular indeterminate color="primary" size="24" />
-                  </div>
-                  <div v-else-if="manifestErrored" class="w-100">
-                    <v-alert type="error" density="compact" class="mb-2">
-                      Unable to load manifest please try again.
-                    </v-alert>
-                    <v-btn size="small" color="secondary" class="mr-2" @click="updateManifest()">
-                      Try again
-                    </v-btn>
-                    <v-btn size="small" color="secondary" @click="handleLogout()">
-                      Logout
-                    </v-btn>
-                  </div>
-                  <Manifest v-else class="w-100" />
-                </div>
+                <!-- Tab Content -->
+                <v-tabs-window v-model="detailTab" class="flex-grow-1 overflow-auto">
+                  <!-- README Tab -->
+                  <v-tabs-window-item value="readme" class="fill-height">
+                    <div class="pa-4">
+                      <div v-if="readmeLoading" class="d-flex justify-center py-4">
+                        <v-progress-circular indeterminate color="primary" size="24" />
+                      </div>
+                      <div v-else-if="readmeErrored">
+                        <v-alert type="error" density="compact" class="mb-2">
+                          Unable to load readme please try again.
+                        </v-alert>
+                        <v-btn size="small" color="secondary" class="mr-2" @click="updateReadme()">
+                          Try again
+                        </v-btn>
+                        <v-btn size="small" color="secondary" @click="handleLogout()">
+                          Logout
+                        </v-btn>
+                      </div>
+                      <Readme v-else :getinfo="getinfo" />
+                    </div>
+                  </v-tabs-window-item>
+
+                  <!-- Items Tab -->
+                  <v-tabs-window-item value="items" class="fill-height">
+                    <div class="pa-4">
+                      <div v-if="manifestLoading" class="d-flex justify-center w-100 py-2">
+                        <v-progress-circular indeterminate color="primary" size="24" />
+                      </div>
+                      <div v-else-if="manifestErrored" class="w-100">
+                        <v-alert type="error" density="compact" class="mb-2">
+                          Unable to load manifest please try again.
+                        </v-alert>
+                        <v-btn size="small" color="secondary" class="mr-2" @click="updateManifest()">
+                          Try again
+                        </v-btn>
+                        <v-btn size="small" color="secondary" @click="handleLogout()">
+                          Logout
+                        </v-btn>
+                      </div>
+                      <Manifest v-else class="w-100" />
+                    </div>
+                  </v-tabs-window-item>
+                </v-tabs-window>
               </v-card>
             </div>
         </div>
@@ -245,6 +285,7 @@ import DatasetSummary from "./components/DatasetSummary.vue";
 import DatasetSorting from "./components/DatasetSorting.vue";
 import UserMenu from "./components/UserMenu.vue";
 import NotificationSnackbar from "./components/NotificationSnackbar.vue";
+import UserManagement from "./components/UserManagement.vue";
 import { useStore } from "./store";
 import { useAuthStore } from "./stores/auth";
 import { useServerHealthStore } from "./stores/serverHealth";
@@ -287,6 +328,8 @@ const annotationsErrored = ref(false);
 const lookup_url = dserverApi.getBaseUrl();
 const responseheaders = ref<ResponseHeaders>({});
 const getinfo = ref<ConfigInfo>({ versions: {} });
+const detailTab = ref<string>("readme");
+const currentView = ref<"datasets" | "users">("datasets");
 
 interface PaginationInfo {
   total: number;
@@ -360,6 +403,14 @@ const shouldShowPagination = computed(() => {
 
 const safeMongoPlugin = computed(() => {
   return getinfo.value.versions.dserver_direct_mongo_plugin || "N/A";
+});
+
+const itemCount = computed(() => {
+  const manifest = store.current_dataset_manifest;
+  if (manifest && manifest.items) {
+    return Object.keys(manifest.items).length;
+  }
+  return 0;
 });
 
 const currentPage = computed({

@@ -22,6 +22,9 @@ import type {
   AuthorizationError,
   NotFoundError,
   ItemSignedURLResponse,
+  UserInfo,
+  UserRequest,
+  BaseURIInfo,
 } from "dserver-client";
 
 // Re-export types for convenience
@@ -41,6 +44,9 @@ export type {
   AuthorizationError,
   NotFoundError,
   ItemSignedURLResponse,
+  UserInfo,
+  UserRequest,
+  BaseURIInfo,
 };
 
 // Re-export error classes
@@ -194,6 +200,70 @@ class DServerApi {
 
   async getItemSignedUrl(uri: string, identifier: string): Promise<ItemSignedURLResponse> {
     return this.ensureClient().getItemSignedUrl(uri, identifier);
+  }
+
+  // =========================================================================
+  // User Management (Admin only)
+  // =========================================================================
+
+  async getCurrentUser(): Promise<UserInfo> {
+    return this.ensureClient().getCurrentUser();
+  }
+
+  async listUsers(): Promise<UserInfo[]> {
+    return this.ensureClient().listUsers();
+  }
+
+  async getUser(username: string): Promise<UserInfo> {
+    return this.ensureClient().getUser(username);
+  }
+
+  async createUser(username: string, options?: UserRequest): Promise<UserInfo> {
+    return this.ensureClient().createUser(username, options);
+  }
+
+  async deleteUser(username: string): Promise<void> {
+    return this.ensureClient().deleteUser(username);
+  }
+
+  async updateUserAdmin(username: string, isAdmin: boolean): Promise<UserInfo> {
+    return this.ensureClient().updateUserAdmin(username, isAdmin);
+  }
+
+  // =========================================================================
+  // Base URI Management (Admin only)
+  // =========================================================================
+
+  async listBaseURIs(): Promise<BaseURIInfo[]> {
+    return this.ensureClient().listBaseURIs();
+  }
+
+  async getBaseURI(baseUri: string): Promise<BaseURIInfo> {
+    return this.ensureClient().getBaseURI(baseUri);
+  }
+
+  async createBaseURI(baseUri: string): Promise<BaseURIInfo> {
+    return this.ensureClient().createBaseURI(baseUri);
+  }
+
+  async deleteBaseURI(baseUri: string): Promise<void> {
+    return this.ensureClient().deleteBaseURI(baseUri);
+  }
+
+  async grantSearchPermission(username: string, baseUri: string): Promise<UserInfo> {
+    return this.ensureClient().grantSearchPermission(username, baseUri);
+  }
+
+  async revokeSearchPermission(username: string, baseUri: string): Promise<UserInfo> {
+    return this.ensureClient().revokeSearchPermission(username, baseUri);
+  }
+
+  async grantRegisterPermission(username: string, baseUri: string): Promise<UserInfo> {
+    return this.ensureClient().grantRegisterPermission(username, baseUri);
+  }
+
+  async revokeRegisterPermission(username: string, baseUri: string): Promise<UserInfo> {
+    return this.ensureClient().revokeRegisterPermission(username, baseUri);
   }
 }
 

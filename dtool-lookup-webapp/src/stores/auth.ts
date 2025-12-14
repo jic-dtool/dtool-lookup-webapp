@@ -32,6 +32,9 @@ export const useAuthStore = defineStore(
     const username = ref<string | null>(null);
     const displayName = ref<string | null>(null);
     const provider = ref<string | null>(null);
+    const isAdmin = ref<boolean>(false);
+    const searchPermissions = ref<string[]>([]);
+    const registerPermissions = ref<string[]>([]);
     const status = ref<AuthStatus>("idle");
     const error = ref<AuthError | null>(null);
     const lastVerifiedAt = ref<number | null>(null);
@@ -88,9 +91,14 @@ export const useAuthStore = defineStore(
         setToken(newToken);
         dserverApi.setToken(newToken);
 
-        // Verify the token works by fetching user summary
+        // Verify the token works and get user info including admin status
         // This will fail with 401 if user is not registered in dserver
-        await dserverApi.searchDatasets({}, { page: 1, page_size: 1 });
+        const userInfo = await dserverApi.getCurrentUser();
+
+        // Set admin status and permissions from server response
+        isAdmin.value = userInfo.is_admin || false;
+        searchPermissions.value = userInfo.search_permissions_on_base_uris || [];
+        registerPermissions.value = userInfo.register_permissions_on_base_uris || [];
 
         status.value = "authenticated";
         lastVerifiedAt.value = Date.now();
@@ -174,6 +182,9 @@ export const useAuthStore = defineStore(
       username.value = null;
       displayName.value = null;
       provider.value = null;
+      isAdmin.value = false;
+      searchPermissions.value = [];
+      registerPermissions.value = [];
       lastVerifiedAt.value = null;
     }
 
@@ -245,6 +256,9 @@ export const useAuthStore = defineStore(
       username,
       displayName,
       provider,
+      isAdmin,
+      searchPermissions,
+      registerPermissions,
       status,
       error,
       lastVerifiedAt,
@@ -267,7 +281,7 @@ export const useAuthStore = defineStore(
   {
     persist: {
       key: "dtool-auth",
-      paths: ["token", "username", "displayName", "provider", "lastVerifiedAt"],
+      paths: ["token", "username", "displayName", "provider", "isAdmin", "searchPermissions", "registerPermissions", "lastVerifiedAt"],
     },
   }
 );
