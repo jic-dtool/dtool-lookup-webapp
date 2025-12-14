@@ -184,7 +184,7 @@
           <!-- Right Column - Dataset Details -->
           <div v-if="datasetLoaded" class="detail-column">
             <v-card class="fill-height d-flex flex-column" variant="elevated" rounded="lg">
-                <!-- Card Header - Dataset Summary (always visible) -->
+                <!-- Card Header - Dataset Title and Metadata (always visible) -->
                 <div class="pa-4 border-b">
                   <div v-if="manifestLoading" class="d-flex justify-center">
                     <v-progress-circular indeterminate color="primary" size="24" />
@@ -200,11 +200,15 @@
                       Logout
                     </v-btn>
                   </div>
-                  <DatasetSummary v-else />
+                  <DatasetHeader v-else />
                 </div>
 
-                <!-- Tabs for README and Items -->
+                <!-- Tabs for Dataset, README and Items -->
                 <v-tabs v-model="detailTab" color="primary" class="border-b">
+                  <v-tab value="dataset">
+                    <v-icon size="small" class="mr-2">mdi-database</v-icon>
+                    Dataset
+                  </v-tab>
                   <v-tab value="readme">
                     <v-icon size="small" class="mr-2">mdi-file-document-outline</v-icon>
                     README
@@ -220,6 +224,13 @@
 
                 <!-- Tab Content -->
                 <v-tabs-window v-model="detailTab" class="flex-grow-1 overflow-auto">
+                  <!-- Dataset Tab (URI, Tags, Annotations) -->
+                  <v-tabs-window-item value="dataset" class="fill-height">
+                    <div class="pa-4">
+                      <DatasetSummary />
+                    </div>
+                  </v-tabs-window-item>
+
                   <!-- README Tab -->
                   <v-tabs-window-item value="readme" class="fill-height">
                     <div class="pa-4">
@@ -282,6 +293,7 @@ import DatasetTable from "./components/DatasetTable.vue";
 import Manifest from "./components/DatasetManifest.vue";
 import Readme from "./components/DatasetReadme.vue";
 import DatasetSummary from "./components/DatasetSummary.vue";
+import DatasetHeader from "./components/DatasetHeader.vue";
 import DatasetSorting from "./components/DatasetSorting.vue";
 import UserMenu from "./components/UserMenu.vue";
 import NotificationSnackbar from "./components/NotificationSnackbar.vue";
@@ -328,7 +340,7 @@ const annotationsErrored = ref(false);
 const lookup_url = dserverApi.getBaseUrl();
 const responseheaders = ref<ResponseHeaders>({});
 const getinfo = ref<ConfigInfo>({ versions: {} });
-const detailTab = ref<string>("readme");
+const detailTab = ref<string>("dataset");
 const currentView = ref<"datasets" | "users">("datasets");
 
 interface PaginationInfo {
