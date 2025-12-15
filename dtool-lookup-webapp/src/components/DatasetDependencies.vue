@@ -1,5 +1,72 @@
 <template>
   <div class="dependencies-section">
+    <!-- Settings Panel -->
+    <v-card variant="outlined" class="mb-3 pa-3">
+      <div class="d-flex align-center justify-space-between">
+        <div class="d-flex align-center">
+          <v-icon size="18" class="mr-2" color="primary">mdi-cog</v-icon>
+          <span class="text-caption text-medium-emphasis">Dependency Keys</span>
+        </div>
+        <v-btn
+          size="x-small"
+          variant="text"
+          :icon="showSettings ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+          @click="showSettings = !showSettings"
+        />
+      </div>
+
+      <v-expand-transition>
+        <div v-show="showSettings" class="mt-3">
+          <v-combobox
+            v-model="dependencyKeys"
+            :items="defaultDependencyKeys"
+            label="Dependency keys (paths to UUID references)"
+            variant="outlined"
+            density="compact"
+            multiple
+            chips
+            closable-chips
+            hint="e.g., readme.derived_from.uuid, annotations.source_dataset_uuid"
+            persistent-hint
+            class="mb-2"
+          />
+          <div class="d-flex justify-end gap-2">
+            <v-btn
+              size="small"
+              variant="text"
+              @click="resetDependencyKeys"
+            >
+              Reset to defaults
+            </v-btn>
+            <v-btn
+              size="small"
+              variant="tonal"
+              color="primary"
+              :loading="loading"
+              @click="loadGraph"
+            >
+              Apply
+            </v-btn>
+          </div>
+        </div>
+      </v-expand-transition>
+
+      <!-- Collapsed view: show current keys as chips -->
+      <div v-if="!showSettings && dependencyKeys.length > 0" class="mt-2">
+        <div class="d-flex flex-wrap gap-1">
+          <v-chip
+            v-for="key in dependencyKeys"
+            :key="key"
+            size="x-small"
+            variant="outlined"
+            color="primary"
+          >
+            {{ key }}
+          </v-chip>
+        </div>
+      </div>
+    </v-card>
+
     <!-- Loading state -->
     <div v-if="loading" class="d-flex justify-center py-8">
       <v-progress-circular indeterminate color="primary" size="48" />
@@ -18,7 +85,7 @@
     <div v-else-if="!hasConnections" class="text-center py-8 text-medium-emphasis">
       <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-graph-outline</v-icon>
       <p class="text-body-2">No dependency connections found</p>
-      <p class="text-caption">This dataset has no derived_from or source_dataset_uuid references</p>
+      <p class="text-caption">This dataset has no references matching the configured dependency keys</p>
     </div>
 
     <!-- Graph visualization -->
@@ -109,6 +176,16 @@ const emit = defineEmits<{
 
 const store = useStore();
 
+// Default dependency keys matching the server defaults
+const defaultDependencyKeys = [
+  "readme.derived_from.uuid",
+  "annotations.source_dataset_uuid",
+];
+
+// Dependency keys configuration
+const dependencyKeys = ref<string[]>([...defaultDependencyKeys]);
+const showSettings = ref(false);
+
 // Refs
 const graphContainer = ref<HTMLDivElement | null>(null);
 const svgElement = ref<SVGSVGElement | null>(null);
@@ -122,6 +199,11 @@ const tooltipPosition = ref({ x: 0, y: 0 });
 let simulation: d3.Simulation<GraphNode, GraphLink> | null = null;
 
 const currentDataset = computed(() => store.current_dataset);
+
+// Reset dependency keys to defaults
+function resetDependencyKeys(): void {
+  dependencyKeys.value = [...defaultDependencyKeys];
+}
 
 const hasConnections = computed(() => {
   if (graphData.value.length <= 1) return false;
@@ -152,9 +234,12 @@ async function loadGraph(): Promise<void> {
   error.value = null;
 
   try {
-    graphData.value = await dserverApi.getDependencyGraph(uuid);
+    // Pass custom dependency keys if they differ from defaults or if explicitly set
+    const keysToUse = dependencyKeys.value.length > 0 ? dependencyKeys.value : undefined;
+    graphData.value = await dserverApi.getDependencyGraph(uuid, keysToUse);
     console.log("Graph data loaded:", graphData.value);
     console.log("Has connections:", hasConnections.value);
+    console.log("Using dependency keys:", keysToUse);
     await nextTick();
     renderGraph();
   } catch (err) {

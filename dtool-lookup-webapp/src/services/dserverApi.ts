@@ -272,8 +272,8 @@ class DServerApi {
   // Dependency Graph (requires dserver-dependency-graph-plugin)
   // =========================================================================
 
-  async getDependencyGraph(uuid: string): Promise<GraphDatasetEntry[]> {
-    return this.ensureClient().getDependencyGraph(uuid);
+  async getDependencyGraph(uuid: string, dependencyKeys?: string[]): Promise<GraphDatasetEntry[]> {
+    return this.ensureClient().getDependencyGraph(uuid, dependencyKeys);
   }
 }
 
