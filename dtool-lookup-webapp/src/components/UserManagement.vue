@@ -62,6 +62,12 @@
             </div>
           </template>
 
+          <!-- Display Name Column -->
+          <template #item.display_name="{ item }">
+            <span v-if="item.display_name" class="text-body-2">{{ item.display_name }}</span>
+            <span v-else class="text-caption text-medium-emphasis">Not set</span>
+          </template>
+
           <!-- Admin Status Column -->
           <template #item.is_admin="{ item }">
             <v-chip
@@ -148,6 +154,35 @@
                     <v-icon size="18" class="mr-2">mdi-shield-key</v-icon>
                     Manage User: {{ item.username }}
                   </div>
+
+                  <!-- Display Name -->
+                  <v-card variant="outlined" class="pa-3 mb-3">
+                    <div class="d-flex align-center mb-2">
+                      <v-icon size="18" class="mr-2" color="primary">mdi-badge-account</v-icon>
+                      <span class="text-body-2">Display Name</span>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                      <v-text-field
+                        :model-value="pendingDisplayName[item.username] ?? item.display_name ?? ''"
+                        label="Display name (optional)"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        clearable
+                        class="flex-grow-1"
+                        @update:model-value="(val: string | null) => pendingDisplayName[item.username] = val || ''"
+                      />
+                      <v-btn
+                        icon="mdi-check"
+                        size="small"
+                        color="primary"
+                        variant="tonal"
+                        :disabled="(pendingDisplayName[item.username] ?? item.display_name ?? '') === (item.display_name ?? '')"
+                        :loading="savingDisplayName === item.username"
+                        @click="saveDisplayName(item.username)"
+                      />
+                    </div>
+                  </v-card>
 
                   <!-- Admin Toggle -->
                   <v-card variant="outlined" class="pa-3 mb-3">
@@ -402,8 +437,10 @@ const expandedRows = ref<string[]>([]);
 // Inline permission management state
 const savingPermission = ref<string | null>(null);
 const savingAdmin = ref<string | null>(null);
+const savingDisplayName = ref<string | null>(null);
 const pendingSearchPermission = reactive<Record<string, string>>({});
 const pendingRegisterPermission = reactive<Record<string, string>>({});
+const pendingDisplayName = reactive<Record<string, string>>({});
 
 // Dialogs
 const showAddUserDialog = ref(false);
@@ -423,6 +460,7 @@ const userToDelete = ref<UserInfo | null>(null);
 // Table headers
 const headers = [
   { title: "Username", key: "username", sortable: true },
+  { title: "Display Name", key: "display_name", sortable: true },
   { title: "Role", key: "is_admin", sortable: true, width: "100" },
   { title: "Search Permissions", key: "search_permissions_on_base_uris", sortable: false },
   { title: "Register Permissions", key: "register_permissions_on_base_uris", sortable: false },
@@ -459,6 +497,26 @@ function getAvailableRegisterUris(user: UserInfo): string[] {
 }
 
 // Inline permission management functions
+async function saveDisplayName(username: string): Promise<void> {
+  const newDisplayName = pendingDisplayName[username];
+  if (newDisplayName === undefined) return;
+
+  savingDisplayName.value = username;
+  try {
+    // Use null to clear the display name, or the new value
+    const displayNameValue = newDisplayName === '' ? null : newDisplayName;
+    await dserverApi.updateUser(username, { display_name: displayNameValue });
+    notifications.success(`Display name updated for "${username}"`);
+    delete pendingDisplayName[username];
+    await loadData();
+  } catch (e) {
+    console.error("Failed to update display name:", e);
+    notifications.error("Failed to update display name");
+  } finally {
+    savingDisplayName.value = null;
+  }
+}
+
 async function toggleAdminStatus(username: string, isAdmin: boolean): Promise<void> {
   savingAdmin.value = username;
   try {

@@ -232,6 +232,10 @@ class DServerApi {
     return this.ensureClient().updateUserAdmin(username, isAdmin);
   }
 
+  async updateUser(username: string, updates: { is_admin?: boolean; display_name?: string | null }): Promise<UserInfo> {
+    return this.ensureClient().updateUser(username, updates);
+  }
+
   // =========================================================================
   // Base URI Management (Admin only)
   // =========================================================================
