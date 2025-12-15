@@ -47,8 +47,10 @@
           :headers="headers"
           :items="filteredUsers"
           :loading="loading"
+          :expanded="expandedRows"
           class="elevation-0"
           item-value="username"
+          show-expand
         >
           <!-- Username Column -->
           <template #item.username="{ item }">
@@ -127,13 +129,6 @@
           <template #item.actions="{ item }">
             <div class="d-flex gap-1">
               <v-btn
-                icon="mdi-pencil"
-                size="small"
-                variant="text"
-                color="primary"
-                @click="openEditDialog(item)"
-              />
-              <v-btn
                 icon="mdi-delete"
                 size="small"
                 variant="text"
@@ -142,6 +137,164 @@
                 @click="openDeleteDialog(item)"
               />
             </div>
+          </template>
+
+          <!-- Expanded Row - Inline Permission Editor -->
+          <template #expanded-row="{ columns, item }">
+            <tr>
+              <td :colspan="columns.length" class="pa-4 bg-grey-lighten-4">
+                <div class="permission-editor">
+                  <div class="text-subtitle-2 mb-3 d-flex align-center">
+                    <v-icon size="18" class="mr-2">mdi-shield-key</v-icon>
+                    Manage User: {{ item.username }}
+                  </div>
+
+                  <!-- Admin Toggle -->
+                  <v-card variant="outlined" class="pa-3 mb-3">
+                    <div class="d-flex align-center justify-space-between">
+                      <div class="d-flex align-center">
+                        <v-icon size="18" class="mr-2" color="primary">mdi-shield-account</v-icon>
+                        <span class="text-body-2">Administrator Status</span>
+                      </div>
+                      <v-switch
+                        :model-value="item.is_admin"
+                        color="primary"
+                        density="compact"
+                        hide-details
+                        :disabled="item.username === currentUsername || savingAdmin === item.username"
+                        :loading="savingAdmin === item.username"
+                        @update:model-value="(val: boolean | null) => val !== null && toggleAdminStatus(item.username, val)"
+                      />
+                    </div>
+                    <div v-if="item.username === currentUsername" class="text-caption text-medium-emphasis mt-1">
+                      You cannot change your own admin status
+                    </div>
+                  </v-card>
+
+                  <v-row>
+                    <!-- Search Permissions -->
+                    <v-col cols="12" md="6">
+                      <v-card variant="outlined" class="pa-3">
+                        <div class="text-caption text-medium-emphasis mb-2">
+                          <v-icon size="14" class="mr-1">mdi-magnify</v-icon>
+                          Search Permissions
+                        </div>
+
+                        <!-- Current permissions -->
+                        <div v-if="(item.search_permissions_on_base_uris || []).length > 0" class="mb-3">
+                          <div class="text-caption mb-1">Current:</div>
+                          <div class="d-flex flex-wrap gap-1">
+                            <v-chip
+                              v-for="uri in item.search_permissions_on_base_uris"
+                              :key="uri"
+                              size="small"
+                              variant="tonal"
+                              color="secondary"
+                              closable
+                              :loading="savingPermission === `search-revoke-${item.username}-${uri}`"
+                              @click:close="revokeSearchPermission(item.username, uri)"
+                            >
+                              {{ formatUri(uri) }}
+                            </v-chip>
+                          </div>
+                        </div>
+                        <div v-else class="text-caption text-medium-emphasis mb-3">
+                          No search permissions assigned
+                        </div>
+
+                        <!-- Add new permission -->
+                        <div v-if="getAvailableSearchUris(item).length > 0">
+                          <div class="text-caption mb-1">Add permission:</div>
+                          <div class="d-flex align-center gap-2">
+                            <v-select
+                              v-model="pendingSearchPermission[item.username]"
+                              :items="getAvailableSearchUris(item)"
+                              label="Select base URI"
+                              variant="outlined"
+                              density="compact"
+                              hide-details
+                              class="flex-grow-1"
+                            />
+                            <v-btn
+                              icon="mdi-plus"
+                              size="small"
+                              color="secondary"
+                              variant="tonal"
+                              :disabled="!pendingSearchPermission[item.username]"
+                              :loading="savingPermission === `search-grant-${item.username}`"
+                              @click="grantSearchPermission(item.username)"
+                            />
+                          </div>
+                        </div>
+                        <div v-else class="text-caption text-medium-emphasis">
+                          All base URIs assigned
+                        </div>
+                      </v-card>
+                    </v-col>
+
+                    <!-- Register Permissions -->
+                    <v-col cols="12" md="6">
+                      <v-card variant="outlined" class="pa-3">
+                        <div class="text-caption text-medium-emphasis mb-2">
+                          <v-icon size="14" class="mr-1">mdi-database-plus</v-icon>
+                          Register Permissions
+                        </div>
+
+                        <!-- Current permissions -->
+                        <div v-if="(item.register_permissions_on_base_uris || []).length > 0" class="mb-3">
+                          <div class="text-caption mb-1">Current:</div>
+                          <div class="d-flex flex-wrap gap-1">
+                            <v-chip
+                              v-for="uri in item.register_permissions_on_base_uris"
+                              :key="uri"
+                              size="small"
+                              variant="tonal"
+                              color="success"
+                              closable
+                              :loading="savingPermission === `register-revoke-${item.username}-${uri}`"
+                              @click:close="revokeRegisterPermission(item.username, uri)"
+                            >
+                              {{ formatUri(uri) }}
+                            </v-chip>
+                          </div>
+                        </div>
+                        <div v-else class="text-caption text-medium-emphasis mb-3">
+                          No register permissions assigned
+                        </div>
+
+                        <!-- Add new permission -->
+                        <div v-if="getAvailableRegisterUris(item).length > 0">
+                          <div class="text-caption mb-1">Add permission:</div>
+                          <div class="d-flex align-center gap-2">
+                            <v-select
+                              v-model="pendingRegisterPermission[item.username]"
+                              :items="getAvailableRegisterUris(item)"
+                              label="Select base URI"
+                              variant="outlined"
+                              density="compact"
+                              hide-details
+                              class="flex-grow-1"
+                            />
+                            <v-btn
+                              icon="mdi-plus"
+                              size="small"
+                              color="success"
+                              variant="tonal"
+                              :disabled="!pendingRegisterPermission[item.username]"
+                              :loading="savingPermission === `register-grant-${item.username}`"
+                              @click="grantRegisterPermissionInline(item.username)"
+                            />
+                          </div>
+                        </div>
+                        <div v-else class="text-caption text-medium-emphasis">
+                          All base URIs assigned
+                        </div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                </div>
+              </td>
+            </tr>
           </template>
         </v-data-table>
       </div>
@@ -186,76 +339,6 @@
             @click="createUser"
           >
             Add User
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Edit User Dialog -->
-    <v-dialog v-model="showEditDialog" max-width="600" persistent>
-      <v-card v-if="editingUser" rounded="lg">
-        <v-card-title class="text-h6 pa-4 border-b">
-          <v-icon size="24" color="primary" class="mr-2">mdi-account-edit</v-icon>
-          Edit User: {{ editingUser.username }}
-        </v-card-title>
-        <v-card-text class="pa-4">
-          <!-- Admin Status -->
-          <v-switch
-            v-model="editingUser.is_admin"
-            label="Administrator"
-            color="primary"
-            hide-details
-            class="mb-4"
-            :disabled="editingUser.username === currentUsername"
-          />
-
-          <!-- Search Permissions -->
-          <div class="mb-4">
-            <div class="text-subtitle-2 mb-2">Search Permissions</div>
-            <v-select
-              v-model="editingUser.search_permissions_on_base_uris"
-              :items="availableBaseUris"
-              label="Select base URIs"
-              variant="outlined"
-              density="compact"
-              multiple
-              chips
-              closable-chips
-              hide-details
-            />
-          </div>
-
-          <!-- Register Permissions -->
-          <div>
-            <div class="text-subtitle-2 mb-2">Register Permissions</div>
-            <v-select
-              v-model="editingUser.register_permissions_on_base_uris"
-              :items="availableBaseUris"
-              label="Select base URIs"
-              variant="outlined"
-              density="compact"
-              multiple
-              chips
-              closable-chips
-              hide-details
-            />
-          </div>
-        </v-card-text>
-        <v-card-actions class="pa-4 pt-0">
-          <v-spacer />
-          <v-btn
-            variant="text"
-            @click="closeEditDialog"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            variant="tonal"
-            :loading="saving"
-            @click="saveUser"
-          >
-            Save Changes
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -313,9 +396,17 @@ const deleting = ref(false);
 const error = ref<string | null>(null);
 const searchQuery = ref("");
 
+// Expanded rows for inline permission editing
+const expandedRows = ref<string[]>([]);
+
+// Inline permission management state
+const savingPermission = ref<string | null>(null);
+const savingAdmin = ref<string | null>(null);
+const pendingSearchPermission = reactive<Record<string, string>>({});
+const pendingRegisterPermission = reactive<Record<string, string>>({});
+
 // Dialogs
 const showAddUserDialog = ref(false);
-const showEditDialog = ref(false);
 const showDeleteDialog = ref(false);
 
 // Form data
@@ -327,8 +418,6 @@ const newUserErrors = reactive({
   username: "",
 });
 
-const editingUser = ref<UserInfo | null>(null);
-const originalUser = ref<UserInfo | null>(null);
 const userToDelete = ref<UserInfo | null>(null);
 
 // Table headers
@@ -351,12 +440,101 @@ const filteredUsers = computed(() => {
   );
 });
 
-const availableBaseUris = computed(() => baseUris.value);
-
 // Methods
 function formatUri(uri: string): string {
   // Extract just the bucket/path part for display
   return uri.replace(/^s3:\/\//, "").split("/")[0] || uri;
+}
+
+// Get base URIs not yet assigned for search permission
+function getAvailableSearchUris(user: UserInfo): string[] {
+  const currentPerms = user.search_permissions_on_base_uris || [];
+  return baseUris.value.filter(uri => !currentPerms.includes(uri));
+}
+
+// Get base URIs not yet assigned for register permission
+function getAvailableRegisterUris(user: UserInfo): string[] {
+  const currentPerms = user.register_permissions_on_base_uris || [];
+  return baseUris.value.filter(uri => !currentPerms.includes(uri));
+}
+
+// Inline permission management functions
+async function toggleAdminStatus(username: string, isAdmin: boolean): Promise<void> {
+  savingAdmin.value = username;
+  try {
+    await dserverApi.updateUserAdmin(username, isAdmin);
+    notifications.success(`User "${username}" ${isAdmin ? "promoted to admin" : "demoted from admin"}`);
+    await loadData();
+  } catch (e) {
+    console.error("Failed to update admin status:", e);
+    notifications.error("Failed to update admin status");
+  } finally {
+    savingAdmin.value = null;
+  }
+}
+
+async function grantSearchPermission(username: string): Promise<void> {
+  const uri = pendingSearchPermission[username];
+  if (!uri) return;
+
+  savingPermission.value = `search-grant-${username}`;
+  try {
+    await dserverApi.grantSearchPermission(username, uri);
+    notifications.success(`Search permission granted on ${formatUri(uri)}`);
+    delete pendingSearchPermission[username];
+    await loadData();
+  } catch (e) {
+    console.error("Failed to grant search permission:", e);
+    notifications.error("Failed to grant search permission");
+  } finally {
+    savingPermission.value = null;
+  }
+}
+
+async function revokeSearchPermission(username: string, uri: string): Promise<void> {
+  savingPermission.value = `search-revoke-${username}-${uri}`;
+  try {
+    await dserverApi.revokeSearchPermission(username, uri);
+    notifications.success(`Search permission revoked from ${formatUri(uri)}`);
+    await loadData();
+  } catch (e) {
+    console.error("Failed to revoke search permission:", e);
+    notifications.error("Failed to revoke search permission");
+  } finally {
+    savingPermission.value = null;
+  }
+}
+
+async function grantRegisterPermissionInline(username: string): Promise<void> {
+  const uri = pendingRegisterPermission[username];
+  if (!uri) return;
+
+  savingPermission.value = `register-grant-${username}`;
+  try {
+    await dserverApi.grantRegisterPermission(username, uri);
+    notifications.success(`Register permission granted on ${formatUri(uri)}`);
+    delete pendingRegisterPermission[username];
+    await loadData();
+  } catch (e) {
+    console.error("Failed to grant register permission:", e);
+    notifications.error("Failed to grant register permission");
+  } finally {
+    savingPermission.value = null;
+  }
+}
+
+async function revokeRegisterPermission(username: string, uri: string): Promise<void> {
+  savingPermission.value = `register-revoke-${username}-${uri}`;
+  try {
+    await dserverApi.revokeRegisterPermission(username, uri);
+    notifications.success(`Register permission revoked from ${formatUri(uri)}`);
+    await loadData();
+  } catch (e) {
+    console.error("Failed to revoke register permission:", e);
+    notifications.error("Failed to revoke register permission");
+  } finally {
+    savingPermission.value = null;
+  }
 }
 
 async function loadData(): Promise<void> {
@@ -408,80 +586,6 @@ async function createUser(): Promise<void> {
   } catch (e) {
     console.error("Failed to create user:", e);
     notifications.error("Failed to create user. Please try again.");
-  } finally {
-    saving.value = false;
-  }
-}
-
-function openEditDialog(user: UserInfo): void {
-  originalUser.value = {
-    ...user,
-    search_permissions_on_base_uris: user.search_permissions_on_base_uris || [],
-    register_permissions_on_base_uris: user.register_permissions_on_base_uris || [],
-  };
-  editingUser.value = {
-    ...user,
-    search_permissions_on_base_uris: [...(user.search_permissions_on_base_uris || [])],
-    register_permissions_on_base_uris: [...(user.register_permissions_on_base_uris || [])],
-  };
-  showEditDialog.value = true;
-}
-
-function closeEditDialog(): void {
-  showEditDialog.value = false;
-  editingUser.value = null;
-  originalUser.value = null;
-}
-
-async function saveUser(): Promise<void> {
-  if (!editingUser.value || !originalUser.value) return;
-
-  saving.value = true;
-
-  try {
-    const username = editingUser.value.username;
-
-    // Update admin status if changed
-    if (editingUser.value.is_admin !== originalUser.value.is_admin) {
-      await dserverApi.updateUserAdmin(username, editingUser.value.is_admin);
-    }
-
-    // Update search permissions
-    const addedSearchPerms = editingUser.value.search_permissions_on_base_uris.filter(
-      uri => !originalUser.value!.search_permissions_on_base_uris.includes(uri)
-    );
-    const removedSearchPerms = originalUser.value.search_permissions_on_base_uris.filter(
-      uri => !editingUser.value!.search_permissions_on_base_uris.includes(uri)
-    );
-
-    for (const uri of addedSearchPerms) {
-      await dserverApi.grantSearchPermission(username, uri);
-    }
-    for (const uri of removedSearchPerms) {
-      await dserverApi.revokeSearchPermission(username, uri);
-    }
-
-    // Update register permissions
-    const addedRegisterPerms = editingUser.value.register_permissions_on_base_uris.filter(
-      uri => !originalUser.value!.register_permissions_on_base_uris.includes(uri)
-    );
-    const removedRegisterPerms = originalUser.value.register_permissions_on_base_uris.filter(
-      uri => !editingUser.value!.register_permissions_on_base_uris.includes(uri)
-    );
-
-    for (const uri of addedRegisterPerms) {
-      await dserverApi.grantRegisterPermission(username, uri);
-    }
-    for (const uri of removedRegisterPerms) {
-      await dserverApi.revokeRegisterPermission(username, uri);
-    }
-
-    notifications.success(`User "${username}" updated successfully`);
-    closeEditDialog();
-    await loadData();
-  } catch (e) {
-    console.error("Failed to update user:", e);
-    notifications.error("Failed to update user. Please try again.");
   } finally {
     saving.value = false;
   }
