@@ -102,6 +102,68 @@
           <div class="text-body-2 font-weight-medium">{{ lookupUrl || 'Not configured' }}</div>
         </div>
 
+        <!-- Base URIs with permissions -->
+        <div class="mb-4">
+          <div class="text-caption text-medium-emphasis mb-2">Base URIs</div>
+          <div v-if="userBaseUris.length === 0" class="text-body-2 text-medium-emphasis">
+            No base URIs accessible
+          </div>
+          <v-list v-else density="compact" class="rounded-lg border">
+            <v-list-item
+              v-for="baseUri in userBaseUris"
+              :key="baseUri.uri"
+              class="px-3"
+            >
+              <template #prepend>
+                <v-icon size="small" color="primary">mdi-database</v-icon>
+              </template>
+              <v-list-item-title class="text-body-2 font-weight-medium">
+                {{ baseUri.uri }}
+              </v-list-item-title>
+              <v-list-item-subtitle class="text-caption">
+                <v-chip
+                  v-if="baseUri.canSearch"
+                  size="x-small"
+                  color="info"
+                  variant="tonal"
+                  class="mr-1"
+                >
+                  search
+                </v-chip>
+                <v-chip
+                  v-if="baseUri.canRegister"
+                  size="x-small"
+                  color="success"
+                  variant="tonal"
+                >
+                  register
+                </v-chip>
+              </v-list-item-subtitle>
+              <template #append>
+                <v-tooltip location="top">
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      icon
+                      size="small"
+                      variant="text"
+                      :disabled="!baseUri.canRegister"
+                      @click="copyDtoolCommand(baseUri.uri)"
+                    >
+                      <v-icon size="small">mdi-content-copy</v-icon>
+                    </v-btn>
+                  </template>
+                  <div class="text-caption">
+                    <div v-if="baseUri.canRegister">Copy dtool command</div>
+                    <div v-else>Register permission required</div>
+                    <code v-if="baseUri.canRegister" class="text-caption">{{ getDtoolCommand(baseUri.uri) }}</code>
+                  </div>
+                </v-tooltip>
+              </template>
+            </v-list-item>
+          </v-list>
+        </div>
+
         <!-- Installed plugins -->
         <div>
           <div class="text-caption text-medium-emphasis mb-2">Installed Plugins</div>
@@ -182,6 +244,25 @@ const username = computed(() => auth.displayName || auth.username);
 const serverVersions = computed(() => store.server_versions);
 const lookupUrl = computed(() => store.lookup_url);
 
+// Computed property for user's accessible base URIs with permissions
+interface UserBaseUri {
+  uri: string;
+  canSearch: boolean;
+  canRegister: boolean;
+}
+
+const userBaseUris = computed((): UserBaseUri[] => {
+  const searchSet = new Set(auth.searchPermissions);
+  const registerSet = new Set(auth.registerPermissions);
+  const allUris = new Set([...auth.searchPermissions, ...auth.registerPermissions]);
+
+  return Array.from(allUris).map(uri => ({
+    uri,
+    canSearch: searchSet.has(uri),
+    canRegister: registerSet.has(uri),
+  }));
+});
+
 function formatPluginName(name: string): string {
   // Convert snake_case to Title Case with spaces
   return name
@@ -205,6 +286,23 @@ async function copyTokenToClipboard(): Promise<void> {
   } catch (error) {
     console.error("Failed to copy token:", error);
     notifications.error("Failed to copy token to clipboard");
+  }
+}
+
+function getDtoolCommand(baseUri: string): string {
+  // Convert base URI like "s3://bucket-name" to dserver format "s3/bucket-name"
+  const dserverPath = baseUri.replace("://", "/");
+  return `dtool cp <dataset-uri> dserver://${dserverPath}`;
+}
+
+async function copyDtoolCommand(baseUri: string): Promise<void> {
+  const command = getDtoolCommand(baseUri);
+  try {
+    await navigator.clipboard.writeText(command);
+    notifications.success("Command copied to clipboard");
+  } catch (error) {
+    console.error("Failed to copy command:", error);
+    notifications.error("Failed to copy command to clipboard");
   }
 }
 
