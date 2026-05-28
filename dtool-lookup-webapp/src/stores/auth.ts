@@ -10,6 +10,7 @@ import { ref, computed } from "vue";
 import { dserverApi } from "@/services/dserverApi";
 import { decodeJwt } from "@/utils/jwtUtils";
 import { useNotificationStore } from "@/stores/notifications";
+import { authEnabled } from "@/config";
 
 export type AuthStatus =
   | "idle" // Initial state, checking for existing session
@@ -81,6 +82,10 @@ export const useAuthStore = defineStore(
      * Verifies the token works by making an API call
      */
     async function login(newToken: string): Promise<boolean> {
+      if (!authEnabled) {
+        status.value = "authenticated";
+        return true;
+      }
       status.value = "idle";
       error.value = null;
 
@@ -161,6 +166,7 @@ export const useAuthStore = defineStore(
      * Logout and clear all auth state
      */
     function logout(): void {
+      if (!authEnabled) return;
       clearAuth();
       status.value = "unauthenticated";
       error.value = null;
@@ -192,6 +198,10 @@ export const useAuthStore = defineStore(
      * Called on app startup to restore session
      */
     async function checkAuth(): Promise<boolean> {
+      if (!authEnabled) {
+        status.value = "authenticated";
+        return true;
+      }
       if (!token.value) {
         status.value = "unauthenticated";
         return false;
@@ -211,6 +221,14 @@ export const useAuthStore = defineStore(
      * Initialize the store - check for existing token from URL or cookies
      */
     async function initialize(): Promise<void> {
+      if (!authEnabled) {
+        // No-auth mode: bring the API client up with no Authorization header
+        // and report the session as authenticated so the app skips the SignIn guard.
+        dserverApi.setToken("");
+        status.value = "authenticated";
+        return;
+      }
+
       // Check for token in URL (OAuth2 callback)
       const urlParams = new URLSearchParams(window.location.search);
       const tokenParam = urlParams.get("token");

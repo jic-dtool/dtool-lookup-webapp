@@ -192,14 +192,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, getCurrentInstance } from "vue";
 import type { AxiosError, AxiosResponse } from "axios";
-import { getUsernameFromJwt } from "@/utils/jwtUtils";
 import { useStore } from "@/store";
 import type { SummaryInfo } from "@/types";
 
 const props = defineProps<{
   lookup_url: string;
   auth_str: string;
-  token: string;
 }>();
 
 const emit = defineEmits<{
@@ -213,13 +211,12 @@ const axios = instance?.appContext.config.globalProperties.$http;
 const summary_info = ref<SummaryInfo | null>(null);
 const loading = ref(true);
 const errored = ref(false);
-const username = ref("");
 const selectedTags = ref<string[]>([]);
 const selectedBaseUris = ref<string[]>([]);
 const selectedCreators = ref<string[]>([]);
 
 const source = computed(() => {
-  return props.lookup_url + "/users/" + username.value + "/summary";
+  return props.lookup_url + "/me/summary";
 });
 
 function load_summary(): void {
@@ -282,11 +279,6 @@ function toggleCreator(creator: string): void {
 }
 
 onMounted(() => {
-  if (props.token) {
-    const extractedUsername = getUsernameFromJwt(props.token);
-    username.value = extractedUsername;
-    store.updateUsername(extractedUsername);
-  }
   load_summary();
 });
 </script>

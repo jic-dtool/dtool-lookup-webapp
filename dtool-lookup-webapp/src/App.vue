@@ -93,7 +93,6 @@
         <SummaryInfo
           :auth_str="auth_str"
           :lookup_url="lookup_url"
-          :token="auth.token || ''"
           @start-search="searchDatasets"
         />
       </v-navigation-drawer>

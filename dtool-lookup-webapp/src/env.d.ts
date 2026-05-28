@@ -28,6 +28,7 @@ interface ImportMetaEnv {
   readonly VUE_APP_INFO_CONTENT?: string;
   readonly VUE_APP_DTOOL_JSON_PATH?: string;
   readonly VUE_APP_DTOOL_README_YAML_PATH?: string;
+  readonly VUE_APP_AUTH_ENABLED?: string;
 }
 
 interface ImportMeta {
@@ -54,5 +55,6 @@ declare namespace NodeJS {
     VUE_APP_INFO_CONTENT?: string;
     VUE_APP_DTOOL_JSON_PATH?: string;
     VUE_APP_DTOOL_README_YAML_PATH?: string;
+    VUE_APP_AUTH_ENABLED?: string;
   }
 }
