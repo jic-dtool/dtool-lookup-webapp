@@ -190,23 +190,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, getCurrentInstance } from "vue";
-import type { AxiosError, AxiosResponse } from "axios";
+import { ref, onMounted } from "vue";
 import { useStore } from "@/store";
+import { dserverApi } from "@/services/dserverApi";
 import type { SummaryInfo } from "@/types";
-
-const props = defineProps<{
-  lookup_url: string;
-  auth_str: string;
-}>();
 
 const emit = defineEmits<{
   (e: "start-search"): void;
 }>();
 
 const store = useStore();
-const instance = getCurrentInstance();
-const axios = instance?.appContext.config.globalProperties.$http;
 
 const summary_info = ref<SummaryInfo | null>(null);
 const loading = ref(true);
@@ -215,24 +208,18 @@ const selectedTags = ref<string[]>([]);
 const selectedBaseUris = ref<string[]>([]);
 const selectedCreators = ref<string[]>([]);
 
-const source = computed(() => {
-  return props.lookup_url + "/me/summary";
-});
-
-function load_summary(): void {
+async function load_summary(): Promise<void> {
   console.log("Loading summary info");
   errored.value = false;
   loading.value = true;
-  axios
-    .get(source.value, { headers: { Authorization: props.auth_str } })
-    .then((response: AxiosResponse<SummaryInfo>) => {
-      summary_info.value = response.data;
-    })
-    .catch((error: AxiosError) => {
-      console.log(error);
-      errored.value = true;
-    })
-    .finally(() => (loading.value = false));
+  try {
+    summary_info.value = (await dserverApi.getMySummary()) as SummaryInfo;
+  } catch (error) {
+    console.log(error);
+    errored.value = true;
+  } finally {
+    loading.value = false;
+  }
 }
 
 function searchDatasets(): void {

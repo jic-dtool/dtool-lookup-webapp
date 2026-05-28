@@ -90,11 +90,7 @@
         temporary
         class="d-md-none"
       >
-        <SummaryInfo
-          :auth_str="auth_str"
-          :lookup_url="lookup_url"
-          @start-search="searchDatasets"
-        />
+        <SummaryInfo @start-search="searchDatasets" />
       </v-navigation-drawer>
 
       <!-- Main Content -->
