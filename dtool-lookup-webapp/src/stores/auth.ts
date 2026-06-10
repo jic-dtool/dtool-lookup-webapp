@@ -272,7 +272,26 @@ export const useAuthStore = defineStore(
      * the token cannot leak into browser history or server logs.
      */
     async function initialize(): Promise<void> {
+<<<<<<< Updated upstream
       // Check for token in cookie (OAuth2 callback)
+=======
+      // Check for token in the URL fragment (OAuth2 callback). The token
+      // is delivered as a fragment rather than a query parameter so it is
+      // never sent to servers or recorded in logs/Referer headers.
+      const fragmentParams = new URLSearchParams(
+        window.location.hash.replace(/^#/, ""),
+      );
+      const tokenParam = fragmentParams.get("token");
+
+      if (tokenParam) {
+        // Clean up URL (drops both fragment and any query string)
+        window.history.replaceState({}, document.title, window.location.pathname);
+        await login(tokenParam);
+        return;
+      }
+
+      // Check for token in cookie
+>>>>>>> Stashed changes
       const cookieToken = getCookie("dserver_token");
       if (cookieToken) {
         // Consume the cookie: the token is persisted by this store, and a
