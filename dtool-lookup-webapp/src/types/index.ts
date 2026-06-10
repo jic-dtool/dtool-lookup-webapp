@@ -8,6 +8,10 @@ export interface Dataset {
   created_at: number;
   frozen_at: number;
   tags?: string[];
+  /** Authenticated identity that registered the dataset (server-asserted). */
+  uploaded_by?: string | null;
+  /** Unix timestamp of the registration. */
+  uploaded_at?: number | null;
 }
 
 export interface ManifestItem {
@@ -41,9 +45,11 @@ export interface SummaryInfo {
   creator_usernames: string[];
   base_uris: string[];
   tags: string[];
+  uploaders?: string[];
   datasets_per_creator: Record<string, number>;
   datasets_per_base_uri: Record<string, number>;
   datasets_per_tag: Record<string, number>;
+  datasets_per_uploader?: Record<string, number>;
 }
 
 // Server config types
@@ -77,6 +83,7 @@ export interface SearchQuery {
   creator_usernames?: string[];
   base_uris?: string[];
   tags?: string[];
+  uploaded_by?: string[];
 }
 
 // Resource link type for sign-in page

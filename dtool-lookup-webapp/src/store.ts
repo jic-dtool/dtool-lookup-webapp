@@ -16,6 +16,7 @@ export const useStore = defineStore("main", () => {
   const creator_usernames = ref<string[]>([]);
   const base_uris = ref<string[]>([]);
   const tags = ref<string[]>([]);
+  const uploaded_by = ref<string[]>([]);
   const current_dataset_index = ref(0);
   const current_dataset = ref<Dataset | null>(null);
   const current_dataset_manifest = ref<Manifest | null>(null);
@@ -53,6 +54,10 @@ export const useStore = defineStore("main", () => {
 
   function updateTags(value: string[]) {
     tags.value = value;
+  }
+
+  function updateUploadedBy(value: string[]) {
+    uploaded_by.value = value;
   }
 
   function updateCurrentDatasetIndex(index: number) {
@@ -109,6 +114,7 @@ export const useStore = defineStore("main", () => {
     creator_usernames.value = [];
     tags.value = [];
     base_uris.value = [];
+    uploaded_by.value = [];
   }
 
   return {
@@ -118,6 +124,7 @@ export const useStore = defineStore("main", () => {
     creator_usernames,
     base_uris,
     tags,
+    uploaded_by,
     current_dataset_index,
     current_dataset,
     current_dataset_manifest,
@@ -138,6 +145,7 @@ export const useStore = defineStore("main", () => {
     updateCreatorUsernames,
     updateBaseUris,
     updateTags,
+    updateUploadedBy,
     updateCurrentDatasetIndex,
     updateCurrentPageNumber,
     updateCurrentDataset,

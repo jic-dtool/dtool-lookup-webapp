@@ -265,19 +265,18 @@ export const useAuthStore = defineStore(
 
     /**
      * Initialize the store - check for a token from the OAuth2 callback
-     * cookie or a persisted session.
+     * or a persisted session.
      *
-     * The OAuth2 plugin delivers the token exclusively via the
-     * "dserver_token" cookie (same-origin), never as a URL parameter, so
-     * the token cannot leak into browser history or server logs.
+     * The OAuth2 plugin delivers the token either in the URL fragment
+     * (default; supports cross-origin webapps, never sent to servers) or
+     * via the same-origin "dserver_token" cookie (cookie-only mode,
+     * OAUTH2_DELIVER_TOKEN_IN_FRAGMENT=false). Both are checked; never a
+     * query parameter, so the token cannot leak into browser history or
+     * server logs.
      */
     async function initialize(): Promise<void> {
-<<<<<<< Updated upstream
-      // Check for token in cookie (OAuth2 callback)
-=======
-      // Check for token in the URL fragment (OAuth2 callback). The token
-      // is delivered as a fragment rather than a query parameter so it is
-      // never sent to servers or recorded in logs/Referer headers.
+      // Check for token in the URL fragment (OAuth2 callback, default
+      // delivery mode).
       const fragmentParams = new URLSearchParams(
         window.location.hash.replace(/^#/, ""),
       );
@@ -290,8 +289,7 @@ export const useAuthStore = defineStore(
         return;
       }
 
-      // Check for token in cookie
->>>>>>> Stashed changes
+      // Check for token in cookie (OAuth2 callback, cookie-only mode)
       const cookieToken = getCookie("dserver_token");
       if (cookieToken) {
         // Consume the cookie: the token is persisted by this store, and a

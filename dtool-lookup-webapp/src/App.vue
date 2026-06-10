@@ -455,6 +455,9 @@ const searchQuery = computed<DServerSearchQuery>(() => {
   if (store.tags.length > 0) {
     query.tags = store.tags;
   }
+  if (store.uploaded_by.length > 0) {
+    query.uploaded_by = store.uploaded_by;
+  }
 
   return query;
 });

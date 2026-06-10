@@ -221,6 +221,60 @@
             </v-list>
           </v-expansion-panel-text>
         </v-expansion-panel>
+
+        <!-- Uploaders Filter (server-asserted registration identity) -->
+        <v-expansion-panel
+          v-if="summary_info?.uploaders && summary_info.uploaders.length > 0"
+        >
+          <v-expansion-panel-title class="text-body-2 font-weight-medium">
+            <v-icon start size="small">mdi-account-arrow-up</v-icon>
+            Uploaders
+            <template #actions="{ expanded }">
+              <v-badge
+                v-if="store.uploaded_by.length > 0"
+                :content="store.uploaded_by.length"
+                color="primary"
+                inline
+                class="mr-2"
+              />
+              <v-icon
+                :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+              />
+            </template>
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <v-list
+              density="compact"
+              class="py-0"
+              max-height="200"
+              style="overflow-y: auto"
+            >
+              <v-list-item
+                v-for="(uploader, index) in summary_info.uploaders"
+                :key="index"
+                @click="toggleUploader(uploader)"
+                class="px-0"
+              >
+                <template #prepend>
+                  <v-checkbox-btn
+                    :model-value="store.uploaded_by.includes(uploader)"
+                    density="compact"
+                    hide-details
+                    @click.stop="toggleUploader(uploader)"
+                  />
+                </template>
+                <v-list-item-title class="text-body-2">{{
+                  uploader
+                }}</v-list-item-title>
+                <template #append>
+                  <v-chip size="x-small" color="grey-lighten-1" variant="flat">
+                    {{ summary_info.datasets_per_uploader?.[uploader] }}
+                  </v-chip>
+                </template>
+              </v-list-item>
+            </v-list>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
       </v-expansion-panels>
     </div>
   </div>
@@ -299,6 +353,15 @@ function toggleCreator(creator: string): void {
     store.creator_usernames.includes(creator)
       ? store.creator_usernames.filter((c) => c !== creator)
       : [...store.creator_usernames, creator],
+  );
+  searchDatasets();
+}
+
+function toggleUploader(uploader: string): void {
+  store.updateUploadedBy(
+    store.uploaded_by.includes(uploader)
+      ? store.uploaded_by.filter((u) => u !== uploader)
+      : [...store.uploaded_by, uploader],
   );
   searchDatasets();
 }

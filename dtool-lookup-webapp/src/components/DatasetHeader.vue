@@ -42,6 +42,19 @@
       <v-chip variant="tonal" size="small" prepend-icon="mdi-calendar-check">
         Frozen {{ formatDate(dataset.frozen_at) }}
       </v-chip>
+      <v-chip
+        v-if="dataset.uploaded_by"
+        variant="tonal"
+        color="info"
+        size="small"
+        prepend-icon="mdi-account-arrow-up"
+        :title="'Authenticated identity that registered this dataset'"
+      >
+        Uploaded by {{ dataset.uploaded_by
+        }}<template v-if="dataset.uploaded_at">
+          on {{ formatDate(dataset.uploaded_at) }}</template
+        >
+      </v-chip>
     </div>
   </div>
 </template>
