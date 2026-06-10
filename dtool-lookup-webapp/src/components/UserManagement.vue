@@ -2,9 +2,13 @@
   <div class="user-management">
     <v-card variant="elevated" rounded="lg" class="fill-height">
       <!-- Header -->
-      <v-card-title class="d-flex align-center justify-space-between pa-4 border-b">
+      <v-card-title
+        class="d-flex align-center justify-space-between pa-4 border-b"
+      >
         <div class="d-flex align-center">
-          <v-icon size="24" color="primary" class="mr-2">mdi-account-group</v-icon>
+          <v-icon size="24" color="primary" class="mr-2"
+            >mdi-account-group</v-icon
+          >
           <span class="text-h6">User Management</span>
         </div>
         <v-btn
@@ -17,8 +21,11 @@
         </v-btn>
       </v-card-title>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="d-flex justify-center align-center pa-8">
+      <!-- Initial Loading State (only before first load; keep table mounted on reloads) -->
+      <div
+        v-if="initialLoading"
+        class="d-flex justify-center align-center pa-8"
+      >
         <v-progress-circular indeterminate color="primary" size="48" />
       </div>
 
@@ -47,7 +54,7 @@
           :headers="headers"
           :items="filteredUsers"
           :loading="loading"
-          :expanded="expandedRows"
+          v-model:expanded="expandedRows"
           class="elevation-0"
           item-value="username"
           show-expand
@@ -56,7 +63,9 @@
           <template #item.username="{ item }">
             <div class="d-flex align-center">
               <v-avatar size="32" color="primary" class="mr-3">
-                <span class="text-body-2 text-white">{{ item.username.charAt(0).toUpperCase() }}</span>
+                <span class="text-body-2 text-white">{{
+                  item.username.charAt(0).toUpperCase()
+                }}</span>
               </v-avatar>
               <span class="font-weight-medium">{{ item.username }}</span>
             </div>
@@ -64,8 +73,12 @@
 
           <!-- Display Name Column -->
           <template #item.display_name="{ item }">
-            <span v-if="item.display_name" class="text-body-2">{{ item.display_name }}</span>
-            <span v-else class="text-caption text-medium-emphasis">Not set</span>
+            <span v-if="item.display_name" class="text-body-2">{{
+              item.display_name
+            }}</span>
+            <span v-else class="text-caption text-medium-emphasis"
+              >Not set</span
+            >
           </template>
 
           <!-- Admin Status Column -->
@@ -75,7 +88,7 @@
               variant="tonal"
               size="small"
             >
-              {{ item.is_admin ? 'Admin' : 'User' }}
+              {{ item.is_admin ? "Admin" : "User" }}
             </v-chip>
           </template>
 
@@ -83,7 +96,9 @@
           <template #item.search_permissions_on_base_uris="{ item }">
             <div class="d-flex flex-wrap gap-1">
               <v-chip
-                v-for="uri in (item.search_permissions_on_base_uris || []).slice(0, 2)"
+                v-for="uri in (
+                  item.search_permissions_on_base_uris || []
+                ).slice(0, 2)"
                 :key="uri"
                 size="x-small"
                 variant="outlined"
@@ -99,7 +114,10 @@
               >
                 +{{ item.search_permissions_on_base_uris.length - 2 }} more
               </v-chip>
-              <span v-if="(item.search_permissions_on_base_uris || []).length === 0" class="text-medium-emphasis text-caption">
+              <span
+                v-if="(item.search_permissions_on_base_uris || []).length === 0"
+                class="text-medium-emphasis text-caption"
+              >
                 None
               </span>
             </div>
@@ -109,7 +127,9 @@
           <template #item.register_permissions_on_base_uris="{ item }">
             <div class="d-flex flex-wrap gap-1">
               <v-chip
-                v-for="uri in (item.register_permissions_on_base_uris || []).slice(0, 2)"
+                v-for="uri in (
+                  item.register_permissions_on_base_uris || []
+                ).slice(0, 2)"
                 :key="uri"
                 size="x-small"
                 variant="outlined"
@@ -125,7 +145,12 @@
               >
                 +{{ item.register_permissions_on_base_uris.length - 2 }} more
               </v-chip>
-              <span v-if="(item.register_permissions_on_base_uris || []).length === 0" class="text-medium-emphasis text-caption">
+              <span
+                v-if="
+                  (item.register_permissions_on_base_uris || []).length === 0
+                "
+                class="text-medium-emphasis text-caption"
+              >
                 None
               </span>
             </div>
@@ -158,26 +183,39 @@
                   <!-- Display Name -->
                   <v-card variant="outlined" class="pa-3 mb-3">
                     <div class="d-flex align-center mb-2">
-                      <v-icon size="18" class="mr-2" color="primary">mdi-badge-account</v-icon>
+                      <v-icon size="18" class="mr-2" color="primary"
+                        >mdi-badge-account</v-icon
+                      >
                       <span class="text-body-2">Display Name</span>
                     </div>
                     <div class="d-flex align-center gap-2">
                       <v-text-field
-                        :model-value="pendingDisplayName[item.username] ?? item.display_name ?? ''"
+                        :model-value="
+                          pendingDisplayName[item.username] ??
+                          item.display_name ??
+                          ''
+                        "
                         label="Display name (optional)"
                         variant="outlined"
                         density="compact"
                         hide-details
                         clearable
                         class="flex-grow-1"
-                        @update:model-value="(val: string | null) => pendingDisplayName[item.username] = val || ''"
+                        @update:model-value="
+                          (val: string | null) =>
+                            (pendingDisplayName[item.username] = val || '')
+                        "
                       />
                       <v-btn
                         icon="mdi-check"
                         size="small"
                         color="primary"
                         variant="tonal"
-                        :disabled="(pendingDisplayName[item.username] ?? item.display_name ?? '') === (item.display_name ?? '')"
+                        :disabled="
+                          (pendingDisplayName[item.username] ??
+                            item.display_name ??
+                            '') === (item.display_name ?? '')
+                        "
                         :loading="savingDisplayName === item.username"
                         @click="saveDisplayName(item.username)"
                       />
@@ -188,7 +226,9 @@
                   <v-card variant="outlined" class="pa-3 mb-3">
                     <div class="d-flex align-center justify-space-between">
                       <div class="d-flex align-center">
-                        <v-icon size="18" class="mr-2" color="primary">mdi-shield-account</v-icon>
+                        <v-icon size="18" class="mr-2" color="primary"
+                          >mdi-shield-account</v-icon
+                        >
                         <span class="text-body-2">Administrator Status</span>
                       </div>
                       <v-switch
@@ -196,12 +236,22 @@
                         color="primary"
                         density="compact"
                         hide-details
-                        :disabled="item.username === currentUsername || savingAdmin === item.username"
+                        :disabled="
+                          item.username === currentUsername ||
+                          savingAdmin === item.username
+                        "
                         :loading="savingAdmin === item.username"
-                        @update:model-value="(val: boolean | null) => val !== null && toggleAdminStatus(item.username, val)"
+                        @update:model-value="
+                          (val: boolean | null) =>
+                            val !== null &&
+                            toggleAdminStatus(item.username, val)
+                        "
                       />
                     </div>
-                    <div v-if="item.username === currentUsername" class="text-caption text-medium-emphasis mt-1">
+                    <div
+                      v-if="item.username === currentUsername"
+                      class="text-caption text-medium-emphasis mt-1"
+                    >
                       You cannot change your own admin status
                     </div>
                   </v-card>
@@ -216,7 +266,13 @@
                         </div>
 
                         <!-- Current permissions -->
-                        <div v-if="(item.search_permissions_on_base_uris || []).length > 0" class="mb-3">
+                        <div
+                          v-if="
+                            (item.search_permissions_on_base_uris || [])
+                              .length > 0
+                          "
+                          class="mb-3"
+                        >
                           <div class="text-caption mb-1">Current:</div>
                           <div class="d-flex flex-wrap gap-1">
                             <v-chip
@@ -226,14 +282,22 @@
                               variant="tonal"
                               color="secondary"
                               closable
-                              :loading="savingPermission === `search-revoke-${item.username}-${uri}`"
-                              @click:close="revokeSearchPermission(item.username, uri)"
+                              :loading="
+                                savingPermission ===
+                                `search-revoke-${item.username}-${uri}`
+                              "
+                              @click:close="
+                                revokeSearchPermission(item.username, uri)
+                              "
                             >
                               {{ formatUri(uri) }}
                             </v-chip>
                           </div>
                         </div>
-                        <div v-else class="text-caption text-medium-emphasis mb-3">
+                        <div
+                          v-else
+                          class="text-caption text-medium-emphasis mb-3"
+                        >
                           No search permissions assigned
                         </div>
 
@@ -255,8 +319,13 @@
                               size="small"
                               color="secondary"
                               variant="tonal"
-                              :disabled="!pendingSearchPermission[item.username]"
-                              :loading="savingPermission === `search-grant-${item.username}`"
+                              :disabled="
+                                !pendingSearchPermission[item.username]
+                              "
+                              :loading="
+                                savingPermission ===
+                                `search-grant-${item.username}`
+                              "
                               @click="grantSearchPermission(item.username)"
                             />
                           </div>
@@ -271,12 +340,20 @@
                     <v-col cols="12" md="6">
                       <v-card variant="outlined" class="pa-3">
                         <div class="text-caption text-medium-emphasis mb-2">
-                          <v-icon size="14" class="mr-1">mdi-database-plus</v-icon>
+                          <v-icon size="14" class="mr-1"
+                            >mdi-database-plus</v-icon
+                          >
                           Register Permissions
                         </div>
 
                         <!-- Current permissions -->
-                        <div v-if="(item.register_permissions_on_base_uris || []).length > 0" class="mb-3">
+                        <div
+                          v-if="
+                            (item.register_permissions_on_base_uris || [])
+                              .length > 0
+                          "
+                          class="mb-3"
+                        >
                           <div class="text-caption mb-1">Current:</div>
                           <div class="d-flex flex-wrap gap-1">
                             <v-chip
@@ -286,14 +363,22 @@
                               variant="tonal"
                               color="success"
                               closable
-                              :loading="savingPermission === `register-revoke-${item.username}-${uri}`"
-                              @click:close="revokeRegisterPermission(item.username, uri)"
+                              :loading="
+                                savingPermission ===
+                                `register-revoke-${item.username}-${uri}`
+                              "
+                              @click:close="
+                                revokeRegisterPermission(item.username, uri)
+                              "
                             >
                               {{ formatUri(uri) }}
                             </v-chip>
                           </div>
                         </div>
-                        <div v-else class="text-caption text-medium-emphasis mb-3">
+                        <div
+                          v-else
+                          class="text-caption text-medium-emphasis mb-3"
+                        >
                           No register permissions assigned
                         </div>
 
@@ -315,9 +400,16 @@
                               size="small"
                               color="success"
                               variant="tonal"
-                              :disabled="!pendingRegisterPermission[item.username]"
-                              :loading="savingPermission === `register-grant-${item.username}`"
-                              @click="grantRegisterPermissionInline(item.username)"
+                              :disabled="
+                                !pendingRegisterPermission[item.username]
+                              "
+                              :loading="
+                                savingPermission ===
+                                `register-grant-${item.username}`
+                              "
+                              @click="
+                                grantRegisterPermissionInline(item.username)
+                              "
                             />
                           </div>
                         </div>
@@ -339,7 +431,9 @@
     <v-dialog v-model="showAddUserDialog" max-width="500" persistent>
       <v-card rounded="lg">
         <v-card-title class="text-h6 pa-4 border-b">
-          <v-icon size="24" color="primary" class="mr-2">mdi-account-plus</v-icon>
+          <v-icon size="24" color="primary" class="mr-2"
+            >mdi-account-plus</v-icon
+          >
           Add New User
         </v-card-title>
         <v-card-text class="pa-4">
@@ -361,12 +455,7 @@
         </v-card-text>
         <v-card-actions class="pa-4 pt-0">
           <v-spacer />
-          <v-btn
-            variant="text"
-            @click="closeAddUserDialog"
-          >
-            Cancel
-          </v-btn>
+          <v-btn variant="text" @click="closeAddUserDialog"> Cancel </v-btn>
           <v-btn
             color="primary"
             variant="tonal"
@@ -387,15 +476,13 @@
           Delete User
         </v-card-title>
         <v-card-text class="pa-4">
-          Are you sure you want to delete user <strong>{{ userToDelete?.username }}</strong>?
-          This action cannot be undone.
+          Are you sure you want to delete user
+          <strong>{{ userToDelete?.username }}</strong
+          >? This action cannot be undone.
         </v-card-text>
         <v-card-actions class="pa-4 pt-0">
           <v-spacer />
-          <v-btn
-            variant="text"
-            @click="showDeleteDialog = false"
-          >
+          <v-btn variant="text" @click="showDeleteDialog = false">
             Cancel
           </v-btn>
           <v-btn
@@ -426,6 +513,7 @@ const notifications = useNotificationStore();
 const users = ref<UserInfo[]>([]);
 const baseUris = ref<string[]>([]);
 const loading = ref(true);
+const initialLoading = ref(true);
 const saving = ref(false);
 const deleting = ref(false);
 const error = ref<string | null>(null);
@@ -462,8 +550,16 @@ const headers = [
   { title: "Username", key: "username", sortable: true },
   { title: "Display Name", key: "display_name", sortable: true },
   { title: "Role", key: "is_admin", sortable: true, width: "100" },
-  { title: "Search Permissions", key: "search_permissions_on_base_uris", sortable: false },
-  { title: "Register Permissions", key: "register_permissions_on_base_uris", sortable: false },
+  {
+    title: "Search Permissions",
+    key: "search_permissions_on_base_uris",
+    sortable: false,
+  },
+  {
+    title: "Register Permissions",
+    key: "register_permissions_on_base_uris",
+    sortable: false,
+  },
   { title: "Actions", key: "actions", sortable: false, width: "100" },
 ];
 
@@ -473,8 +569,8 @@ const currentUsername = computed(() => auth.username);
 const filteredUsers = computed(() => {
   if (!searchQuery.value) return users.value;
   const query = searchQuery.value.toLowerCase();
-  return users.value.filter(user =>
-    user.username.toLowerCase().includes(query)
+  return users.value.filter((user) =>
+    user.username.toLowerCase().includes(query),
   );
 });
 
@@ -487,13 +583,13 @@ function formatUri(uri: string): string {
 // Get base URIs not yet assigned for search permission
 function getAvailableSearchUris(user: UserInfo): string[] {
   const currentPerms = user.search_permissions_on_base_uris || [];
-  return baseUris.value.filter(uri => !currentPerms.includes(uri));
+  return baseUris.value.filter((uri) => !currentPerms.includes(uri));
 }
 
 // Get base URIs not yet assigned for register permission
 function getAvailableRegisterUris(user: UserInfo): string[] {
   const currentPerms = user.register_permissions_on_base_uris || [];
-  return baseUris.value.filter(uri => !currentPerms.includes(uri));
+  return baseUris.value.filter((uri) => !currentPerms.includes(uri));
 }
 
 // Inline permission management functions
@@ -504,7 +600,7 @@ async function saveDisplayName(username: string): Promise<void> {
   savingDisplayName.value = username;
   try {
     // Use null to clear the display name, or the new value
-    const displayNameValue = newDisplayName === '' ? null : newDisplayName;
+    const displayNameValue = newDisplayName === "" ? null : newDisplayName;
     await dserverApi.updateUser(username, { display_name: displayNameValue });
     notifications.success(`Display name updated for "${username}"`);
     delete pendingDisplayName[username];
@@ -517,11 +613,16 @@ async function saveDisplayName(username: string): Promise<void> {
   }
 }
 
-async function toggleAdminStatus(username: string, isAdmin: boolean): Promise<void> {
+async function toggleAdminStatus(
+  username: string,
+  isAdmin: boolean,
+): Promise<void> {
   savingAdmin.value = username;
   try {
     await dserverApi.updateUserAdmin(username, isAdmin);
-    notifications.success(`User "${username}" ${isAdmin ? "promoted to admin" : "demoted from admin"}`);
+    notifications.success(
+      `User "${username}" ${isAdmin ? "promoted to admin" : "demoted from admin"}`,
+    );
     await loadData();
   } catch (e) {
     console.error("Failed to update admin status:", e);
@@ -549,7 +650,10 @@ async function grantSearchPermission(username: string): Promise<void> {
   }
 }
 
-async function revokeSearchPermission(username: string, uri: string): Promise<void> {
+async function revokeSearchPermission(
+  username: string,
+  uri: string,
+): Promise<void> {
   savingPermission.value = `search-revoke-${username}-${uri}`;
   try {
     await dserverApi.revokeSearchPermission(username, uri);
@@ -581,7 +685,10 @@ async function grantRegisterPermissionInline(username: string): Promise<void> {
   }
 }
 
-async function revokeRegisterPermission(username: string, uri: string): Promise<void> {
+async function revokeRegisterPermission(
+  username: string,
+  uri: string,
+): Promise<void> {
   savingPermission.value = `register-revoke-${username}-${uri}`;
   try {
     await dserverApi.revokeRegisterPermission(username, uri);
@@ -605,12 +712,13 @@ async function loadData(): Promise<void> {
       dserverApi.listBaseURIs(),
     ]);
     users.value = userList;
-    baseUris.value = baseUriList.map(b => b.base_uri);
+    baseUris.value = baseUriList.map((b) => b.base_uri);
   } catch (e) {
     console.error("Failed to load user data:", e);
     error.value = "Failed to load user data. Please try again.";
   } finally {
     loading.value = false;
+    initialLoading.value = false;
   }
 }
 
@@ -628,7 +736,7 @@ async function createUser(): Promise<void> {
     return;
   }
 
-  if (users.value.some(u => u.username === newUser.username)) {
+  if (users.value.some((u) => u.username === newUser.username)) {
     newUserErrors.username = "Username already exists";
     return;
   }
@@ -637,7 +745,9 @@ async function createUser(): Promise<void> {
   saving.value = true;
 
   try {
-    await dserverApi.createUser(newUser.username, { is_admin: newUser.is_admin });
+    await dserverApi.createUser(newUser.username, {
+      is_admin: newUser.is_admin,
+    });
     notifications.success(`User "${newUser.username}" created successfully`);
     closeAddUserDialog();
     await loadData();
@@ -661,7 +771,9 @@ async function confirmDeleteUser(): Promise<void> {
 
   try {
     await dserverApi.deleteUser(userToDelete.value.username);
-    notifications.success(`User "${userToDelete.value.username}" deleted successfully`);
+    notifications.success(
+      `User "${userToDelete.value.username}" deleted successfully`,
+    );
     showDeleteDialog.value = false;
     userToDelete.value = null;
     await loadData();

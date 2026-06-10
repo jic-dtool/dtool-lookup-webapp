@@ -6,6 +6,7 @@
  */
 
 import { DServerClient } from "dserver-client";
+import { serverUrl } from "@/config";
 import type {
   DatasetEntry,
   SearchQuery,
@@ -68,7 +69,7 @@ class DServerApi {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "";
+    this.baseUrl = serverUrl;
   }
 
   /**
@@ -120,7 +121,7 @@ class DServerApi {
 
   async searchDatasets(
     query: SearchQuery,
-    pagination?: PaginationParams
+    pagination?: PaginationParams,
   ): Promise<PaginatedResponse<DatasetEntry>> {
     return this.ensureClient().searchDatasets(query, pagination);
   }
@@ -171,7 +172,7 @@ class DServerApi {
 
   async setAnnotations(
     uri: string,
-    annotations: Record<string, unknown>
+    annotations: Record<string, unknown>,
   ): Promise<AnnotationsResponse> {
     return this.ensureClient().setAnnotations(uri, annotations);
   }
@@ -179,12 +180,15 @@ class DServerApi {
   async setAnnotation(
     uri: string,
     name: string,
-    value: unknown
+    value: unknown,
   ): Promise<AnnotationsResponse> {
     return this.ensureClient().setAnnotation(uri, name, value);
   }
 
-  async deleteAnnotation(uri: string, name: string): Promise<AnnotationsResponse> {
+  async deleteAnnotation(
+    uri: string,
+    name: string,
+  ): Promise<AnnotationsResponse> {
     return this.ensureClient().deleteAnnotation(uri, name);
   }
 
@@ -200,7 +204,10 @@ class DServerApi {
   // Signed URLs
   // =========================================================================
 
-  async getItemSignedUrl(uri: string, identifier: string): Promise<ItemSignedURLResponse> {
+  async getItemSignedUrl(
+    uri: string,
+    identifier: string,
+  ): Promise<ItemSignedURLResponse> {
     return this.ensureClient().getItemSignedUrl(uri, identifier);
   }
 
@@ -232,7 +239,10 @@ class DServerApi {
     return this.ensureClient().updateUserAdmin(username, isAdmin);
   }
 
-  async updateUser(username: string, updates: { is_admin?: boolean; display_name?: string | null }): Promise<UserInfo> {
+  async updateUser(
+    username: string,
+    updates: { is_admin?: boolean; display_name?: string | null },
+  ): Promise<UserInfo> {
     return this.ensureClient().updateUser(username, updates);
   }
 
@@ -256,19 +266,31 @@ class DServerApi {
     return this.ensureClient().deleteBaseURI(baseUri);
   }
 
-  async grantSearchPermission(username: string, baseUri: string): Promise<UserInfo> {
+  async grantSearchPermission(
+    username: string,
+    baseUri: string,
+  ): Promise<UserInfo> {
     return this.ensureClient().grantSearchPermission(username, baseUri);
   }
 
-  async revokeSearchPermission(username: string, baseUri: string): Promise<UserInfo> {
+  async revokeSearchPermission(
+    username: string,
+    baseUri: string,
+  ): Promise<UserInfo> {
     return this.ensureClient().revokeSearchPermission(username, baseUri);
   }
 
-  async grantRegisterPermission(username: string, baseUri: string): Promise<UserInfo> {
+  async grantRegisterPermission(
+    username: string,
+    baseUri: string,
+  ): Promise<UserInfo> {
     return this.ensureClient().grantRegisterPermission(username, baseUri);
   }
 
-  async revokeRegisterPermission(username: string, baseUri: string): Promise<UserInfo> {
+  async revokeRegisterPermission(
+    username: string,
+    baseUri: string,
+  ): Promise<UserInfo> {
     return this.ensureClient().revokeRegisterPermission(username, baseUri);
   }
 
@@ -276,7 +298,10 @@ class DServerApi {
   // Dependency Graph (requires dserver-dependency-graph-plugin)
   // =========================================================================
 
-  async getDependencyGraph(uuid: string, dependencyKeys?: string[]): Promise<GraphDatasetEntry[]> {
+  async getDependencyGraph(
+    uuid: string,
+    dependencyKeys?: string[],
+  ): Promise<GraphDatasetEntry[]> {
     return this.ensureClient().getDependencyGraph(uuid, dependencyKeys);
   }
 }

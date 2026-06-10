@@ -42,12 +42,11 @@
         <v-list-item-title>Info</v-list-item-title>
       </v-list-item>
 
-      <v-divider v-if="downloadReadmeYaml || downloadReadmeJson || showInfoMenuEntry" />
+      <v-divider
+        v-if="downloadReadmeYaml || downloadReadmeJson || showInfoMenuEntry"
+      />
 
-      <v-list-item
-        prepend-icon="mdi-logout"
-        @click="logout"
-      >
+      <v-list-item prepend-icon="mdi-logout" @click="logout">
         <v-list-item-title class="text-error">Logout</v-list-item-title>
       </v-list-item>
     </v-list>
@@ -57,7 +56,10 @@
   <v-dialog v-model="infoDialog" max-width="500">
     <v-card>
       <v-card-title>Info</v-card-title>
-      <v-card-text v-html="infoContent"></v-card-text>
+      <v-card-text>
+        <!-- eslint-disable-next-line vue/no-v-html -- operator-controlled build-time content -->
+        <div v-html="infoContent"></div>
+      </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn color="primary" @click="infoDialog = false">OK</v-btn>
@@ -68,14 +70,19 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useNotificationStore } from "@/stores/notifications";
 
 const emit = defineEmits<{
   (e: "logoutAction"): void;
 }>();
 
+const notifications = useNotificationStore();
+
 const infoDialog = ref(false);
-const downloadReadmeYaml = process.env.VUE_APP_OFFER_DTOOL_README_YAML_DOWNLOAD === "true";
-const downloadReadmeJson = process.env.VUE_APP_OFFER_DTOOL_JSON_DOWNLOAD === "true";
+const downloadReadmeYaml =
+  process.env.VUE_APP_OFFER_DTOOL_README_YAML_DOWNLOAD === "true";
+const downloadReadmeJson =
+  process.env.VUE_APP_OFFER_DTOOL_JSON_DOWNLOAD === "true";
 const showInfoMenuEntry = process.env.VUE_APP_SHOW_INFO_MENU_ENTRY === "true";
 const infoContent = process.env.VUE_APP_INFO_CONTENT || "Info Content";
 
@@ -86,8 +93,7 @@ function logout(): void {
 async function downloadFile(fileName: string): Promise<void> {
   const filePath =
     fileName === "dtool.json"
-      ? process.env.VUE_APP_DTOOL_JSON_PATH ||
-        `data/templates/${fileName}`
+      ? process.env.VUE_APP_DTOOL_JSON_PATH || `data/templates/${fileName}`
       : process.env.VUE_APP_DTOOL_README_YAML_PATH ||
         `data/templates/${fileName}`;
 
@@ -108,6 +114,9 @@ async function downloadFile(fileName: string): Promise<void> {
     document.body.removeChild(a);
   } catch (error) {
     console.error("Failed to download file:", error);
+    notifications.error(
+      `Failed to download template "${fileName}". Please try again.`,
+    );
   }
 }
 </script>

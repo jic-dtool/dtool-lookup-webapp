@@ -46,7 +46,6 @@ describe("Store", () => {
     store.updateCreatorUsernames(["user1"]);
     store.updateTags(["tag1"]);
     store.updateBaseUris(["s3://bucket"]);
-    store.updateUsername("testuser");
 
     store.clearAll();
 
@@ -55,7 +54,6 @@ describe("Store", () => {
     expect(store.creator_usernames).toEqual([]);
     expect(store.tags).toEqual([]);
     expect(store.base_uris).toEqual([]);
-    expect(store.username).toBeNull();
   });
 
   it("updates readme", () => {

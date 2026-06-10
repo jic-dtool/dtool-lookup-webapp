@@ -37,12 +37,16 @@ export const useAuthStore = defineStore(
     const registerPermissions = ref<string[]>([]);
     const status = ref<AuthStatus>("idle");
     const error = ref<AuthError | null>(null);
-    const lastVerifiedAt = ref<number | null>(null);
+
+    // Timer that logs the user out when the token expires mid-session.
+    let expiryTimerId: ReturnType<typeof setTimeout> | null = null;
 
     // Computed
     const isAuthenticated = computed(() => status.value === "authenticated");
     const isLoading = computed(() => status.value === "idle");
-    const hasError = computed(() => status.value === "error" || status.value === "unauthorized");
+    const hasError = computed(
+      () => status.value === "error" || status.value === "unauthorized",
+    );
 
     const tokenExpiry = computed(() => {
       if (!token.value) return null;
@@ -69,7 +73,8 @@ export const useAuthStore = defineStore(
       try {
         const payload = decodeJwt(newToken);
         username.value = payload.sub || null;
-        displayName.value = (payload.display_name as string) || (payload.name as string) || null;
+        displayName.value =
+          (payload.display_name as string) || (payload.name as string) || null;
         provider.value = (payload.provider as string) || null;
       } catch (e) {
         console.error("Failed to decode JWT:", e);
@@ -97,17 +102,21 @@ export const useAuthStore = defineStore(
 
         // Set admin status and permissions from server response
         isAdmin.value = userInfo.is_admin || false;
-        searchPermissions.value = userInfo.search_permissions_on_base_uris || [];
-        registerPermissions.value = userInfo.register_permissions_on_base_uris || [];
+        searchPermissions.value =
+          userInfo.search_permissions_on_base_uris || [];
+        registerPermissions.value =
+          userInfo.register_permissions_on_base_uris || [];
 
         status.value = "authenticated";
-        lastVerifiedAt.value = Date.now();
+        scheduleExpiryLogout();
         return true;
       } catch (e) {
         const err = e as { status?: number; name?: string; message?: string };
         const statusCode = err.status;
-        const isAuthError = statusCode === 401 || err.name === "AuthenticationError";
-        const isAuthzError = statusCode === 403 || err.name === "AuthorizationError";
+        const isAuthError =
+          statusCode === 401 || err.name === "AuthenticationError";
+        const isAuthzError =
+          statusCode === 403 || err.name === "AuthorizationError";
 
         if (isAuthError || isAuthzError) {
           // User authenticated via OAuth2 but not authorized in dserver
@@ -118,8 +127,11 @@ export const useAuthStore = defineStore(
             message: "User not registered",
             details: `Your account (${username.value}) authenticated successfully via ${provider.value || "OAuth2"}, but is not registered in the dserver database. Please contact an administrator to register your account.`,
           };
+          // The token was rejected by the server; discard it.
+          clearAuth();
         } else {
-          // For other errors, use the notification system
+          // Transient failure (network blip, timeout, 5xx): keep the
+          // persisted token so a retry or reload can restore the session.
           status.value = "unauthenticated";
 
           // Get a user-friendly error message
@@ -128,23 +140,51 @@ export const useAuthStore = defineStore(
           notifications.error(errorMessage, 8000);
         }
 
-        // Clear token on auth failure
-        clearAuth();
         return false;
       }
     }
 
     /**
+     * Schedule an automatic logout when the current token expires.
+     */
+    function scheduleExpiryLogout(): void {
+      if (expiryTimerId) {
+        clearTimeout(expiryTimerId);
+        expiryTimerId = null;
+      }
+      if (!tokenExpiry.value) return;
+      const msLeft = tokenExpiry.value - Date.now();
+      // setTimeout overflows beyond ~24.8 days; such tokens effectively
+      // never expire within a browser session.
+      if (msLeft <= 0 || msLeft > 0x7fffffff) return;
+      expiryTimerId = setTimeout(() => {
+        const notifications = useNotificationStore();
+        notifications.error(
+          "Your session has expired. Please sign in again.",
+          8000,
+        );
+        logout();
+      }, msLeft);
+    }
+
+    /**
      * Convert technical error messages to user-friendly ones
      */
-    function getReadableErrorMessage(err: { status?: number; name?: string; message?: string }): string {
+    function getReadableErrorMessage(err: {
+      status?: number;
+      name?: string;
+      message?: string;
+    }): string {
       const message = err.message || "";
 
       // Handle common technical errors
       if (message.includes("body stream already read")) {
         return "Unable to verify authentication. Please try logging in again.";
       }
-      if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
+      if (
+        message.includes("Failed to fetch") ||
+        message.includes("NetworkError")
+      ) {
         return "Network error. Please check your connection and try again.";
       }
       if (message.includes("timeout") || message.includes("Timeout")) {
@@ -170,6 +210,8 @@ export const useAuthStore = defineStore(
      */
     function logout(): void {
       clearAuth();
+      // Make sure no OAuth2 callback cookie survives the logout.
+      deleteCookie("dserver_token");
       status.value = "unauthenticated";
       error.value = null;
     }
@@ -178,6 +220,10 @@ export const useAuthStore = defineStore(
      * Clear auth state without changing status
      */
     function clearAuth(): void {
+      if (expiryTimerId) {
+        clearTimeout(expiryTimerId);
+        expiryTimerId = null;
+      }
       token.value = null;
       username.value = null;
       displayName.value = null;
@@ -185,7 +231,6 @@ export const useAuthStore = defineStore(
       isAdmin.value = false;
       searchPermissions.value = [];
       registerPermissions.value = [];
-      lastVerifiedAt.value = null;
     }
 
     /**
@@ -219,23 +264,20 @@ export const useAuthStore = defineStore(
     }
 
     /**
-     * Initialize the store - check for existing token from URL or cookies
+     * Initialize the store - check for a token from the OAuth2 callback
+     * cookie or a persisted session.
+     *
+     * The OAuth2 plugin delivers the token exclusively via the
+     * "dserver_token" cookie (same-origin), never as a URL parameter, so
+     * the token cannot leak into browser history or server logs.
      */
     async function initialize(): Promise<void> {
-      // Check for token in URL (OAuth2 callback)
-      const urlParams = new URLSearchParams(window.location.search);
-      const tokenParam = urlParams.get("token");
-
-      if (tokenParam) {
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        await login(tokenParam);
-        return;
-      }
-
-      // Check for token in cookie
+      // Check for token in cookie (OAuth2 callback)
       const cookieToken = getCookie("dserver_token");
       if (cookieToken) {
+        // Consume the cookie: the token is persisted by this store, and a
+        // lingering cookie would silently re-authenticate after logout.
+        deleteCookie("dserver_token");
         await login(cookieToken);
         return;
       }
@@ -261,7 +303,6 @@ export const useAuthStore = defineStore(
       registerPermissions,
       status,
       error,
-      lastVerifiedAt,
       // Computed
       isAuthenticated,
       isLoading,
@@ -281,9 +322,17 @@ export const useAuthStore = defineStore(
   {
     persist: {
       key: "dtool-auth",
-      paths: ["token", "username", "displayName", "provider", "isAdmin", "searchPermissions", "registerPermissions", "lastVerifiedAt"],
+      paths: [
+        "token",
+        "username",
+        "displayName",
+        "provider",
+        "isAdmin",
+        "searchPermissions",
+        "registerPermissions",
+      ],
     },
-  }
+  },
 );
 
 // Helper function to get cookie value
@@ -294,4 +343,9 @@ function getCookie(name: string): string | null {
     return parts.pop()?.split(";").shift() || null;
   }
   return null;
+}
+
+// Helper function to delete a cookie
+function deleteCookie(name: string): void {
+  document.cookie = `${name}=; Max-Age=0; path=/`;
 }

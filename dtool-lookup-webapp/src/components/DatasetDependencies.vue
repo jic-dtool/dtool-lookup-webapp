@@ -31,11 +31,7 @@
             class="mb-2"
           />
           <div class="d-flex justify-end gap-2">
-            <v-btn
-              size="small"
-              variant="text"
-              @click="resetDependencyKeys"
-            >
+            <v-btn size="small" variant="text" @click="resetDependencyKeys">
               Reset to defaults
             </v-btn>
             <v-btn
@@ -76,16 +72,29 @@
     <div v-else-if="error" class="text-center py-8">
       <v-icon size="48" color="error" class="mb-2">mdi-alert-circle</v-icon>
       <p class="text-body-2 text-error">{{ error }}</p>
-      <v-btn size="small" variant="tonal" color="primary" class="mt-2" @click="loadGraph">
+      <v-btn
+        size="small"
+        variant="tonal"
+        color="primary"
+        class="mt-2"
+        @click="loadGraph"
+      >
         Retry
       </v-btn>
     </div>
 
     <!-- Empty state (no dependencies) -->
-    <div v-else-if="!hasConnections" class="text-center py-8 text-medium-emphasis">
-      <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-graph-outline</v-icon>
+    <div
+      v-else-if="!hasConnections"
+      class="text-center py-8 text-medium-emphasis"
+    >
+      <v-icon size="48" color="grey-lighten-1" class="mb-2"
+        >mdi-graph-outline</v-icon
+      >
       <p class="text-body-2">No dependency connections found</p>
-      <p class="text-caption">This dataset has no references matching the configured dependency keys</p>
+      <p class="text-caption">
+        This dataset has no references matching the configured dependency keys
+      </p>
     </div>
 
     <!-- Graph visualization -->
@@ -96,7 +105,10 @@
       <div
         v-if="hoveredNode"
         class="graph-tooltip"
-        :style="{ left: tooltipPosition.x + 'px', top: tooltipPosition.y + 'px' }"
+        :style="{
+          left: tooltipPosition.x + 'px',
+          top: tooltipPosition.y + 'px',
+        }"
       >
         <div class="tooltip-header">{{ hoveredNode.name }}</div>
         <div class="tooltip-row">
@@ -144,8 +156,8 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import * as d3 from "d3";
 import { filesize as filesizeLib } from "filesize";
-import moment from "moment";
 import { useStore } from "@/store";
+import { formatDateTime } from "@/utils/dateUtils";
 import { dserverApi } from "@/services/dserverApi";
 import type { GraphDatasetEntry } from "@/services/dserverApi";
 
@@ -198,6 +210,10 @@ const tooltipPosition = ref({ x: 0, y: 0 });
 // D3 simulation reference
 let simulation: d3.Simulation<GraphNode, GraphLink> | null = null;
 
+// UUID of the dataset the graph was last rendered for (to decide whether to
+// preserve the user's zoom/pan state across re-renders)
+let lastRenderedUuid: string | null = null;
+
 const currentDataset = computed(() => store.current_dataset);
 
 // Reset dependency keys to defaults
@@ -208,20 +224,29 @@ function resetDependencyKeys(): void {
 const hasConnections = computed(() => {
   if (graphData.value.length <= 1) return false;
   // Check if any dataset has derived_from connections
-  return graphData.value.some(d => d.derived_from && d.derived_from.length > 0);
+  return graphData.value.some(
+    (d) => d.derived_from && d.derived_from.length > 0,
+  );
 });
 
 // Watch for dataset changes
-watch(() => currentDataset.value?.uuid, async (newUuid) => {
-  if (newUuid) {
-    await loadGraph();
-  }
-}, { immediate: true });
+watch(
+  () => currentDataset.value?.uuid,
+  async (newUuid) => {
+    if (newUuid) {
+      await loadGraph();
+    }
+  },
+  { immediate: true },
+);
 
 // Watch for when the graph container becomes available (tab becomes visible)
-watch([graphContainer, svgElement], ([container, svg]) => {
+watch([graphContainer, svgElement], ([container, svg], [oldContainer]) => {
+  if (resizeObserver && container !== oldContainer) {
+    if (oldContainer) resizeObserver.unobserve(oldContainer);
+    if (container) resizeObserver.observe(container);
+  }
   if (container && svg && graphData.value.length > 0) {
-    console.log("Container/SVG now available, rendering graph");
     renderGraph();
   }
 });
@@ -235,29 +260,43 @@ async function loadGraph(): Promise<void> {
 
   try {
     // Pass custom dependency keys if they differ from defaults or if explicitly set
-    const keysToUse = dependencyKeys.value.length > 0 ? dependencyKeys.value : undefined;
-    graphData.value = await dserverApi.getDependencyGraph(uuid, keysToUse);
-    console.log("Graph data loaded:", graphData.value);
-    console.log("Has connections:", hasConnections.value);
-    console.log("Using dependency keys:", keysToUse);
+    const keysToUse =
+      dependencyKeys.value.length > 0 ? dependencyKeys.value : undefined;
+    const data = await dserverApi.getDependencyGraph(uuid, keysToUse);
+    // Bail out if the current dataset changed while the request was in flight
+    if (currentDataset.value?.uuid !== uuid) return;
+    graphData.value = data;
     await nextTick();
+    if (currentDataset.value?.uuid !== uuid) return;
     renderGraph();
   } catch (err) {
+    if (currentDataset.value?.uuid !== uuid) return;
     console.error("Failed to load dependency graph:", err);
     error.value = "Failed to load dependency graph";
     graphData.value = [];
   } finally {
-    loading.value = false;
+    if (currentDataset.value?.uuid === uuid) {
+      loading.value = false;
+    }
   }
 }
 
 function renderGraph(): void {
-  console.log("renderGraph called", {
-    svgElement: svgElement.value,
-    graphContainer: graphContainer.value,
-    dataLength: graphData.value.length
-  });
-  if (!svgElement.value || !graphContainer.value || graphData.value.length === 0) return;
+  if (
+    !svgElement.value ||
+    !graphContainer.value ||
+    graphData.value.length === 0
+  )
+    return;
+
+  // Preserve zoom/pan state when re-rendering the same graph (e.g. on resize);
+  // reset to identity when rendering a new dataset
+  const currentUuid = currentDataset.value?.uuid;
+  const previousTransform =
+    lastRenderedUuid === currentUuid
+      ? d3.zoomTransform(svgElement.value)
+      : d3.zoomIdentity;
+  lastRenderedUuid = currentUuid ?? null;
 
   // Clear previous graph
   d3.select(svgElement.value).selectAll("*").remove();
@@ -266,15 +305,16 @@ function renderGraph(): void {
   const container = graphContainer.value;
   const width = container.clientWidth;
   const height = Math.max(400, container.clientHeight);
-  console.log("Container dimensions:", { width, height });
 
-  const svg = d3.select(svgElement.value)
+  const svg = d3
+    .select(svgElement.value)
     .attr("width", width)
     .attr("height", height)
     .attr("viewBox", [0, 0, width, height]);
 
   // Create zoom behavior
-  const zoom = d3.zoom<SVGSVGElement, unknown>()
+  const zoom = d3
+    .zoom<SVGSVGElement, unknown>()
     .scaleExtent([0.1, 4])
     .on("zoom", (event) => {
       g.attr("transform", event.transform);
@@ -285,12 +325,16 @@ function renderGraph(): void {
   // Create container group for zoom/pan
   const g = svg.append("g");
 
+  // Re-apply the previous zoom/pan state (identity for a new dataset)
+  svg.call(zoom.transform, previousTransform);
+
   // Define arrow marker for directed edges
   const defs = svg.append("defs");
-  defs.append("marker")
+  defs
+    .append("marker")
     .attr("id", "arrowhead")
     .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 20)  // Position relative to target node (accounting for radius ~15)
+    .attr("refX", 20) // Position relative to target node (accounting for radius ~15)
     .attr("refY", 0)
     .attr("orient", "auto")
     .attr("markerWidth", 8)
@@ -302,8 +346,7 @@ function renderGraph(): void {
     .attr("stroke", "none");
 
   // Build nodes and links
-  const currentUuid = currentDataset.value?.uuid;
-  const nodes: GraphNode[] = graphData.value.map(d => ({
+  const nodes: GraphNode[] = graphData.value.map((d) => ({
     id: d.uuid,
     uuid: d.uuid,
     name: d.name,
@@ -317,17 +360,17 @@ function renderGraph(): void {
     isCurrent: d.uuid === currentUuid,
   }));
 
-  const nodeMap = new Map(nodes.map(n => [n.uuid, n]));
+  const nodeMap = new Map(nodes.map((n) => [n.uuid, n]));
   const links: GraphLink[] = [];
 
   // Build directed links from derived_from relationships
   // Arrow points from source (parent) to target (derived dataset)
   // Note: derived_from contains UUID strings, not objects
-  graphData.value.forEach(dataset => {
+  graphData.value.forEach((dataset) => {
     if (dataset.derived_from) {
-      dataset.derived_from.forEach(depUuid => {
+      dataset.derived_from.forEach((depUuid) => {
         // depUuid is a string (the parent dataset's UUID)
-        if (typeof depUuid === 'string' && nodeMap.has(depUuid)) {
+        if (typeof depUuid === "string" && nodeMap.has(depUuid)) {
           links.push({
             source: depUuid,
             target: dataset.uuid,
@@ -337,25 +380,23 @@ function renderGraph(): void {
     }
   });
 
-  console.log("Nodes:", nodes);
-  console.log("Links:", links);
-  console.log("Raw graph data derived_from fields:", JSON.stringify(graphData.value.map(d => ({
-    name: d.name,
-    uuid: d.uuid,
-    derived_from: d.derived_from
-  })), null, 2));
-
   // Create simulation
-  simulation = d3.forceSimulation<GraphNode>(nodes)
-    .force("link", d3.forceLink<GraphNode, GraphLink>(links)
-      .id(d => d.id)
-      .distance(150))
+  simulation = d3
+    .forceSimulation<GraphNode>(nodes)
+    .force(
+      "link",
+      d3
+        .forceLink<GraphNode, GraphLink>(links)
+        .id((d) => d.id)
+        .distance(150),
+    )
     .force("charge", d3.forceManyBody().strength(-400))
     .force("center", d3.forceCenter(width / 2, height / 2))
     .force("collision", d3.forceCollide().radius(50));
 
   // Draw links
-  const link = g.append("g")
+  const link = g
+    .append("g")
     .attr("class", "links")
     .selectAll("line")
     .data(links)
@@ -366,7 +407,8 @@ function renderGraph(): void {
     .attr("marker-end", "url(#arrowhead)");
 
   // Draw nodes
-  const node = g.append("g")
+  const node = g
+    .append("g")
     .attr("class", "nodes")
     .selectAll<SVGGElement, GraphNode>("g")
     .data(nodes)
@@ -375,16 +417,18 @@ function renderGraph(): void {
     .call(drag(simulation));
 
   // Node circles
-  node.append("circle")
-    .attr("r", d => d.isCurrent ? 20 : 15)
-    .attr("fill", d => d.isCurrent ? "#1976D2" : "#42A5F5")
-    .attr("stroke", d => d.isCurrent ? "#0D47A1" : "#1976D2")
-    .attr("stroke-width", d => d.isCurrent ? 3 : 2)
+  node
+    .append("circle")
+    .attr("r", (d) => (d.isCurrent ? 20 : 15))
+    .attr("fill", (d) => (d.isCurrent ? "#1976D2" : "#42A5F5"))
+    .attr("stroke", (d) => (d.isCurrent ? "#0D47A1" : "#1976D2"))
+    .attr("stroke-width", (d) => (d.isCurrent ? 3 : 2))
     .style("cursor", "pointer");
 
   // Node labels
-  node.append("text")
-    .text(d => truncateName(d.name, 15))
+  node
+    .append("text")
+    .text((d) => truncateName(d.name, 15))
     .attr("dy", 35)
     .attr("text-anchor", "middle")
     .attr("font-size", "11px")
@@ -403,40 +447,27 @@ function renderGraph(): void {
       hoveredNode.value = null;
     })
     .on("click", (event, d) => {
-      console.log("Node clicked:", d);
       if (!d.isCurrent) {
-        console.log("Emitting select-dataset", d.uuid, d.uri);
         emit("select-dataset", d.uuid, d.uri);
       }
     });
 
   // Update positions on tick
-  let tickCount = 0;
   simulation.on("tick", () => {
-    if (tickCount === 0) {
-      console.log("First tick - link data:", links.map(l => ({
-        source: (l.source as GraphNode).uuid,
-        target: (l.target as GraphNode).uuid,
-        x1: (l.source as GraphNode).x,
-        y1: (l.source as GraphNode).y,
-        x2: (l.target as GraphNode).x,
-        y2: (l.target as GraphNode).y,
-      })));
-    }
-    tickCount++;
-
     link
-      .attr("x1", d => (d.source as GraphNode).x!)
-      .attr("y1", d => (d.source as GraphNode).y!)
-      .attr("x2", d => (d.target as GraphNode).x!)
-      .attr("y2", d => (d.target as GraphNode).y!);
+      .attr("x1", (d) => (d.source as GraphNode).x!)
+      .attr("y1", (d) => (d.source as GraphNode).y!)
+      .attr("x2", (d) => (d.target as GraphNode).x!)
+      .attr("y2", (d) => (d.target as GraphNode).y!);
 
-    node.attr("transform", d => `translate(${d.x},${d.y})`);
+    node.attr("transform", (d) => `translate(${d.x},${d.y})`);
   });
 }
 
 function drag(sim: d3.Simulation<GraphNode, GraphLink>) {
-  function dragstarted(event: d3.D3DragEvent<SVGGElement, GraphNode, GraphNode>) {
+  function dragstarted(
+    event: d3.D3DragEvent<SVGGElement, GraphNode, GraphNode>,
+  ) {
     if (!event.active) sim.alphaTarget(0.3).restart();
     event.subject.fx = event.subject.x;
     event.subject.fy = event.subject.y;
@@ -453,7 +484,8 @@ function drag(sim: d3.Simulation<GraphNode, GraphLink>) {
     event.subject.fy = null;
   }
 
-  return d3.drag<SVGGElement, GraphNode>()
+  return d3
+    .drag<SVGGElement, GraphNode>()
     .on("start", dragstarted)
     .on("drag", dragged)
     .on("end", dragended);
@@ -476,7 +508,7 @@ function truncateName(name: string, maxLength: number): string {
 }
 
 function formatDate(timestamp: number): string {
-  return moment.unix(timestamp).format("YYYY-MM-DD HH:mm");
+  return formatDateTime(timestamp);
 }
 
 function filesize(bytes: number): string {
@@ -487,12 +519,12 @@ function filesize(bytes: number): string {
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
+  resizeObserver = new ResizeObserver(() => {
+    if (graphData.value.length > 0) {
+      renderGraph();
+    }
+  });
   if (graphContainer.value) {
-    resizeObserver = new ResizeObserver(() => {
-      if (graphData.value.length > 0) {
-        renderGraph();
-      }
-    });
     resizeObserver.observe(graphContainer.value);
   }
 });
@@ -530,7 +562,7 @@ onUnmounted(() => {
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   pointer-events: none;
   z-index: 1000;
   min-width: 200px;
@@ -540,7 +572,7 @@ onUnmounted(() => {
   font-weight: 600;
   font-size: 14px;
   margin-bottom: 8px;
-  color: #1976D2;
+  color: #1976d2;
   word-break: break-word;
 }
 
@@ -576,13 +608,13 @@ onUnmounted(() => {
 }
 
 .legend-node.current {
-  background-color: #1976D2;
-  border: 2px solid #0D47A1;
+  background-color: #1976d2;
+  border: 2px solid #0d47a1;
 }
 
 .legend-node.related {
-  background-color: #42A5F5;
-  border: 2px solid #1976D2;
+  background-color: #42a5f5;
+  border: 2px solid #1976d2;
 }
 
 .legend-arrow {

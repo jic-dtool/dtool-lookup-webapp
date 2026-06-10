@@ -4,10 +4,13 @@
     <template v-if="isInitializing">
       <v-main class="d-flex align-center justify-center bg-grey-lighten-4">
         <v-card class="pa-8 text-center" max-width="400">
-          <v-progress-circular indeterminate color="primary" size="64" class="mb-4" />
-          <p class="text-body-1 text-grey-darken-1">
-            Connecting to server...
-          </p>
+          <v-progress-circular
+            indeterminate
+            color="primary"
+            size="64"
+            class="mb-4"
+          />
+          <p class="text-body-1 text-grey-darken-1">Connecting to server...</p>
         </v-card>
       </v-main>
     </template>
@@ -23,7 +26,9 @@
             Server Unavailable
           </h1>
           <v-alert type="error" variant="tonal" class="mb-4">
-            {{ serverHealth.errorMessage || "Unable to connect to the dserver." }}
+            {{
+              serverHealth.errorMessage || "Unable to connect to the dserver."
+            }}
           </v-alert>
           <p class="text-body-2 text-grey-darken-1 mb-4">
             The dtool lookup server is not responding. This could be due to:
@@ -60,10 +65,7 @@
     <template v-else>
       <!-- App Bar -->
       <v-app-bar color="grey-lighten-3" elevation="2">
-        <v-app-bar-nav-icon
-          class="d-md-none"
-          @click="drawer = !drawer"
-        />
+        <v-app-bar-nav-icon class="d-md-none" @click="drawer = !drawer" />
 
         <v-avatar size="36" class="ml-2 mr-2">
           <v-img src="/icons/128x128/dtool_logo.png" alt="dtool Logo" />
@@ -98,23 +100,17 @@
       </v-app-bar>
 
       <!-- Navigation Drawer for mobile -->
-      <v-navigation-drawer
-        v-model="drawer"
-        temporary
-        class="d-md-none"
-      >
-        <SummaryInfo
-          :auth_str="auth_str"
-          :lookup_url="lookup_url"
-          :token="auth.token || ''"
-          @start-search="searchDatasets"
-        />
+      <v-navigation-drawer v-model="drawer" temporary class="d-md-none">
+        <SummaryInfo @start-search="searchDatasets" />
       </v-navigation-drawer>
 
       <!-- Main Content -->
       <v-main class="bg-grey-lighten-4">
         <!-- User Management View (Admin Only) -->
-        <div v-if="currentView === 'users' && auth.isAdmin" class="pa-4 fill-height">
+        <div
+          v-if="currentView === 'users' && auth.isAdmin"
+          class="pa-4 fill-height"
+        >
           <UserManagement />
         </div>
 
@@ -122,28 +118,37 @@
         <div v-else class="main-layout pa-4">
           <!-- Left Sidebar - Navigation Rail (hidden on mobile, shown on md+) -->
           <div class="nav-column d-none d-md-flex">
-            <v-card class="fill-height overflow-auto" variant="flat" rounded="lg">
-              <SummaryInfo
-                :auth_str="auth_str"
-                :lookup_url="lookup_url"
-                :token="auth.token || ''"
-                @start-search="searchDatasets"
-              />
+            <v-card
+              class="fill-height overflow-auto"
+              variant="flat"
+              rounded="lg"
+            >
+              <SummaryInfo @start-search="searchDatasets" />
             </v-card>
           </div>
 
           <!-- Middle Column - Dataset List -->
           <div class="list-column">
-            <v-card class="fill-height d-flex flex-column" variant="elevated" rounded="lg">
+            <v-card
+              class="fill-height d-flex flex-column"
+              variant="elevated"
+              rounded="lg"
+            >
               <!-- Loading State -->
-              <div v-if="searchLoading" class="d-flex justify-center align-center flex-grow-1">
+              <div
+                v-if="searchLoading"
+                class="d-flex justify-center align-center flex-grow-1"
+              >
                 <v-progress-circular indeterminate color="primary" size="48" />
               </div>
 
               <!-- Error State -->
               <div v-else-if="searchErrored" class="pa-4">
                 <v-alert type="error" class="mb-4">
-                  {{ searchErrorMessage || "Unable to load datasets please try again." }}
+                  {{
+                    searchErrorMessage ||
+                    "Unable to load datasets please try again."
+                  }}
                 </v-alert>
                 <v-btn color="secondary" class="mr-2" @click="searchDatasets()">
                   Try again
@@ -162,7 +167,6 @@
                 <div class="flex-grow-1 overflow-auto">
                   <DatasetTable
                     :datasetHits="datasetHits"
-                    :responseheaders="responseheaders"
                     @update-dataset="updateDataset"
                   />
                 </div>
@@ -183,109 +187,171 @@
 
           <!-- Right Column - Dataset Details -->
           <div v-if="datasetLoaded" class="detail-column">
-            <v-card class="fill-height d-flex flex-column" variant="elevated" rounded="lg">
-                <!-- Card Header - Dataset Title and Metadata (always visible) -->
-                <div class="pa-4 border-b">
-                  <div v-if="manifestLoading" class="d-flex justify-center">
-                    <v-progress-circular indeterminate color="primary" size="24" />
-                  </div>
-                  <div v-else-if="manifestErrored">
-                    <v-alert type="error" density="compact" class="mb-2">
-                      Unable to load manifest please try again.
-                    </v-alert>
-                    <v-btn size="small" color="secondary" class="mr-2" @click="updateManifest()">
-                      Try again
-                    </v-btn>
-                    <v-btn size="small" color="secondary" @click="handleLogout()">
-                      Logout
-                    </v-btn>
-                  </div>
-                  <DatasetHeader v-else />
+            <v-card
+              class="fill-height d-flex flex-column"
+              variant="elevated"
+              rounded="lg"
+            >
+              <!-- Card Header - Dataset Title and Metadata (always visible) -->
+              <div class="pa-4 border-b">
+                <div v-if="manifestLoading" class="d-flex justify-center">
+                  <v-progress-circular
+                    indeterminate
+                    color="primary"
+                    size="24"
+                  />
                 </div>
+                <div v-else-if="manifestErrored">
+                  <v-alert type="error" density="compact" class="mb-2">
+                    Unable to load manifest please try again.
+                  </v-alert>
+                  <v-btn
+                    size="small"
+                    color="secondary"
+                    class="mr-2"
+                    @click="updateManifest()"
+                  >
+                    Try again
+                  </v-btn>
+                  <v-btn size="small" color="secondary" @click="handleLogout()">
+                    Logout
+                  </v-btn>
+                </div>
+                <DatasetHeader v-else />
+              </div>
 
-                <!-- Tabs for Dataset, README and Items -->
-                <v-tabs v-model="detailTab" color="primary" class="border-b">
-                  <v-tab value="dataset">
-                    <v-icon size="small" class="mr-2">mdi-database</v-icon>
-                    Dataset
-                  </v-tab>
-                  <v-tab value="readme">
-                    <v-icon size="small" class="mr-2">mdi-file-document-outline</v-icon>
-                    README
-                  </v-tab>
-                  <v-tab value="items">
-                    <v-icon size="small" class="mr-2">mdi-file-tree</v-icon>
-                    Items
-                    <v-chip v-if="itemCount > 0" size="x-small" variant="tonal" color="primary" class="ml-2">
-                      {{ itemCount }}
-                    </v-chip>
-                  </v-tab>
-                  <v-tab v-if="hasDependencyGraphPlugin" value="dependencies">
-                    <v-icon size="small" class="mr-2">mdi-graph-outline</v-icon>
-                    Dependencies
-                  </v-tab>
-                </v-tabs>
+              <!-- Tabs for Dataset, README and Items -->
+              <v-tabs v-model="detailTab" color="primary" class="border-b">
+                <v-tab value="dataset">
+                  <v-icon size="small" class="mr-2">mdi-database</v-icon>
+                  Dataset
+                </v-tab>
+                <v-tab value="readme">
+                  <v-icon size="small" class="mr-2"
+                    >mdi-file-document-outline</v-icon
+                  >
+                  README
+                </v-tab>
+                <v-tab value="items">
+                  <v-icon size="small" class="mr-2">mdi-file-tree</v-icon>
+                  Items
+                  <v-chip
+                    v-if="itemCount > 0"
+                    size="x-small"
+                    variant="tonal"
+                    color="primary"
+                    class="ml-2"
+                  >
+                    {{ itemCount }}
+                  </v-chip>
+                </v-tab>
+                <v-tab v-if="hasDependencyGraphPlugin" value="dependencies">
+                  <v-icon size="small" class="mr-2">mdi-graph-outline</v-icon>
+                  Dependencies
+                </v-tab>
+              </v-tabs>
 
-                <!-- Tab Content -->
-                <v-tabs-window v-model="detailTab" class="flex-grow-1 overflow-auto">
-                  <!-- Dataset Tab (URI, Tags, Annotations) -->
-                  <v-tabs-window-item value="dataset" class="fill-height">
-                    <div class="pa-4">
-                      <DatasetSummary />
+              <!-- Tab Content -->
+              <v-tabs-window
+                v-model="detailTab"
+                class="flex-grow-1 overflow-auto"
+              >
+                <!-- Dataset Tab (URI, Tags, Annotations) -->
+                <v-tabs-window-item value="dataset" class="fill-height">
+                  <div class="pa-4">
+                    <DatasetSummary />
+                  </div>
+                </v-tabs-window-item>
+
+                <!-- README Tab -->
+                <v-tabs-window-item value="readme" class="fill-height">
+                  <div class="pa-4">
+                    <div
+                      v-if="readmeLoading"
+                      class="d-flex justify-center py-4"
+                    >
+                      <v-progress-circular
+                        indeterminate
+                        color="primary"
+                        size="24"
+                      />
                     </div>
-                  </v-tabs-window-item>
-
-                  <!-- README Tab -->
-                  <v-tabs-window-item value="readme" class="fill-height">
-                    <div class="pa-4">
-                      <div v-if="readmeLoading" class="d-flex justify-center py-4">
-                        <v-progress-circular indeterminate color="primary" size="24" />
-                      </div>
-                      <div v-else-if="readmeErrored">
-                        <v-alert type="error" density="compact" class="mb-2">
-                          Unable to load readme please try again.
-                        </v-alert>
-                        <v-btn size="small" color="secondary" class="mr-2" @click="updateReadme()">
-                          Try again
-                        </v-btn>
-                        <v-btn size="small" color="secondary" @click="handleLogout()">
-                          Logout
-                        </v-btn>
-                      </div>
-                      <Readme v-else :getinfo="getinfo" />
+                    <div v-else-if="readmeErrored">
+                      <v-alert type="error" density="compact" class="mb-2">
+                        Unable to load readme please try again.
+                      </v-alert>
+                      <v-btn
+                        size="small"
+                        color="secondary"
+                        class="mr-2"
+                        @click="updateReadme()"
+                      >
+                        Try again
+                      </v-btn>
+                      <v-btn
+                        size="small"
+                        color="secondary"
+                        @click="handleLogout()"
+                      >
+                        Logout
+                      </v-btn>
                     </div>
-                  </v-tabs-window-item>
+                    <Readme v-else :getinfo="getinfo" />
+                  </div>
+                </v-tabs-window-item>
 
-                  <!-- Items Tab -->
-                  <v-tabs-window-item value="items" class="fill-height">
-                    <div class="pa-4">
-                      <div v-if="manifestLoading" class="d-flex justify-center w-100 py-2">
-                        <v-progress-circular indeterminate color="primary" size="24" />
-                      </div>
-                      <div v-else-if="manifestErrored" class="w-100">
-                        <v-alert type="error" density="compact" class="mb-2">
-                          Unable to load manifest please try again.
-                        </v-alert>
-                        <v-btn size="small" color="secondary" class="mr-2" @click="updateManifest()">
-                          Try again
-                        </v-btn>
-                        <v-btn size="small" color="secondary" @click="handleLogout()">
-                          Logout
-                        </v-btn>
-                      </div>
-                      <Manifest v-else class="w-100" />
+                <!-- Items Tab -->
+                <v-tabs-window-item value="items" class="fill-height">
+                  <div class="pa-4">
+                    <div
+                      v-if="manifestLoading"
+                      class="d-flex justify-center w-100 py-2"
+                    >
+                      <v-progress-circular
+                        indeterminate
+                        color="primary"
+                        size="24"
+                      />
                     </div>
-                  </v-tabs-window-item>
+                    <div v-else-if="manifestErrored" class="w-100">
+                      <v-alert type="error" density="compact" class="mb-2">
+                        Unable to load manifest please try again.
+                      </v-alert>
+                      <v-btn
+                        size="small"
+                        color="secondary"
+                        class="mr-2"
+                        @click="updateManifest()"
+                      >
+                        Try again
+                      </v-btn>
+                      <v-btn
+                        size="small"
+                        color="secondary"
+                        @click="handleLogout()"
+                      >
+                        Logout
+                      </v-btn>
+                    </div>
+                    <Manifest v-else class="w-100" />
+                  </div>
+                </v-tabs-window-item>
 
-                  <!-- Dependencies Tab -->
-                  <v-tabs-window-item v-if="hasDependencyGraphPlugin" value="dependencies" class="fill-height">
-                    <div class="pa-4 fill-height">
-                      <DatasetDependencies @select-dataset="handleDependencyNavigation" />
-                    </div>
-                  </v-tabs-window-item>
-                </v-tabs-window>
-              </v-card>
-            </div>
+                <!-- Dependencies Tab -->
+                <v-tabs-window-item
+                  v-if="hasDependencyGraphPlugin"
+                  value="dependencies"
+                  class="fill-height"
+                >
+                  <div class="pa-4 fill-height">
+                    <DatasetDependencies
+                      @select-dataset="handleDependencyNavigation"
+                    />
+                  </div>
+                </v-tabs-window-item>
+              </v-tabs-window>
+            </v-card>
+          </div>
         </div>
       </v-main>
     </template>
@@ -296,7 +362,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, getCurrentInstance, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
+import axios from "axios";
 import SignIn from "./components/SignIn.vue";
 import SummaryInfo from "./components/SummaryInfo.vue";
 import TextSearch from "./components/TextSearch.vue";
@@ -314,23 +381,13 @@ import { useStore } from "./store";
 import { useAuthStore } from "./stores/auth";
 import { useServerHealthStore } from "./stores/serverHealth";
 import { dserverApi } from "./services/dserverApi";
-import type {
-  DatasetEntry,
-  SearchQuery as DServerSearchQuery,
-} from "./services/dserverApi";
-import type {
-  Dataset,
-  ConfigInfo,
-  ResponseHeaders,
-} from "./types";
+import type { SearchQuery as DServerSearchQuery } from "./services/dserverApi";
+import type { Dataset, ConfigInfo } from "./types";
 
 // Stores
 const store = useStore();
 const auth = useAuthStore();
 const serverHealth = useServerHealthStore();
-
-const instance = getCurrentInstance();
-const axios = instance?.appContext.config.globalProperties.$http;
 
 // App initialization state
 const isInitializing = ref(true);
@@ -350,7 +407,6 @@ const tagsErrored = ref(false);
 const annotationsLoading = ref(false);
 const annotationsErrored = ref(false);
 const lookup_url = dserverApi.getBaseUrl();
-const responseheaders = ref<ResponseHeaders>({});
 const getinfo = ref<ConfigInfo>({ versions: {} });
 const detailTab = ref<string>("dataset");
 const currentView = ref<"datasets" | "users">("datasets");
@@ -362,7 +418,12 @@ interface PaginationInfo {
   pages: number;
 }
 
-const paginationInfo = ref<PaginationInfo>({ total: 0, page: 1, per_page: 10, pages: 1 });
+const paginationInfo = ref<PaginationInfo>({
+  total: 0,
+  page: 1,
+  per_page: 10,
+  pages: 1,
+});
 
 // Computed properties
 const datasetLoaded = computed<Dataset | null>(() => {
@@ -376,10 +437,6 @@ const current_dataset = computed<Dataset | undefined>(() => {
 // For backward compatibility with mongo search (still uses axios)
 const mongoSearchURL = computed(() => {
   return lookup_url + "/mongo/query";
-});
-
-const auth_str = computed(() => {
-  return "Bearer ".concat(auth.token || "");
 });
 
 const searchQuery = computed<DServerSearchQuery>(() => {
@@ -413,16 +470,20 @@ const uriQuery = computed<{ uri: string | null }>(() => {
 });
 
 const totalPages = computed(() => {
-  if (paginationInfo.value.total && store.update_current_Per_Page) {
+  // Prefer the page count reported by the server.
+  if (paginationInfo.value.pages) {
+    return paginationInfo.value.pages;
+  }
+  if (paginationInfo.value.total && paginationInfo.value.per_page) {
     return Math.ceil(
-      paginationInfo.value.total / store.update_current_Per_Page
+      paginationInfo.value.total / paginationInfo.value.per_page,
     );
   }
   return 1;
 });
 
 const shouldShowPagination = computed(() => {
-  return paginationInfo.value.total > store.update_current_Per_Page;
+  return paginationInfo.value.total > paginationInfo.value.per_page;
 });
 
 const safeMongoPlugin = computed(() => {
@@ -430,7 +491,7 @@ const safeMongoPlugin = computed(() => {
 });
 
 const hasDependencyGraphPlugin = computed(() => {
-  return !!(getinfo.value.versions.dserver_dependency_graph_plugin);
+  return !!getinfo.value.versions.dserver_dependency_graph_plugin;
 });
 
 const itemCount = computed(() => {
@@ -450,24 +511,36 @@ const currentPage = computed({
   },
 });
 
+// Monotonically increasing id used to discard stale search responses when
+// several searches are in flight (there is no request cancellation).
+let searchSequence = 0;
+
 // Methods
 function onPageChange(): void {
   searchDatasets();
 }
 
+function isAuthenticationError(error: unknown): boolean {
+  const err = error as {
+    status?: number;
+    response?: { status?: number };
+    name?: string;
+  };
+  const status = err.status || err.response?.status;
+  return status === 401 || err.name === "AuthenticationError";
+}
+
 async function searchDatasets(): Promise<void> {
   getconfiginfo();
-  console.log(getinfo.value);
 
-  console.log("Running search");
-  console.log(searchQuery.value);
+  const sequence = ++searchSequence;
+
   store.updateCurrentDatasetIndex(0);
   store.updateCurrentDataset(null);
   store.updateCurrentDatasetManifest(null);
   store.updateCurrentDatasetReadme(null);
   store.updateCurrentDatasetTags(null);
   store.updateCurrentDatasetAnnotations(null);
-  updateDataset();
   searchLoading.value = true;
   searchErrored.value = false;
 
@@ -478,24 +551,37 @@ async function searchDatasets(): Promise<void> {
         mongoSearchURL.value,
         { query: JSON.parse(store.mongo_text) },
         {
+          params: {
+            page: store.current_pageNumber,
+            page_size: store.update_current_Per_Page,
+          },
           headers: {
-            Authorization: auth_str.value,
+            Authorization: `Bearer ${auth.token || ""}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
+      if (sequence !== searchSequence) return;
       datasetHits.value = response.data;
       const paginationHeader = response.headers["x-pagination"];
       paginationInfo.value = paginationHeader
         ? JSON.parse(paginationHeader)
-        : { total: response.data.length, page: 1, per_page: response.data.length, pages: 1 };
+        : {
+            total: response.data.length,
+            page: 1,
+            per_page: response.data.length,
+            pages: 1,
+          };
       store.updateCurrentDataset(current_dataset.value ?? null);
       store.updateNumFiltered(paginationInfo.value.total);
       updateDataset();
     } catch (error) {
+      if (sequence !== searchSequence) return;
       handleSearchError(error);
     } finally {
-      searchLoading.value = false;
+      if (sequence === searchSequence) {
+        searchLoading.value = false;
+      }
     }
     return;
   }
@@ -508,30 +594,32 @@ async function searchDatasets(): Promise<void> {
       sort: store.selected_sort_option,
     });
 
+    if (sequence !== searchSequence) return;
     datasetHits.value = result.data as Dataset[];
     paginationInfo.value = result.pagination;
     store.updateCurrentDataset(current_dataset.value ?? null);
     store.updateNumFiltered(result.pagination.total);
     updateDataset();
   } catch (error) {
+    if (sequence !== searchSequence) return;
     handleSearchError(error);
   } finally {
-    searchLoading.value = false;
+    if (sequence === searchSequence) {
+      searchLoading.value = false;
+    }
   }
 }
 
 function handleSearchError(error: unknown): void {
-  console.log(error);
-  const err = error as { status?: number; response?: { status?: number }; name?: string };
+  const err = error as { status?: number; response?: { status?: number } };
   const status = err.status || err.response?.status;
-  const isAuthError = status === 401 || err.name === "AuthenticationError";
 
-  if (isAuthError) {
-    console.log("401 Unauthorized - User not authenticated or not registered");
+  if (isAuthenticationError(error)) {
     // Auth store will handle this - logout the user
     auth.logout();
-  } else if (status === 404) {
-    console.log("404 Not Found - Resetting pageNumber and retrying");
+  } else if (status === 404 && store.current_pageNumber > 1) {
+    // Out-of-range page (e.g. after changing the page size): retry once
+    // from the first page. Only when not already there, to avoid a loop.
     store.current_pageNumber = 1;
     searchDatasets();
   } else {
@@ -547,23 +635,23 @@ function updateDataset(): void {
   updateTags();
 }
 
-async function handleDependencyNavigation(uuid: string, uri: string): Promise<void> {
+async function handleDependencyNavigation(uuid: string): Promise<void> {
   // Navigate to a dataset from the dependency graph
   // Keep the Dependencies tab open so user can continue exploring the graph
-  console.log("handleDependencyNavigation called:", { uuid, uri });
+  const sequence = ++searchSequence;
   try {
     // Search using free text with the UUID to find the dataset
     const result = await dserverApi.searchDatasets({ free_text: uuid });
-    console.log("Search result:", result);
+    if (sequence !== searchSequence) return;
     if (result.data.length > 0) {
       // Find the exact match by UUID
-      const exactMatch = result.data.find(d => d.uuid === uuid);
+      const exactMatch = result.data.find((d) => d.uuid === uuid);
       const dataset = exactMatch || result.data[0];
 
       datasetHits.value = result.data as Dataset[];
       paginationInfo.value = result.pagination;
 
-      const datasetIndex = result.data.findIndex(d => d.uuid === uuid);
+      const datasetIndex = result.data.findIndex((d) => d.uuid === uuid);
       store.updateCurrentDatasetIndex(datasetIndex >= 0 ? datasetIndex : 0);
       store.updateCurrentDataset(dataset as Dataset);
       store.updateNumFiltered(result.pagination.total);
@@ -575,14 +663,20 @@ async function handleDependencyNavigation(uuid: string, uri: string): Promise<vo
   }
 }
 
+/**
+ * True while the response for `uri` is still the one the UI is waiting for.
+ * Late responses for a previously selected dataset are discarded.
+ */
+function isCurrentUri(uri: string): boolean {
+  return store.current_dataset?.uri === uri || uriQuery.value.uri === uri;
+}
+
 async function updateManifest(): Promise<void> {
-  console.log("Loading manifest");
   manifestLoading.value = true;
   manifestErrored.value = false;
 
   const uri = uriQuery.value.uri;
   if (!uri) {
-    console.log("No URI available for manifest.");
     manifestErrored.value = true;
     manifestLoading.value = false;
     return;
@@ -590,23 +684,28 @@ async function updateManifest(): Promise<void> {
 
   try {
     const manifest = await dserverApi.getManifest(uri);
+    if (!isCurrentUri(uri)) return;
     store.updateCurrentDatasetManifest(manifest);
   } catch (error) {
-    console.log(error);
+    if (!isCurrentUri(uri)) return;
+    if (isAuthenticationError(error)) {
+      auth.logout();
+      return;
+    }
     manifestErrored.value = true;
   } finally {
-    manifestLoading.value = false;
+    if (isCurrentUri(uri)) {
+      manifestLoading.value = false;
+    }
   }
 }
 
 async function updateReadme(): Promise<void> {
-  console.log("Loading readme");
   readmeLoading.value = true;
   readmeErrored.value = false;
 
   const uri = uriQuery.value.uri;
   if (!uri) {
-    console.log("No URI available for readme.");
     readmeErrored.value = true;
     readmeLoading.value = false;
     return;
@@ -614,23 +713,28 @@ async function updateReadme(): Promise<void> {
 
   try {
     const readme = await dserverApi.getReadme(uri);
+    if (!isCurrentUri(uri)) return;
     store.updateCurrentDatasetReadme(readme);
   } catch (error) {
-    console.log(error);
+    if (!isCurrentUri(uri)) return;
+    if (isAuthenticationError(error)) {
+      auth.logout();
+      return;
+    }
     readmeErrored.value = true;
   } finally {
-    readmeLoading.value = false;
+    if (isCurrentUri(uri)) {
+      readmeLoading.value = false;
+    }
   }
 }
 
 async function updateAnnotations(): Promise<void> {
-  console.log("Loading annotations");
   annotationsLoading.value = true;
   annotationsErrored.value = false;
 
   const uri = uriQuery.value.uri;
   if (!uri) {
-    console.log("No URI available for annotations.");
     annotationsErrored.value = true;
     annotationsLoading.value = false;
     return;
@@ -638,23 +742,28 @@ async function updateAnnotations(): Promise<void> {
 
   try {
     const annotations = await dserverApi.getAnnotations(uri);
+    if (!isCurrentUri(uri)) return;
     store.updateCurrentDatasetAnnotations(annotations);
   } catch (error) {
-    console.log(error);
+    if (!isCurrentUri(uri)) return;
+    if (isAuthenticationError(error)) {
+      auth.logout();
+      return;
+    }
     annotationsErrored.value = true;
   } finally {
-    annotationsLoading.value = false;
+    if (isCurrentUri(uri)) {
+      annotationsLoading.value = false;
+    }
   }
 }
 
 async function updateTags(): Promise<void> {
-  console.log("Loading tags");
   tagsLoading.value = true;
   tagsErrored.value = false;
 
   const uri = uriQuery.value.uri;
   if (!uri) {
-    console.log("No URI available for tags.");
     tagsErrored.value = true;
     tagsLoading.value = false;
     return;
@@ -662,18 +771,23 @@ async function updateTags(): Promise<void> {
 
   try {
     const tags = await dserverApi.getTags(uri);
+    if (!isCurrentUri(uri)) return;
     store.updateCurrentDatasetTags(tags);
   } catch (error) {
-    console.error(error);
+    if (!isCurrentUri(uri)) return;
+    if (isAuthenticationError(error)) {
+      auth.logout();
+      return;
+    }
     tagsErrored.value = true;
   } finally {
-    tagsLoading.value = false;
+    if (isCurrentUri(uri)) {
+      tagsLoading.value = false;
+    }
   }
 }
 
 async function getconfiginfo(): Promise<void> {
-  console.log("Loading ConfigInfo");
-
   // Store the lookup URL in the store for components to use
   store.updateLookupUrl(lookup_url);
 
@@ -682,7 +796,7 @@ async function getconfiginfo(): Promise<void> {
     getinfo.value = { versions };
     store.updateServerVersions(versions);
   } catch (error) {
-    console.log(error);
+    console.error("Failed to load server versions:", error);
   }
 }
 
@@ -696,9 +810,11 @@ function handleLogout(): void {
 async function retryServerConnection(): Promise<void> {
   const healthy = await serverHealth.checkHealth();
   if (healthy) {
-    serverHealth.startPolling();
-    // Re-initialize auth if server is back
-    await auth.initialize();
+    // Re-initialize auth only if the session was not restored already;
+    // re-running login on an intact session is unnecessary.
+    if (!auth.isAuthenticated) {
+      await auth.initialize();
+    }
     isInitializing.value = false;
   }
 }
@@ -711,7 +827,7 @@ watch(
       // User just logged in, start search
       searchDatasets();
     }
-  }
+  },
 );
 
 // Initialize the app
@@ -724,15 +840,11 @@ onMounted(async () => {
     return;
   }
 
-  // Then initialize auth (will check for existing token or OAuth2 callback)
+  // Then initialize auth (will check for existing token or OAuth2 callback).
+  // The isAuthenticated watcher above triggers the initial search.
   await auth.initialize();
 
   isInitializing.value = false;
-
-  // If already authenticated, start search
-  if (auth.isAuthenticated) {
-    searchDatasets();
-  }
 });
 </script>
 

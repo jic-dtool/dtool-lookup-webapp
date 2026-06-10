@@ -2,9 +2,7 @@
   <div class="readme-section">
     <!-- Header with Edit button -->
     <div class="d-flex align-center justify-space-between mb-3">
-      <div class="text-body-2 text-medium-emphasis">
-        Dataset README (YAML)
-      </div>
+      <div class="text-body-2 text-medium-emphasis">Dataset README (YAML)</div>
       <!-- Edit button - shows inline editor if valid YAML, otherwise shows dtool command -->
       <v-btn
         v-if="isValidYaml && getReadmeContent"
@@ -14,9 +12,13 @@
         :prepend-icon="isEditing ? 'mdi-close' : 'mdi-pencil'"
         @click="toggleEdit"
       >
-        {{ isEditing ? 'Cancel' : 'Edit' }}
+        {{ isEditing ? "Cancel" : "Edit" }}
       </v-btn>
-      <v-menu v-else-if="getReadmeContent" location="bottom end" :close-on-content-click="false">
+      <v-menu
+        v-else-if="getReadmeContent"
+        location="bottom end"
+        :close-on-content-click="false"
+      >
         <template #activator="{ props }">
           <v-btn
             v-bind="props"
@@ -70,12 +72,7 @@
         @update:model-value="validateYaml"
       />
       <div class="d-flex justify-end mt-2 gap-2">
-        <v-btn
-          size="small"
-          variant="tonal"
-          color="grey"
-          @click="cancelEdit"
-        >
+        <v-btn size="small" variant="tonal" color="grey" @click="cancelEdit">
           Cancel
         </v-btn>
         <v-btn
@@ -98,7 +95,9 @@
 
     <!-- Empty state -->
     <div v-else class="text-center py-8 text-medium-emphasis">
-      <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-file-document-outline</v-icon>
+      <v-icon size="48" color="grey-lighten-1" class="mb-2"
+        >mdi-file-document-outline</v-icon
+      >
       <p class="text-body-2">No README content</p>
     </div>
   </div>
@@ -107,20 +106,19 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { useStore } from "@/store";
+import { useNotificationStore } from "@/stores/notifications";
 import { dserverApi } from "@/services/dserverApi";
 import * as yaml from "yaml";
 
 const store = useStore();
+const notifications = useNotificationStore();
 const isEditing = ref(false);
 const editedContent = ref("");
 const yamlError = ref<string | null>(null);
 const isSaving = ref(false);
 
 const getReadmeContent = computed<string | null>(() => {
-  if (
-    !store.current_dataset_readme ||
-    !store.current_dataset_readme.readme
-  ) {
+  if (!store.current_dataset_readme || !store.current_dataset_readme.readme) {
     return null;
   }
   return store.current_dataset_readme.readme.trim();
@@ -151,11 +149,14 @@ const edit_command = computed(() => {
 });
 
 // Reset editing state when dataset changes
-watch(() => store.current_dataset?.uri, () => {
-  isEditing.value = false;
-  editedContent.value = "";
-  yamlError.value = null;
-});
+watch(
+  () => store.current_dataset?.uri,
+  () => {
+    isEditing.value = false;
+    editedContent.value = "";
+    yamlError.value = null;
+  },
+);
 
 function toggleEdit(): void {
   if (isEditing.value) {
@@ -193,6 +194,8 @@ async function saveReadme(): Promise<void> {
   isSaving.value = true;
   try {
     const response = await dserverApi.setReadme(uri, editedContent.value);
+    // Ignore the response if the user has switched datasets in the meantime
+    if (store.current_dataset?.uri !== uri) return;
     // Update store with new readme
     store.updateCurrentDatasetReadme(response);
     isEditing.value = false;
@@ -212,9 +215,7 @@ function formatLine(line: string): string {
     .replace(/>/g, "&gt;");
 
   // Match YAML-like patterns: "key: value" or "  key: value"
-  const yamlMatch = escaped.match(
-    /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*):\s*(.*)$/
-  );
+  const yamlMatch = escaped.match(/^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*):\s*(.*)$/);
   if (yamlMatch) {
     const [, indent, key, value] = yamlMatch;
     if (value) {
@@ -244,8 +245,10 @@ function formatLine(line: string): string {
 async function copyToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
+    notifications.success("Copied to clipboard");
   } catch (err) {
     console.error("Failed to copy:", err);
+    notifications.error("Failed to copy to clipboard");
   }
 }
 </script>

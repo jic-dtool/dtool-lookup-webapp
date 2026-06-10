@@ -6,8 +6,9 @@
  */
 
 import { defineStore } from "pinia";
-import { ref, computed, onUnmounted } from "vue";
+import { ref, computed } from "vue";
 import axios from "axios";
+import { serverUrl as configuredServerUrl } from "@/config";
 
 export type ServerStatus =
   | "unknown" // Initial state
@@ -34,9 +35,7 @@ export const useServerHealthStore = defineStore("serverHealth", () => {
   const errorMessage = ref<string | null>(null);
   const consecutiveFailures = ref(0);
   const pollIntervalId = ref<ReturnType<typeof setInterval> | null>(null);
-  const serverUrl = ref<string>(
-    process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "http://localhost:5000"
-  );
+  const serverUrl = ref<string>(configuredServerUrl);
 
   // Computed
   const isHealthy = computed(() => status.value === "healthy");
@@ -80,9 +79,14 @@ export const useServerHealthStore = defineStore("serverHealth", () => {
       lastCheckedAt.value = Date.now();
 
       if (err.code === "ECONNABORTED") {
-        errorMessage.value = "Server health check timed out. The server may be overloaded or unreachable.";
-      } else if (err.code === "ERR_NETWORK" || err.message?.includes("Network Error")) {
-        errorMessage.value = "Unable to connect to the server. Please check your network connection or try again later.";
+        errorMessage.value =
+          "Server health check timed out. The server may be overloaded or unreachable.";
+      } else if (
+        err.code === "ERR_NETWORK" ||
+        err.message?.includes("Network Error")
+      ) {
+        errorMessage.value =
+          "Unable to connect to the server. Please check your network connection or try again later.";
       } else {
         errorMessage.value = `Server health check failed: ${err.message || "Unknown error"}`;
       }
@@ -94,12 +98,17 @@ export const useServerHealthStore = defineStore("serverHealth", () => {
   /**
    * Start periodic health checks
    */
-  function startPolling(interval: number = DEFAULT_POLL_INTERVAL): void {
+  function startPolling(
+    interval: number = DEFAULT_POLL_INTERVAL,
+    immediate = true,
+  ): void {
     // Stop any existing polling
     stopPolling();
 
     // Do an immediate check
-    checkHealth();
+    if (immediate) {
+      checkHealth();
+    }
 
     // Start periodic polling
     pollIntervalId.value = setInterval(() => {
@@ -134,9 +143,9 @@ export const useServerHealthStore = defineStore("serverHealth", () => {
    */
   async function initialize(): Promise<boolean> {
     const healthy = await checkHealth();
-    if (healthy) {
-      startPolling();
-    }
+    // Poll regardless of the first result: polling is most useful while the
+    // server is unhealthy, so recovery is detected without a manual retry.
+    startPolling(DEFAULT_POLL_INTERVAL, false);
     return healthy;
   }
 

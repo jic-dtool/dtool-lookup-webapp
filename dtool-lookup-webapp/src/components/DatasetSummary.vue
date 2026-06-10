@@ -10,7 +10,13 @@
         <template #append>
           <v-menu location="bottom end" :close-on-content-click="false">
             <template #activator="{ props }">
-              <v-btn v-bind="props" size="small" variant="tonal" color="primary" prepend-icon="mdi-content-copy">
+              <v-btn
+                v-bind="props"
+                size="small"
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-content-copy"
+              >
                 Copy
               </v-btn>
             </template>
@@ -55,9 +61,19 @@
         </template>
         <v-card-title class="text-body-2 font-weight-medium">Tags</v-card-title>
         <template #append>
-          <v-menu v-model="addTagMenu" location="bottom end" :close-on-content-click="false">
+          <v-menu
+            v-model="addTagMenu"
+            location="bottom end"
+            :close-on-content-click="false"
+          >
             <template #activator="{ props }">
-              <v-btn v-bind="props" size="small" variant="tonal" color="primary" prepend-icon="mdi-tag-plus">
+              <v-btn
+                v-bind="props"
+                size="small"
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-tag-plus"
+              >
                 Add Tag
               </v-btn>
             </template>
@@ -130,11 +146,23 @@
         <template #prepend>
           <v-icon size="small" color="primary">mdi-tag-text</v-icon>
         </template>
-        <v-card-title class="text-body-2 font-weight-medium">Annotations</v-card-title>
+        <v-card-title class="text-body-2 font-weight-medium"
+          >Annotations</v-card-title
+        >
         <template #append>
-          <v-menu v-model="addAnnotationMenu" location="bottom end" :close-on-content-click="false">
+          <v-menu
+            v-model="addAnnotationMenu"
+            location="bottom end"
+            :close-on-content-click="false"
+          >
             <template #activator="{ props }">
-              <v-btn v-bind="props" size="small" variant="tonal" color="primary" prepend-icon="mdi-plus">
+              <v-btn
+                v-bind="props"
+                size="small"
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-plus"
+              >
                 Add Annotation
               </v-btn>
             </template>
@@ -190,7 +218,11 @@
       </v-card-item>
       <v-card-text class="pt-0">
         <div v-if="annotationEntries.length > 0">
-          <v-list density="compact" class="annotation-list pa-0" bg-color="transparent">
+          <v-list
+            density="compact"
+            class="annotation-list pa-0"
+            bg-color="transparent"
+          >
             <v-list-item
               v-for="([key, value], index) in annotationEntries"
               :key="index"
@@ -198,7 +230,12 @@
               class="annotation-item mb-1 px-2"
             >
               <template #prepend>
-                <v-avatar size="28" color="grey-lighten-3" rounded="lg" class="mr-2">
+                <v-avatar
+                  size="28"
+                  color="grey-lighten-3"
+                  rounded="lg"
+                  class="mr-2"
+                >
                   <v-icon size="12" color="grey-darken-1">mdi-key</v-icon>
                 </v-avatar>
               </template>
@@ -209,7 +246,12 @@
                 {{ formatAnnotationValue(value) }}
               </v-list-item-subtitle>
               <template #append>
-                <v-menu location="start" :close-on-content-click="false">
+                <v-menu
+                  :model-value="editingAnnotationKey === key"
+                  location="start"
+                  :close-on-content-click="false"
+                  @update:model-value="toggleEditMenu(key, $event)"
+                >
                   <template #activator="{ props }">
                     <v-btn
                       v-bind="props"
@@ -223,7 +265,8 @@
                   </template>
                   <v-card min-width="300" rounded="lg">
                     <v-card-text class="text-body-2 pb-2">
-                      Update value for <strong>{{ key }}</strong>:
+                      Update value for <strong>{{ key }}</strong
+                      >:
                     </v-card-text>
                     <v-card-text class="pt-0">
                       <v-text-field
@@ -242,7 +285,7 @@
                         <v-btn
                           size="small"
                           variant="text"
-                          @click="editAnnotationValue = ''"
+                          @click="cancelEditAnnotation"
                         >
                           Cancel
                         </v-btn>
@@ -277,7 +320,6 @@
         </div>
       </v-card-text>
     </v-card>
-
   </div>
 </template>
 
@@ -297,6 +339,7 @@ const addTagMenu = ref(false);
 const newAnnotationKey = ref<string>("");
 const newAnnotationValue = ref<string>("");
 const addAnnotationMenu = ref(false);
+const editingAnnotationKey = ref<string | null>(null);
 const editAnnotationValue = ref<string>("");
 const saving = ref(false);
 
@@ -305,14 +348,9 @@ const dataset = computed<Dataset | null>(() => {
   return store.current_dataset;
 });
 
-const hasSignedUrlPlugin = computed(() => {
-  const versions = store.server_versions;
-  return !!(versions && versions.dserver_signed_url_plugin);
-});
-
 const displayUri = computed(() => {
   if (!dataset.value) return "";
-  if (hasSignedUrlPlugin.value) {
+  if (store.hasSignedUrlPlugin) {
     const lookupUrl = store.lookup_url;
     if (lookupUrl) {
       try {
@@ -339,7 +377,10 @@ const currentTags = computed<string[]>(() => {
 });
 
 const currentAnnotations = computed<Record<string, unknown>>(() => {
-  if (store.current_dataset_annotations && store.current_dataset_annotations.annotations) {
+  if (
+    store.current_dataset_annotations &&
+    store.current_dataset_annotations.annotations
+  ) {
     return store.current_dataset_annotations.annotations;
   }
   return {};
@@ -353,6 +394,22 @@ function formatAnnotationValue(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+// Annotation edit menu state (tracked per key so editors don't share text)
+function toggleEditMenu(key: string, open: boolean): void {
+  if (open) {
+    editingAnnotationKey.value = key;
+    editAnnotationValue.value = "";
+  } else if (editingAnnotationKey.value === key) {
+    editingAnnotationKey.value = null;
+    editAnnotationValue.value = "";
+  }
+}
+
+function cancelEditAnnotation(): void {
+  editingAnnotationKey.value = null;
+  editAnnotationValue.value = "";
 }
 
 async function copyToClipboard(text: string): Promise<void> {
@@ -375,9 +432,11 @@ async function addTag(): Promise<void> {
     return;
   }
 
+  const uri = dataset.value.uri;
   saving.value = true;
   try {
-    const result = await dserverApi.addTag(dataset.value.uri, tagToAdd);
+    const result = await dserverApi.addTag(uri, tagToAdd);
+    if (store.current_dataset?.uri !== uri) return;
     store.updateCurrentDatasetTags(result);
     newTagName.value = "";
     addTagMenu.value = false;
@@ -398,9 +457,11 @@ async function addTag(): Promise<void> {
 async function removeTag(tag: string): Promise<void> {
   if (!dataset.value) return;
 
+  const uri = dataset.value.uri;
   saving.value = true;
   try {
-    const result = await dserverApi.removeTag(dataset.value.uri, tag);
+    const result = await dserverApi.removeTag(uri, tag);
+    if (store.current_dataset?.uri !== uri) return;
     store.updateCurrentDatasetTags(result);
     notifications.success(`Tag "${tag}" removed`);
   } catch (error) {
@@ -429,9 +490,11 @@ async function addAnnotation(): Promise<void> {
     // Keep as string
   }
 
+  const uri = dataset.value.uri;
   saving.value = true;
   try {
-    const result = await dserverApi.setAnnotation(dataset.value.uri, key, value);
+    const result = await dserverApi.setAnnotation(uri, key, value);
+    if (store.current_dataset?.uri !== uri) return;
     store.updateCurrentDatasetAnnotations(result);
     newAnnotationKey.value = "";
     newAnnotationValue.value = "";
@@ -451,7 +514,8 @@ async function addAnnotation(): Promise<void> {
 }
 
 async function updateAnnotation(key: string): Promise<void> {
-  if (!dataset.value || !editAnnotationValue.value) return;
+  // Only save when this key's editor is open; an empty string is a valid value.
+  if (!dataset.value || editingAnnotationKey.value !== key) return;
 
   // Parse value - try JSON first, then use as string
   let value: unknown = editAnnotationValue.value;
@@ -461,11 +525,13 @@ async function updateAnnotation(key: string): Promise<void> {
     // Keep as string
   }
 
+  const uri = dataset.value.uri;
   saving.value = true;
   try {
-    const result = await dserverApi.setAnnotation(dataset.value.uri, key, value);
+    const result = await dserverApi.setAnnotation(uri, key, value);
+    if (store.current_dataset?.uri !== uri) return;
     store.updateCurrentDatasetAnnotations(result);
-    editAnnotationValue.value = "";
+    cancelEditAnnotation();
     notifications.success(`Annotation "${key}" updated`);
   } catch (error) {
     console.error("Failed to update annotation:", error);
@@ -483,9 +549,11 @@ async function updateAnnotation(key: string): Promise<void> {
 async function deleteAnnotation(key: string): Promise<void> {
   if (!dataset.value) return;
 
+  const uri = dataset.value.uri;
   saving.value = true;
   try {
-    const result = await dserverApi.deleteAnnotation(dataset.value.uri, key);
+    const result = await dserverApi.deleteAnnotation(uri, key);
+    if (store.current_dataset?.uri !== uri) return;
     store.updateCurrentDatasetAnnotations(result);
     notifications.success(`Annotation "${key}" deleted`);
   } catch (error) {

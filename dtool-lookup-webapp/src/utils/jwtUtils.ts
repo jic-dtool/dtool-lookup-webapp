@@ -9,7 +9,11 @@ interface JwtPayload {
 
 // This function decodes a JWT token to extract the payload.
 export function decodeJwt(token: string): JwtPayload {
-  const base64Url = token.split(".")[1];
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw new Error("Invalid JWT: expected three dot-separated segments");
+  }
+  const base64Url = parts[1];
   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
   const jsonPayload = decodeURIComponent(
     atob(base64)
@@ -17,14 +21,8 @@ export function decodeJwt(token: string): JwtPayload {
       .map(function (c) {
         return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
       })
-      .join("")
+      .join(""),
   );
 
   return JSON.parse(jsonPayload);
-}
-
-// This function extracts the username (from the 'sub' field) from a decoded JWT token.
-export function getUsernameFromJwt(token: string): string {
-  const decodedToken = decodeJwt(token);
-  return decodedToken.sub; // 'sub' contains the username.
 }

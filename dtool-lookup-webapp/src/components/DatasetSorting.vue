@@ -11,7 +11,7 @@
         density="compact"
         variant="outlined"
         hide-details
-        style="width: 90px;"
+        style="width: 90px"
         @update:model-value="updatePerPage"
       />
     </v-col>
@@ -28,13 +28,15 @@
         density="compact"
         variant="outlined"
         hide-details
-        style="width: 160px;"
+        style="width: 160px"
         class="mr-2"
       />
       <v-btn
         color="primary"
         size="small"
-        :icon="sortDirection === 'asc' ? 'mdi-sort-ascending' : 'mdi-sort-descending'"
+        :icon="
+          sortDirection === 'asc' ? 'mdi-sort-ascending' : 'mdi-sort-descending'
+        "
         @click="toggleSortDirection"
       />
     </v-col>
@@ -95,9 +97,7 @@ const perPageOptions: PerPageOption[] = [
 // Format sortOptions for display in the dropdown
 const formattedOptions = computed<SortOption[]>(() => {
   return sortOptions.map((option) => ({
-    text: option
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (l) => l.toUpperCase()),
+    text: option.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
     value: option,
   }));
 });
@@ -112,6 +112,7 @@ const selectedSortValue = computed(() => {
 // Watch for changes to selectedSortOption
 watch(selectedSortOption, () => {
   store.updateSelectedSortOption(selectedSortValue.value);
+  store.updateCurrentPageNumber(1);
   emit("start-search");
 });
 
@@ -119,11 +120,13 @@ watch(selectedSortOption, () => {
 function toggleSortDirection(): void {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
   store.updateSelectedSortOption(selectedSortValue.value);
+  store.updateCurrentPageNumber(1);
   emit("start-search");
 }
 
 function updatePerPage(perpage: number): void {
   store.updateCurrentPerPage(perpage);
+  store.updateCurrentPageNumber(1);
   emit("start-search");
 }
 </script>

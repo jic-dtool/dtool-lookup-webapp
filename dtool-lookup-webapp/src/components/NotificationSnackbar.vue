@@ -1,51 +1,33 @@
 <template>
   <div class="notification-container">
-    <v-snackbar
-      v-for="notification in notifications"
-      :key="notification.id"
-      :model-value="true"
-      :color="getColor(notification.type)"
-      :timeout="-1"
-      location="bottom right"
-      class="notification-snackbar"
-    >
-      <div class="d-flex align-center">
-        <v-icon :icon="getIcon(notification.type)" class="mr-2" />
+    <v-slide-y-reverse-transition group>
+      <v-alert
+        v-for="notification in notifications"
+        :key="notification.id"
+        :type="notification.type"
+        :icon="getIcon(notification.type)"
+        variant="elevated"
+        density="comfortable"
+        class="notification-alert"
+        closable
+        @click:close="notificationStore.remove(notification.id)"
+      >
         {{ notification.message }}
-      </div>
-      <template #actions>
-        <v-btn
-          variant="text"
-          icon="mdi-close"
-          size="small"
-          @click="notificationStore.remove(notification.id)"
-        />
-      </template>
-    </v-snackbar>
+      </v-alert>
+    </v-slide-y-reverse-transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { useNotificationStore, type NotificationType } from "@/stores/notifications";
+import {
+  useNotificationStore,
+  type NotificationType,
+} from "@/stores/notifications";
 
 const notificationStore = useNotificationStore();
 
 const notifications = computed(() => notificationStore.notifications);
-
-function getColor(type: NotificationType): string {
-  switch (type) {
-    case "success":
-      return "success";
-    case "error":
-      return "error";
-    case "warning":
-      return "warning";
-    case "info":
-    default:
-      return "info";
-  }
-}
 
 function getIcon(type: NotificationType): string {
   switch (type) {
@@ -65,12 +47,19 @@ function getIcon(type: NotificationType): string {
 <style scoped>
 .notification-container {
   position: fixed;
-  bottom: 0;
-  right: 0;
+  bottom: 16px;
+  right: 16px;
   z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 420px;
+  pointer-events: none;
 }
 
-.notification-snackbar {
-  margin-bottom: 8px;
+.notification-alert {
+  pointer-events: auto;
+  width: 100%;
 }
 </style>

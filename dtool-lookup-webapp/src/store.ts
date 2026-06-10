@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import type {
   Dataset,
   Manifest,
@@ -16,7 +16,6 @@ export const useStore = defineStore("main", () => {
   const creator_usernames = ref<string[]>([]);
   const base_uris = ref<string[]>([]);
   const tags = ref<string[]>([]);
-  const username = ref<string | null>(null);
   const current_dataset_index = ref(0);
   const current_dataset = ref<Dataset | null>(null);
   const current_dataset_manifest = ref<Manifest | null>(null);
@@ -29,6 +28,11 @@ export const useStore = defineStore("main", () => {
   const selected_sort_option = ref("-frozen_at");
   const server_versions = ref<ServerVersions>({});
   const lookup_url = ref<string | null>(null);
+
+  // Computed
+  const hasSignedUrlPlugin = computed(
+    () => !!server_versions.value.dserver_signed_url_plugin,
+  );
 
   // Actions
   function updateFreeText(value: string | null) {
@@ -87,10 +91,6 @@ export const useStore = defineStore("main", () => {
     update_current_Per_Page.value = perpage;
   }
 
-  function updateUsername(value: string | null) {
-    username.value = value;
-  }
-
   function updateSelectedSortOption(value: string) {
     selected_sort_option.value = value;
   }
@@ -104,7 +104,6 @@ export const useStore = defineStore("main", () => {
   }
 
   function clearAll() {
-    username.value = null;
     free_text.value = null;
     mongo_text.value = null;
     creator_usernames.value = [];
@@ -119,7 +118,6 @@ export const useStore = defineStore("main", () => {
     creator_usernames,
     base_uris,
     tags,
-    username,
     current_dataset_index,
     current_dataset,
     current_dataset_manifest,
@@ -132,6 +130,8 @@ export const useStore = defineStore("main", () => {
     selected_sort_option,
     server_versions,
     lookup_url,
+    // Computed
+    hasSignedUrlPlugin,
     // Actions
     updateFreeText,
     updateMongoText,
@@ -147,7 +147,6 @@ export const useStore = defineStore("main", () => {
     updateCurrentDatasetTags,
     updateNumFiltered,
     updateCurrentPerPage,
-    updateUsername,
     updateSelectedSortOption,
     updateServerVersions,
     updateLookupUrl,

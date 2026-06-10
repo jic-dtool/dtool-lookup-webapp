@@ -12,7 +12,7 @@
         variant="outlined"
         hide-details
         class="items-per-page-select"
-        style="max-width: 120px;"
+        style="max-width: 120px"
       />
     </div>
 
@@ -27,11 +27,12 @@
         :key="id"
         rounded="lg"
         class="manifest-item mb-1"
-        @mouseenter="update_fetch_identifier(id)"
       >
         <template #prepend>
           <v-avatar size="32" color="grey-lighten-3" rounded="lg" class="mr-3">
-            <v-icon size="16" color="grey-darken-1">{{ getFileIcon(item.relpath) }}</v-icon>
+            <v-icon size="16" color="grey-darken-1">{{
+              getFileIcon(item.relpath)
+            }}</v-icon>
           </v-avatar>
         </template>
         <v-list-item-title class="text-body-2 font-weight-medium">
@@ -43,7 +44,7 @@
         <template #append>
           <!-- Direct download button when signed URL plugin is available -->
           <v-btn
-            v-if="hasSignedUrlPlugin"
+            v-if="store.hasSignedUrlPlugin"
             size="small"
             variant="tonal"
             color="primary"
@@ -60,6 +61,7 @@
                 variant="tonal"
                 color="primary"
                 icon="mdi-download"
+                @click="update_fetch_identifier(id)"
               />
             </template>
             <v-card min-width="440" rounded="lg">
@@ -94,7 +96,9 @@
 
     <!-- Empty state -->
     <div v-if="numItems === 0" class="text-center py-8 text-medium-emphasis">
-      <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-file-tree</v-icon>
+      <v-icon size="48" color="grey-lighten-1" class="mb-2"
+        >mdi-file-tree</v-icon
+      >
       <p class="text-body-2">No items in this dataset</p>
     </div>
 
@@ -115,6 +119,7 @@
 import { ref, computed, reactive, watch } from "vue";
 import { filesize as filesizeLib } from "filesize";
 import { useStore } from "@/store";
+import { useNotificationStore } from "@/stores/notifications";
 import { dserverApi } from "@/services/dserverApi";
 import type { Manifest, ManifestItem } from "@/types";
 
@@ -123,6 +128,7 @@ interface FileIconMap {
 }
 
 const store = useStore();
+const notifications = useNotificationStore();
 const fetch_identifier = ref<string | null>(null);
 const downloadingItems = reactive<Record<string, boolean>>({});
 
@@ -173,9 +179,12 @@ const paginatedItems = computed<[string, ManifestItem][]>(() => {
 });
 
 // Reset page when dataset changes
-watch(() => store.current_dataset?.uri, () => {
-  currentPage.value = 1;
-});
+watch(
+  () => store.current_dataset?.uri,
+  () => {
+    currentPage.value = 1;
+  },
+);
 
 // Reset page when items per page changes
 watch(itemsPerPage, () => {
@@ -183,18 +192,13 @@ watch(itemsPerPage, () => {
 });
 
 const fetch_command = computed(() => {
-  if (!store.current_dataset) return "";
+  if (!store.current_dataset || !fetch_identifier.value) return "";
   return (
     "dtool item fetch " +
     store.current_dataset.uri +
     " " +
     fetch_identifier.value
   );
-});
-
-const hasSignedUrlPlugin = computed(() => {
-  const versions = store.server_versions;
-  return versions && "dserver_signed_url_plugin" in versions;
 });
 
 function filesize(bytes: number): string {
@@ -253,7 +257,10 @@ function getFileIcon(filename: string): string {
   return iconMap[ext] || "mdi-file";
 }
 
-async function downloadItem(identifier: string, relpath: string): Promise<void> {
+async function downloadItem(
+  identifier: string,
+  relpath: string,
+): Promise<void> {
   const uri = store.current_dataset?.uri;
   if (!uri) return;
 
@@ -288,6 +295,8 @@ async function downloadItem(identifier: string, relpath: string): Promise<void> 
     window.URL.revokeObjectURL(downloadUrl);
   } catch (err) {
     console.error("Failed to download item:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    notifications.error(`Download failed: ${message}`);
   } finally {
     downloadingItems[identifier] = false;
   }
@@ -296,8 +305,10 @@ async function downloadItem(identifier: string, relpath: string): Promise<void> 
 async function copyToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
+    notifications.success("Copied to clipboard");
   } catch (err) {
     console.error("Failed to copy:", err);
+    notifications.error("Failed to copy to clipboard");
   }
 }
 </script>

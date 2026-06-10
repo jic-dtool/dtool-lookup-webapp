@@ -20,17 +20,27 @@
 
     <!-- Metadata Chips -->
     <div class="d-flex flex-wrap ga-2">
-      <v-chip variant="tonal" color="primary" size="small" prepend-icon="mdi-file-multiple">
+      <v-chip
+        variant="tonal"
+        color="primary"
+        size="small"
+        prepend-icon="mdi-file-multiple"
+      >
         {{ numItems }} items
       </v-chip>
-      <v-chip variant="tonal" color="secondary" size="small" prepend-icon="mdi-harddisk">
+      <v-chip
+        variant="tonal"
+        color="secondary"
+        size="small"
+        prepend-icon="mdi-harddisk"
+      >
         {{ filesize(total_size_in_bytes) }}
       </v-chip>
       <v-chip variant="tonal" size="small" prepend-icon="mdi-calendar-plus">
-        Created {{ moment(dataset.created_at * 1000).format("MMM D, YYYY") }}
+        Created {{ formatDate(dataset.created_at) }}
       </v-chip>
       <v-chip variant="tonal" size="small" prepend-icon="mdi-calendar-check">
-        Frozen {{ moment(dataset.frozen_at * 1000).format("MMM D, YYYY") }}
+        Frozen {{ formatDate(dataset.frozen_at) }}
       </v-chip>
     </div>
   </div>
@@ -39,8 +49,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { filesize as filesizeLib } from "filesize";
-import moment from "moment";
 import { useStore } from "@/store";
+import { formatDate } from "@/utils/dateUtils";
 import type { Dataset, ManifestItem } from "@/types";
 
 const store = useStore();
@@ -51,8 +61,7 @@ const dataset = computed<Dataset | null>(() => {
 });
 
 const numItems = computed(() => {
-  return store.current_dataset_manifest &&
-    store.current_dataset_manifest.items
+  return store.current_dataset_manifest && store.current_dataset_manifest.items
     ? Object.values(store.current_dataset_manifest.items).length
     : 0;
 });
@@ -66,7 +75,7 @@ const total_size_in_bytes = computed(() => {
   }
   let total = 0;
   Object.values(
-    store.current_dataset_manifest.items as Record<string, ManifestItem>
+    store.current_dataset_manifest.items as Record<string, ManifestItem>,
   ).forEach((item: ManifestItem) => {
     total = total + item.size_in_bytes;
   });

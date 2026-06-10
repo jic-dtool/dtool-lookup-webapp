@@ -17,7 +17,7 @@ describe("DatasetReadme", () => {
     setActivePinia(createPinia());
   });
 
-  it("does not render when readme is null", () => {
+  it("shows the empty state when readme is null", () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const store = useStore();
@@ -29,8 +29,9 @@ describe("DatasetReadme", () => {
       },
     });
 
-    // Component should not render anything when readme is null
-    expect(wrapper.find(".v-expansion-panels").exists()).toBe(false);
+    // Component should show the empty state instead of readme content
+    expect(wrapper.find(".readme-content").exists()).toBe(false);
+    expect(wrapper.text()).toContain("No README content");
   });
 
   it("renders expansion panel when readme is available", () => {
@@ -45,8 +46,8 @@ describe("DatasetReadme", () => {
       },
     });
 
-    // Component should render the expansion panels wrapper
-    expect(wrapper.find(".v-expansion-panels").exists()).toBe(true);
+    // Component should render the readme content
+    expect(wrapper.find(".readme-content").exists()).toBe(true);
   });
 
   it("shows README label in panel title", () => {

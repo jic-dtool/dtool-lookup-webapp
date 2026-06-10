@@ -55,7 +55,9 @@
       <!-- Filters -->
       <v-expansion-panels variant="accordion" multiple>
         <!-- Tags Filter -->
-        <v-expansion-panel v-if="summary_info?.tags && summary_info.tags.length > 0">
+        <v-expansion-panel
+          v-if="summary_info?.tags && summary_info.tags.length > 0"
+        >
           <v-expansion-panel-title class="text-body-2 font-weight-medium">
             <v-icon start size="small">mdi-tag-multiple</v-icon>
             Tags
@@ -67,11 +69,18 @@
                 inline
                 class="mr-2"
               />
-              <v-icon :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+              <v-icon
+                :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+              />
             </template>
           </v-expansion-panel-title>
           <v-expansion-panel-text>
-            <v-list density="compact" class="py-0" max-height="200" style="overflow-y: auto;">
+            <v-list
+              density="compact"
+              class="py-0"
+              max-height="200"
+              style="overflow-y: auto"
+            >
               <v-list-item
                 v-for="(tag, index) in summary_info.tags"
                 :key="index"
@@ -86,7 +95,9 @@
                     @click.stop="toggleTag(tag)"
                   />
                 </template>
-                <v-list-item-title class="text-body-2">{{ tag }}</v-list-item-title>
+                <v-list-item-title class="text-body-2">{{
+                  tag
+                }}</v-list-item-title>
                 <template #append>
                   <v-chip size="x-small" color="grey-lighten-1" variant="flat">
                     {{ summary_info.datasets_per_tag[tag] }}
@@ -98,7 +109,9 @@
         </v-expansion-panel>
 
         <!-- Locations Filter -->
-        <v-expansion-panel v-if="summary_info?.base_uris && summary_info.base_uris.length > 0">
+        <v-expansion-panel
+          v-if="summary_info?.base_uris && summary_info.base_uris.length > 0"
+        >
           <v-expansion-panel-title class="text-body-2 font-weight-medium">
             <v-icon start size="small">mdi-folder-marker</v-icon>
             Locations
@@ -110,11 +123,18 @@
                 inline
                 class="mr-2"
               />
-              <v-icon :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+              <v-icon
+                :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+              />
             </template>
           </v-expansion-panel-title>
           <v-expansion-panel-text>
-            <v-list density="compact" class="py-0" max-height="200" style="overflow-y: auto;">
+            <v-list
+              density="compact"
+              class="py-0"
+              max-height="200"
+              style="overflow-y: auto"
+            >
               <v-list-item
                 v-for="(base_uri, index) in summary_info.base_uris"
                 :key="index"
@@ -129,7 +149,10 @@
                     @click.stop="toggleBaseUri(base_uri)"
                   />
                 </template>
-                <v-list-item-title class="text-body-2 text-truncate" style="max-width: 140px;">
+                <v-list-item-title
+                  class="text-body-2 text-truncate"
+                  style="max-width: 140px"
+                >
                   {{ base_uri }}
                 </v-list-item-title>
                 <template #append>
@@ -143,7 +166,12 @@
         </v-expansion-panel>
 
         <!-- Creators Filter -->
-        <v-expansion-panel v-if="summary_info?.creator_usernames && summary_info.creator_usernames.length > 0">
+        <v-expansion-panel
+          v-if="
+            summary_info?.creator_usernames &&
+            summary_info.creator_usernames.length > 0
+          "
+        >
           <v-expansion-panel-title class="text-body-2 font-weight-medium">
             <v-icon start size="small">mdi-account-multiple</v-icon>
             Creators
@@ -155,11 +183,18 @@
                 inline
                 class="mr-2"
               />
-              <v-icon :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+              <v-icon
+                :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+              />
             </template>
           </v-expansion-panel-title>
           <v-expansion-panel-text>
-            <v-list density="compact" class="py-0" max-height="200" style="overflow-y: auto;">
+            <v-list
+              density="compact"
+              class="py-0"
+              max-height="200"
+              style="overflow-y: auto"
+            >
               <v-list-item
                 v-for="(creator, index) in summary_info.creator_usernames"
                 :key="index"
@@ -174,7 +209,9 @@
                     @click.stop="toggleCreator(creator)"
                   />
                 </template>
-                <v-list-item-title class="text-body-2">{{ creator }}</v-list-item-title>
+                <v-list-item-title class="text-body-2">{{
+                  creator
+                }}</v-list-item-title>
                 <template #append>
                   <v-chip size="x-small" color="grey-lighten-1" variant="flat">
                     {{ summary_info.datasets_per_creator[creator] }}
@@ -190,52 +227,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, getCurrentInstance } from "vue";
-import type { AxiosError, AxiosResponse } from "axios";
-import { getUsernameFromJwt } from "@/utils/jwtUtils";
+import { ref, onMounted } from "vue";
 import { useStore } from "@/store";
-import type { SummaryInfo } from "@/types";
-
-const props = defineProps<{
-  lookup_url: string;
-  auth_str: string;
-  token: string;
-}>();
+import { useAuthStore } from "@/stores/auth";
+import { dserverApi } from "@/services/dserverApi";
+import type { SummaryInfo } from "@/services/dserverApi";
 
 const emit = defineEmits<{
   (e: "start-search"): void;
 }>();
 
 const store = useStore();
-const instance = getCurrentInstance();
-const axios = instance?.appContext.config.globalProperties.$http;
+const auth = useAuthStore();
 
 const summary_info = ref<SummaryInfo | null>(null);
 const loading = ref(true);
 const errored = ref(false);
-const username = ref("");
-const selectedTags = ref<string[]>([]);
-const selectedBaseUris = ref<string[]>([]);
-const selectedCreators = ref<string[]>([]);
 
-const source = computed(() => {
-  return props.lookup_url + "/users/" + username.value + "/summary";
-});
-
-function load_summary(): void {
-  console.log("Loading summary info");
+async function load_summary(): Promise<void> {
   errored.value = false;
   loading.value = true;
-  axios
-    .get(source.value, { headers: { Authorization: props.auth_str } })
-    .then((response: AxiosResponse<SummaryInfo>) => {
-      summary_info.value = response.data;
-    })
-    .catch((error: AxiosError) => {
-      console.log(error);
-      errored.value = true;
-    })
-    .finally(() => (loading.value = false));
+
+  const username = auth.username;
+  if (!username) {
+    errored.value = true;
+    loading.value = false;
+    return;
+  }
+
+  try {
+    summary_info.value = await dserverApi.getUserSummary(username);
+  } catch (error) {
+    console.log(error);
+    errored.value = true;
+  } finally {
+    loading.value = false;
+  }
 }
 
 function searchDatasets(): void {
@@ -244,49 +271,39 @@ function searchDatasets(): void {
 }
 
 function clearFilters(): void {
-  selectedTags.value = [];
-  selectedBaseUris.value = [];
-  selectedCreators.value = [];
   store.clearAll();
+  store.current_pageNumber = 1;
   emit("start-search");
 }
 
 function toggleTag(tag: string): void {
-  if (selectedTags.value.includes(tag)) {
-    selectedTags.value.splice(selectedTags.value.indexOf(tag), 1);
-  } else {
-    selectedTags.value.push(tag);
-  }
-  store.updateTags(selectedTags.value);
+  store.updateTags(
+    store.tags.includes(tag)
+      ? store.tags.filter((t) => t !== tag)
+      : [...store.tags, tag],
+  );
   searchDatasets();
 }
 
 function toggleBaseUri(base_uri: string): void {
-  if (selectedBaseUris.value.includes(base_uri)) {
-    selectedBaseUris.value.splice(selectedBaseUris.value.indexOf(base_uri), 1);
-  } else {
-    selectedBaseUris.value.push(base_uri);
-  }
-  store.updateBaseUris(selectedBaseUris.value);
+  store.updateBaseUris(
+    store.base_uris.includes(base_uri)
+      ? store.base_uris.filter((u) => u !== base_uri)
+      : [...store.base_uris, base_uri],
+  );
   searchDatasets();
 }
 
 function toggleCreator(creator: string): void {
-  if (selectedCreators.value.includes(creator)) {
-    selectedCreators.value.splice(selectedCreators.value.indexOf(creator), 1);
-  } else {
-    selectedCreators.value.push(creator);
-  }
-  store.updateCreatorUsernames(selectedCreators.value);
+  store.updateCreatorUsernames(
+    store.creator_usernames.includes(creator)
+      ? store.creator_usernames.filter((c) => c !== creator)
+      : [...store.creator_usernames, creator],
+  );
   searchDatasets();
 }
 
 onMounted(() => {
-  if (props.token) {
-    const extractedUsername = getUsernameFromJwt(props.token);
-    username.value = extractedUsername;
-    store.updateUsername(extractedUsername);
-  }
   load_summary();
 });
 </script>

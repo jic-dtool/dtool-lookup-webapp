@@ -17,12 +17,14 @@
           </v-list-item-title>
 
           <!-- Supporting text -->
-          <v-list-item-subtitle class="text-body-2 text-medium-emphasis d-flex align-center ga-2">
+          <v-list-item-subtitle
+            class="text-body-2 text-medium-emphasis d-flex align-center ga-2"
+          >
             <v-icon size="x-small" class="mr-1">mdi-account</v-icon>
             {{ dataset.creator_username }}
             <span class="mx-1">·</span>
             <v-icon size="x-small" class="mr-1">mdi-calendar</v-icon>
-            {{ moment(dataset.created_at * 1000).format("MMM D, YYYY") }}
+            {{ formatDate(dataset.created_at) }}
           </v-list-item-subtitle>
 
           <!-- UUID (tertiary line) -->
@@ -31,7 +33,10 @@
           </div>
 
           <!-- Tags -->
-          <div v-if="dataset.tags && dataset.tags.length" class="mt-2 d-flex flex-wrap ga-1">
+          <div
+            v-if="dataset.tags && dataset.tags.length"
+            class="mt-2 d-flex flex-wrap ga-1"
+          >
             <v-chip
               v-for="(tag, tagIndex) in dataset.tags"
               :key="tagIndex"
@@ -51,13 +56,12 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import moment from "moment";
 import { useStore } from "@/store";
-import type { Dataset, ResponseHeaders } from "@/types";
+import { formatDate } from "@/utils/dateUtils";
+import type { Dataset } from "@/types";
 
 const props = defineProps<{
   datasetHits: Dataset[];
-  responseheaders?: ResponseHeaders;
 }>();
 
 const emit = defineEmits<{

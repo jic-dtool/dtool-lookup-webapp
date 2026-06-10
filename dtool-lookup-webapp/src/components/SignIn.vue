@@ -21,7 +21,11 @@
 
                   <h1
                     class="text-h5 font-weight-bold text-center mb-6"
-                    v-html="rightPanelActive ? fourthContainerHeading : firstContainerTitle"
+                    v-html="
+                      rightPanelActive
+                        ? fourthContainerHeading
+                        : firstContainerTitle
+                    "
                   ></h1>
 
                   <!-- Sign In Form (shown when not right panel active) -->
@@ -53,7 +57,10 @@
                         Sign in with {{ oauth2ProviderName }}
                       </v-btn>
 
-                      <div v-if="showUsernamePasswordForm" class="d-flex align-center my-4">
+                      <div
+                        v-if="showUsernamePasswordForm"
+                        class="d-flex align-center my-4"
+                      >
                         <v-divider />
                         <span class="mx-3 text-grey">or</span>
                         <v-divider />
@@ -61,7 +68,10 @@
                     </div>
 
                     <!-- Username/Password Form (if enabled) -->
-                    <v-form v-if="showUsernamePasswordForm" @submit.prevent="handleUsernamePasswordLogin">
+                    <v-form
+                      v-if="showUsernamePasswordForm"
+                      @submit.prevent="handleUsernamePasswordLogin"
+                    >
                       <v-text-field
                         v-model="username"
                         label="Username"
@@ -109,7 +119,10 @@
 
                   <!-- Resources (shown when right panel active) -->
                   <div v-else>
-                    <p v-html="fourthContainerIntro" class="text-body-1 mb-4"></p>
+                    <p
+                      v-html="fourthContainerIntro"
+                      class="text-body-1 mb-4"
+                    ></p>
                     <v-list density="compact" class="bg-transparent">
                       <v-list-item
                         v-for="(resource, index) in fourthContainerResources"
@@ -118,7 +131,9 @@
                         target="_blank"
                         prepend-icon="mdi-link"
                       >
-                        <v-list-item-title>{{ resource.text }}</v-list-item-title>
+                        <v-list-item-title>{{
+                          resource.text
+                        }}</v-list-item-title>
                       </v-list-item>
                     </v-list>
                   </div>
@@ -138,20 +153,32 @@
                 >
                   <h1
                     class="text-h5 font-weight-bold text-white text-center mb-4"
-                    v-html="rightPanelActive ? thirdContainerHeading : secondContainerTitle"
+                    v-html="
+                      rightPanelActive
+                        ? thirdContainerHeading
+                        : secondContainerTitle
+                    "
                   ></h1>
 
                   <p
                     class="text-body-1 text-white text-center mb-6"
-                    v-html="rightPanelActive ? thirdContainerMessage : secondContainerMessage"
+                    v-html="
+                      rightPanelActive
+                        ? thirdContainerMessage
+                        : secondContainerMessage
+                    "
                   ></p>
 
                   <v-btn
                     variant="outlined"
                     color="white"
-                    @click="rightPanelActive ? deactivateRightPanel() : activateRightPanel()"
+                    @click="
+                      rightPanelActive
+                        ? deactivateRightPanel()
+                        : activateRightPanel()
+                    "
                   >
-                    {{ rightPanelActive ? 'Return to Sign In' : 'More Info' }}
+                    {{ rightPanelActive ? "Return to Sign In" : "More Info" }}
                   </v-btn>
                 </v-sheet>
               </v-col>
@@ -163,9 +190,11 @@
             <v-btn
               variant="text"
               color="primary"
-              @click="rightPanelActive ? deactivateRightPanel() : activateRightPanel()"
+              @click="
+                rightPanelActive ? deactivateRightPanel() : activateRightPanel()
+              "
             >
-              {{ rightPanelActive ? 'Return to Sign In' : 'More Info' }}
+              {{ rightPanelActive ? "Return to Sign In" : "More Info" }}
             </v-btn>
           </div>
         </v-col>
@@ -175,9 +204,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, getCurrentInstance } from "vue";
+import { ref, computed } from "vue";
+import axios from "axios";
 import type { AxiosError, AxiosResponse } from "axios";
 import type { ResourceLink } from "@/types";
+import { serverUrl, tokenGeneratorUrl } from "@/config";
 import { useNotificationStore } from "@/stores/notifications";
 import { useAuthStore } from "@/stores/auth";
 
@@ -185,8 +216,6 @@ interface TokenResponse {
   token?: string;
 }
 
-const instance = getCurrentInstance();
-const axios = instance?.appContext.config.globalProperties.$http;
 const notifications = useNotificationStore();
 const auth = useAuthStore();
 
@@ -197,28 +226,35 @@ const signInInfo = ref<TokenResponse | null>(null);
 const signInLoading = ref(false);
 const rightPanelActive = ref(false);
 
-const tokenGeneratorURL = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL ||
-  `${process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "http://localhost:5000"}/auth/token`;
-const logoSrc = process.env.VUE_APP_LANDING_PAGE_ICON_PATH || "/icons/128x128/dtool_logo.png";
+const logoSrc =
+  process.env.VUE_APP_LANDING_PAGE_ICON_PATH || "/icons/128x128/dtool_logo.png";
 
 // OAuth2 configuration
-const dserverUrl = process.env.VUE_APP_DTOOL_LOOKUP_SERVER_URL || "http://localhost:5000";
 const oauth2Enabled = process.env.VUE_APP_OAUTH2_ENABLED === "true";
 const oauth2ProviderName = process.env.VUE_APP_OAUTH2_PROVIDER_NAME || "OAuth2";
-const oauth2LoginUrl = `${dserverUrl}/auth/login`;
+const oauth2LoginUrl = `${serverUrl}/auth/login`;
 // Show username/password form if OAuth2 is disabled or if explicitly enabled
-const showUsernamePasswordForm = !oauth2Enabled || process.env.VUE_APP_SHOW_USERNAME_PASSWORD_FORM === "true";
-const firstContainerTitle = process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In";
-const secondContainerTitle = process.env.VUE_APP_SECOND_CONTAINER_TITLE || "Welcome to Dtool";
-const secondContainerMessage = process.env.VUE_APP_SECOND_CONTAINER_MESSAGE ||
+const showUsernamePasswordForm =
+  !oauth2Enabled || process.env.VUE_APP_SHOW_USERNAME_PASSWORD_FORM === "true";
+const firstContainerTitle =
+  process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In";
+const secondContainerTitle =
+  process.env.VUE_APP_SECOND_CONTAINER_TITLE || "Welcome to Dtool";
+const secondContainerMessage =
+  process.env.VUE_APP_SECOND_CONTAINER_MESSAGE ||
   "Make your data more resilient, portable and easy to work with by packaging files & metadata into self-contained datasets.";
-const thirdContainerHeading = process.env.VUE_APP_THIRD_CONTAINER_HEADING || "Access Your Account";
-const thirdContainerMessage = process.env.VUE_APP_THIRD_CONTAINER_MESSAGE ||
+const thirdContainerHeading =
+  process.env.VUE_APP_THIRD_CONTAINER_HEADING || "Access Your Account";
+const thirdContainerMessage =
+  process.env.VUE_APP_THIRD_CONTAINER_MESSAGE ||
   "To log in, use the default credentials: Username - <strong>testuser</strong>, Password - <strong>test_password</strong>.";
-const fourthContainerHeading = process.env.VUE_APP_FOURTH_CONTAINER_HEADING || "Supporting Documentation";
-const fourthContainerIntro = process.env.VUE_APP_FOURTH_CONTAINER_INTRO ||
+const fourthContainerHeading =
+  process.env.VUE_APP_FOURTH_CONTAINER_HEADING || "Supporting Documentation";
+const fourthContainerIntro =
+  process.env.VUE_APP_FOURTH_CONTAINER_INTRO ||
   "Please refer to the following resources for more information:";
-const fourthContainerResources: ResourceLink[] = process.env.VUE_APP_FOURTH_CONTAINER_RESOURCES
+const fourthContainerResources: ResourceLink[] = process.env
+  .VUE_APP_FOURTH_CONTAINER_RESOURCES
   ? JSON.parse(process.env.VUE_APP_FOURTH_CONTAINER_RESOURCES)
   : [
       {
@@ -247,24 +283,27 @@ const overlayGradient = computed(() => {
 });
 
 async function handleUsernamePasswordLogin(): Promise<void> {
-  console.log(process.env);
   signInLoading.value = true;
   signInFailed.value = false;
   auth.clearError();
 
   try {
     const response: AxiosResponse<TokenResponse> = await axios.post(
-      tokenGeneratorURL,
+      tokenGeneratorUrl,
       loginCredentials.value,
       {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     signInInfo.value = response.data;
-    if (signInInfo.value && "token" in signInInfo.value && signInInfo.value.token) {
+    if (
+      signInInfo.value &&
+      "token" in signInInfo.value &&
+      signInInfo.value.token
+    ) {
       // Use auth store to login (this verifies the token works)
       const success = await auth.login(signInInfo.value.token);
       if (!success) {
@@ -276,20 +315,21 @@ async function handleUsernamePasswordLogin(): Promise<void> {
     }
   } catch (error) {
     const axiosError = error as AxiosError;
-    console.log(axiosError);
 
     // Determine error type and show appropriate message
     if (axiosError.code === "ERR_NETWORK") {
       notifications.error(
         "Unable to connect to authentication server. Please check that the token generator service is running.",
-        10000
+        10000,
       );
     } else if (axiosError.response?.status === 401) {
       signInFailed.value = true;
     } else if (axiosError.response?.status === 403) {
       notifications.error("Access denied. Please check your credentials.");
     } else if (axiosError.response?.status === 500) {
-      notifications.error("Authentication server error. Please try again later.");
+      notifications.error(
+        "Authentication server error. Please try again later.",
+      );
     } else {
       notifications.error(`Authentication failed: ${axiosError.message}`);
     }

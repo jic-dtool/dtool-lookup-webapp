@@ -3,9 +3,6 @@ import App from "./App.vue";
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 
-import axios from "axios";
-import VueAxios from "vue-axios";
-
 // Vuetify
 import "vuetify/styles";
 import { createVuetify } from "vuetify";
@@ -58,5 +55,4 @@ const app = createApp(App);
 
 app.use(vuetify);
 app.use(pinia);
-app.use(VueAxios, axios);
 app.mount("#app");

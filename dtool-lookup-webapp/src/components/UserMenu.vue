@@ -8,7 +8,7 @@
         class="user-menu-btn"
       >
         <v-icon start>mdi-account-circle</v-icon>
-        <span class="d-none d-sm-inline">{{ username || 'User' }}</span>
+        <span class="d-none d-sm-inline">{{ username || "User" }}</span>
         <v-icon end>mdi-menu-down</v-icon>
       </v-btn>
     </template>
@@ -21,8 +21,12 @@
             <v-icon color="white">mdi-account</v-icon>
           </v-avatar>
           <div class="ml-3">
-            <div class="text-body-1 font-weight-medium">{{ auth.displayName || 'User' }}</div>
-            <div class="text-caption text-medium-emphasis">{{ auth.username }}</div>
+            <div class="text-body-1 font-weight-medium">
+              {{ auth.displayName || "User" }}
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              {{ auth.username }}
+            </div>
           </div>
         </div>
       </div>
@@ -99,13 +103,18 @@
         <!-- Server URL -->
         <div class="mb-4">
           <div class="text-caption text-medium-emphasis mb-1">Server URL</div>
-          <div class="text-body-2 font-weight-medium">{{ lookupUrl || 'Not configured' }}</div>
+          <div class="text-body-2 font-weight-medium">
+            {{ lookupUrl || "Not configured" }}
+          </div>
         </div>
 
         <!-- Base URIs with permissions -->
         <div class="mb-4">
           <div class="text-caption text-medium-emphasis mb-2">Base URIs</div>
-          <div v-if="userBaseUris.length === 0" class="text-body-2 text-medium-emphasis">
+          <div
+            v-if="userBaseUris.length === 0"
+            class="text-body-2 text-medium-emphasis"
+          >
             No base URIs accessible
           </div>
           <v-list v-else density="compact" class="rounded-lg border">
@@ -156,7 +165,9 @@
                   <div class="text-caption">
                     <div v-if="baseUri.canRegister">Copy dtool command</div>
                     <div v-else>Register permission required</div>
-                    <code v-if="baseUri.canRegister" class="text-caption">{{ getDtoolCommand(baseUri.uri) }}</code>
+                    <code v-if="baseUri.canRegister" class="text-caption">{{
+                      getDtoolCommand(baseUri.uri)
+                    }}</code>
                   </div>
                 </v-tooltip>
               </template>
@@ -166,7 +177,9 @@
 
         <!-- Installed plugins -->
         <div>
-          <div class="text-caption text-medium-emphasis mb-2">Installed Plugins</div>
+          <div class="text-caption text-medium-emphasis mb-2">
+            Installed Plugins
+          </div>
           <v-table density="compact" class="rounded-lg">
             <thead>
               <tr>
@@ -176,8 +189,12 @@
             </thead>
             <tbody>
               <tr v-for="(version, plugin) in serverVersions" :key="plugin">
-                <td class="text-body-2">{{ formatPluginName(plugin as string) }}</td>
-                <td class="text-body-2 text-medium-emphasis">{{ version || 'N/A' }}</td>
+                <td class="text-body-2">
+                  {{ formatPluginName(plugin as string) }}
+                </td>
+                <td class="text-body-2 text-medium-emphasis">
+                  {{ version || "N/A" }}
+                </td>
               </tr>
               <tr v-if="Object.keys(serverVersions).length === 0">
                 <td colspan="2" class="text-center text-medium-emphasis">
@@ -208,7 +225,10 @@
   <v-dialog v-model="infoDialog" max-width="500">
     <v-card rounded="lg">
       <v-card-title>Info</v-card-title>
-      <v-card-text v-html="infoContent"></v-card-text>
+      <v-card-text>
+        <!-- eslint-disable-next-line vue/no-v-html -- operator-controlled build-time content -->
+        <div v-html="infoContent"></div>
+      </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn color="primary" @click="infoDialog = false">OK</v-btn>
@@ -234,8 +254,10 @@ const showServerConfigDialog = ref(false);
 const infoDialog = ref(false);
 
 // Environment config
-const downloadReadmeYaml = process.env.VUE_APP_OFFER_DTOOL_README_YAML_DOWNLOAD === "true";
-const downloadReadmeJson = process.env.VUE_APP_OFFER_DTOOL_JSON_DOWNLOAD === "true";
+const downloadReadmeYaml =
+  process.env.VUE_APP_OFFER_DTOOL_README_YAML_DOWNLOAD === "true";
+const downloadReadmeJson =
+  process.env.VUE_APP_OFFER_DTOOL_JSON_DOWNLOAD === "true";
 const showInfoMenuEntry = process.env.VUE_APP_SHOW_INFO_MENU_ENTRY === "true";
 const infoContent = process.env.VUE_APP_INFO_CONTENT || "Info Content";
 
@@ -254,9 +276,12 @@ interface UserBaseUri {
 const userBaseUris = computed((): UserBaseUri[] => {
   const searchSet = new Set(auth.searchPermissions);
   const registerSet = new Set(auth.registerPermissions);
-  const allUris = new Set([...auth.searchPermissions, ...auth.registerPermissions]);
+  const allUris = new Set([
+    ...auth.searchPermissions,
+    ...auth.registerPermissions,
+  ]);
 
-  return Array.from(allUris).map(uri => ({
+  return Array.from(allUris).map((uri) => ({
     uri,
     canSearch: searchSet.has(uri),
     canRegister: registerSet.has(uri),
@@ -265,9 +290,7 @@ const userBaseUris = computed((): UserBaseUri[] => {
 
 function formatPluginName(name: string): string {
   // Convert snake_case to Title Case with spaces
-  return name
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return name.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function logout(): void {
@@ -309,8 +332,7 @@ async function copyDtoolCommand(baseUri: string): Promise<void> {
 async function downloadFile(fileName: string): Promise<void> {
   const filePath =
     fileName === "dtool.json"
-      ? process.env.VUE_APP_DTOOL_JSON_PATH ||
-        `data/templates/${fileName}`
+      ? process.env.VUE_APP_DTOOL_JSON_PATH || `data/templates/${fileName}`
       : process.env.VUE_APP_DTOOL_README_YAML_PATH ||
         `data/templates/${fileName}`;
 

@@ -32,7 +32,7 @@ export interface Tags {
 }
 
 export interface Annotations {
-  [key: string]: Record<string, unknown>;
+  annotations: Record<string, unknown>;
 }
 
 // Summary info types
@@ -87,6 +87,6 @@ export interface ResourceLink {
 
 // Axios response headers type
 export interface ResponseHeaders {
-  'x-pagination'?: string;
+  "x-pagination"?: string;
   [key: string]: string | undefined;
 }

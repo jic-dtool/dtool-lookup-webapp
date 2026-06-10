@@ -1,11 +1,12 @@
 <template>
   <div class="search-container" :class="{ 'search-expanded': isFocused }">
-    <v-tooltip
-      v-if="textQuery !== ''"
-      location="bottom"
-    >
+    <v-tooltip v-if="textQuery !== ''" location="bottom">
       <template #activator="{ props }">
-        <span v-bind="props" class="text-caption text-primary mr-2 search-label" style="white-space: nowrap;">
+        <span
+          v-bind="props"
+          class="text-caption text-primary mr-2 search-label"
+          style="white-space: nowrap"
+        >
           {{
             isJsonEnabled
               ? isJson
@@ -15,7 +16,10 @@
           }}
         </span>
       </template>
-      <span>Enclose a JSON query in braces {} to have it interpreted as a direct MongoDB query.</span>
+      <span
+        >Enclose a JSON query in braces {} to have it interpreted as a direct
+        MongoDB query.</span
+      >
     </v-tooltip>
 
     <v-text-field
@@ -54,11 +58,12 @@ const textQuery = ref("");
 const isFocused = ref(false);
 
 const isJson = computed(() => {
-  if (textQuery.value === "") {
+  const trimmed = (textQuery.value ?? "").trim();
+  if (!trimmed.startsWith("{")) {
     return false;
   }
   try {
-    JSON.parse(textQuery.value);
+    JSON.parse(trimmed);
     return true;
   } catch {
     return false;
@@ -68,10 +73,15 @@ const isJson = computed(() => {
 const isJsonEnabled = computed(() => props.mongoplugin !== "N/A");
 
 function startSearch(): void {
-  if (isJsonEnabled.value && isJson.value) {
+  if (textQuery.value === "") {
+    store.updateFreeText(null);
+    store.updateMongoText(null);
+  } else if (isJsonEnabled.value && isJson.value) {
     store.updateMongoText(textQuery.value);
+    store.updateFreeText(null);
   } else {
     store.updateFreeText(textQuery.value);
+    store.updateMongoText(null);
   }
   emit("start-search");
 }

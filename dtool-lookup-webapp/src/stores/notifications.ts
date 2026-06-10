@@ -17,7 +17,7 @@ export const useNotificationStore = defineStore("notifications", () => {
   function show(
     message: string,
     type: NotificationType = "info",
-    timeout: number = 5000
+    timeout: number = 5000,
   ): number {
     const id = nextId++;
     notifications.value.push({ id, message, type, timeout });
