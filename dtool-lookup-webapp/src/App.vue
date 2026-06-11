@@ -382,6 +382,7 @@ import { useAuthStore } from "./stores/auth";
 import { useServerHealthStore } from "./stores/serverHealth";
 import { dserverApi } from "./services/dserverApi";
 import type { SearchQuery as DServerSearchQuery } from "./services/dserverApi";
+import { parsePaginationHeader } from "dserver-client";
 import type { Dataset, ConfigInfo } from "./types";
 
 // Stores
@@ -566,15 +567,13 @@ async function searchDatasets(): Promise<void> {
       );
       if (sequence !== searchSequence) return;
       datasetHits.value = response.data;
-      const paginationHeader = response.headers["x-pagination"];
-      paginationInfo.value = paginationHeader
-        ? JSON.parse(paginationHeader)
-        : {
-            total: response.data.length,
-            page: 1,
-            per_page: response.data.length,
-            pages: 1,
-          };
+      // The X-Pagination header is in flask-smorest format (total_pages,
+      // no per_page); normalize it the same way dserver-client does.
+      paginationInfo.value = parsePaginationHeader(
+        response.headers["x-pagination"],
+        store.update_current_Per_Page,
+        response.data.length,
+      );
       store.updateCurrentDataset(current_dataset.value ?? null);
       store.updateNumFiltered(paginationInfo.value.total);
       updateDataset();
