@@ -12,3 +12,7 @@ export const serverUrl: string =
 export const tokenGeneratorUrl: string =
   process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL ||
   `${serverUrl}/auth/token`;
+
+export const authLogoutUrl: string =
+  process.env.VUE_APP_DTOOL_LOOKUP_SERVER_AUTH_LOGOUT_URL ||
+  `${serverUrl}/auth/logout`;

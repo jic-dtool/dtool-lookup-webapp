@@ -7,9 +7,11 @@
 
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import axios from "axios";
 import { dserverApi } from "@/services/dserverApi";
 import { decodeJwt } from "@/utils/jwtUtils";
 import { useNotificationStore } from "@/stores/notifications";
+import { tokenGeneratorUrl, authLogoutUrl } from "@/config";
 
 export type AuthStatus =
   | "idle" // Initial state, checking for existing session
@@ -206,14 +208,23 @@ export const useAuthStore = defineStore(
     }
 
     /**
-     * Logout and clear all auth state
+     * Logout and clear all auth state.
+     *
+     * Also terminates the server-side OAuth2 session; otherwise the next
+     * page load would silently re-authenticate via GET /auth/token.
      */
-    function logout(): void {
+    async function logout(): Promise<void> {
       clearAuth();
-      // Make sure no OAuth2 callback cookie survives the logout.
-      deleteCookie("dserver_token");
       status.value = "unauthenticated";
       error.value = null;
+      try {
+        await axios.post(authLogoutUrl, null, {
+          withCredentials: true,
+          headers: { Accept: "application/json" },
+        });
+      } catch {
+        // Best effort: the local session is already cleared.
+      }
     }
 
     /**
@@ -264,18 +275,49 @@ export const useAuthStore = defineStore(
     }
 
     /**
+     * Fetch the JWT for the current server-side OAuth2 session, if any.
+     *
+     * In cookie-only delivery mode (OAUTH2_DELIVER_TOKEN_IN_FRAGMENT=
+     * false) the token never appears in any URL: the OAuth2 callback
+     * stores it in the server-side session and the webapp retrieves it
+     * here, authenticated by the session cookie. Requires the auth
+     * endpoints to be same-origin (or CORS-enabled with credentials).
+     */
+    async function fetchSessionToken(): Promise<string | null> {
+      try {
+        const response = await axios.get<{ token?: unknown }>(
+          tokenGeneratorUrl,
+          {
+            withCredentials: true,
+            headers: { Accept: "application/json" },
+          },
+        );
+        const fetched = response.data?.token;
+        if (typeof fetched !== "string" || !fetched) return null;
+        // Ignore tokens from sessions that outlived the JWT expiry.
+        const payload = decodeJwt(fetched);
+        if (payload.exp && payload.exp * 1000 <= Date.now()) return null;
+        return fetched;
+      } catch {
+        // 401 (no session), malformed token or network failure: no
+        // session token available.
+        return null;
+      }
+    }
+
+    /**
      * Initialize the store - check for a token from the OAuth2 callback
      * or a persisted session.
      *
      * The OAuth2 plugin delivers the token either in the URL fragment
      * (default; supports cross-origin webapps, never sent to servers) or
-     * via the same-origin "dserver_token" cookie (cookie-only mode,
-     * OAUTH2_DELIVER_TOKEN_IN_FRAGMENT=false). Both are checked; never a
-     * query parameter, so the token cannot leak into browser history or
-     * server logs.
+     * server-side only (cookie-only mode, OAUTH2_DELIVER_TOKEN_IN_
+     * FRAGMENT=false), where it is fetched from GET /auth/token using
+     * the session cookie. Either way the token never rides in a query
+     * parameter, so it cannot leak into browser history or server logs.
      */
     async function initialize(): Promise<void> {
-      // Check for token in the URL fragment (OAuth2 callback, default
+      // Check for token in the URL fragment (OAuth2 callback, fragment
       // delivery mode).
       const fragmentParams = new URLSearchParams(
         window.location.hash.replace(/^#/, ""),
@@ -284,18 +326,21 @@ export const useAuthStore = defineStore(
 
       if (tokenParam) {
         // Clean up URL (drops both fragment and any query string)
-        window.history.replaceState({}, document.title, window.location.pathname);
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
         await login(tokenParam);
         return;
       }
 
-      // Check for token in cookie (OAuth2 callback, cookie-only mode)
-      const cookieToken = getCookie("dserver_token");
-      if (cookieToken) {
-        // Consume the cookie: the token is persisted by this store, and a
-        // lingering cookie would silently re-authenticate after logout.
-        deleteCookie("dserver_token");
-        await login(cookieToken);
+      // Check for a server-side OAuth2 session (cookie-only delivery
+      // mode). Checked before the persisted token so that a fresh login
+      // always wins over a stale persisted session.
+      const sessionToken = await fetchSessionToken();
+      if (sessionToken) {
+        await login(sessionToken);
         return;
       }
 
@@ -351,18 +396,3 @@ export const useAuthStore = defineStore(
     },
   },
 );
-
-// Helper function to get cookie value
-function getCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(";").shift() || null;
-  }
-  return null;
-}
-
-// Helper function to delete a cookie
-function deleteCookie(name: string): void {
-  document.cookie = `${name}=; Max-Age=0; path=/`;
-}
