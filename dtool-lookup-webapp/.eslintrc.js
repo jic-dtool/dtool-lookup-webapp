@@ -1,23 +1,20 @@
 module.exports = {
   root: true,
   env: {
-    node: true
+    node: true,
+    es2021: true
   },
   extends: [
     "eslint:recommended",
     "plugin:vue/vue3-essential",
-    //"@vue/prettier"
+    "@vue/eslint-config-typescript",
+    "@vue/eslint-config-prettier"
   ],
   rules: {
-    //"no-console": process.env.NODE_ENV === "production" ? "error" : "off",
-    "no-console": "off",
-    "no-debugger": process.env.NODE_ENV === "production" ? "error" : "off"
-  },
-  parserOptions: {
-    parser: "@babel/eslint-parser",
-    requireConfigFile: false,
-    babelOptions: {
-      presets: ["@babel/preset-react"],
-    },
+    "no-console": process.env.NODE_ENV === "production" ? "warn" : "off",
+    "no-debugger": process.env.NODE_ENV === "production" ? "error" : "off",
+    "vue/multi-word-component-names": "off",
+    // Vuetify data-table slot names contain dots (e.g. #item.username)
+    "vue/valid-v-slot": ["error", { allowModifiers: true }]
   }
 };

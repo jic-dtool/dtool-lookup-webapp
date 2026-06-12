@@ -1,14 +1,11 @@
 <template>
-  <div class="textSearch">
-    <form class="form-inline" @submit.prevent>
-      <div class="searchContainer d-flex align-items-center">
-        <!-- Span for the JSON Checker label with tooltip -->
+  <div class="search-container" :class="{ 'search-expanded': isFocused }">
+    <v-tooltip v-if="textQuery !== ''" location="bottom">
+      <template #activator="{ props }">
         <span
-          class="jsonChecker"
-          v-if="textQuery !== ''"
-          v-b-tooltip.hover.top="
-            'Enclose a JSON query in braces {} to have it interpreted as a direct MongoDB query.'
-          "
+          v-bind="props"
+          class="text-caption text-primary mr-2 search-label"
+          style="white-space: nowrap"
         >
           {{
             isJsonEnabled
@@ -18,94 +15,127 @@
               : "free text search:"
           }}
         </span>
-        <!-- Input for the text query -->
-        <input
-          class="form-control"
-          type="text"
-          v-model="textQuery"
-          @keyup.enter.prevent="startSearch"
-          placeholder="Search..."
-        />
-      </div>
-    </form>
+      </template>
+      <span
+        >Enclose a JSON query in braces {} to have it interpreted as a direct
+        MongoDB query.</span
+      >
+    </v-tooltip>
+
+    <v-text-field
+      v-model="textQuery"
+      placeholder="Search datasets..."
+      prepend-inner-icon="mdi-magnify"
+      density="compact"
+      variant="outlined"
+      hide-details
+      single-line
+      rounded
+      clearable
+      class="search-field"
+      @keyup.enter="startSearch"
+      @click:clear="clearSearch"
+      @focus="isFocused = true"
+      @blur="isFocused = false"
+    />
   </div>
 </template>
 
-<script>
-import { BTooltip } from "bootstrap-vue-next";
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useStore } from "@/store";
 
-export default {
-  name: "TextSearch",
-  directives: {
-    "b-tooltip": BTooltip,
-  },
-  props: {
-    mongoplugin: {
-      type: String,
-      required: true,
-    },
-  },
-  data() {
-    return {
-      textQuery: "",
-    };
-  },
-  computed: {
-    isJson() {
-      if (this.textQuery === "") {
-        return false;
-      }
-      try {
-        JSON.parse(this.textQuery);
-        return true;
-      } catch (e) {
-        return false;
-      }
-    },
-    isJsonEnabled() {
-      return this.mongoplugin !== "N/A";
-    },
-  },
-  methods: {
-    startSearch() {
-      if (this.isJsonEnabled && this.isJson) {
-        this.$store.commit("update_mongo_text", this.textQuery);
-      } else {
-        this.$store.commit("update_free_text", this.textQuery);
-      }
-      this.$emit("start-search");
-    },
-  },
-};
+const props = defineProps<{
+  mongoplugin: string;
+}>();
+
+const emit = defineEmits<{
+  (e: "start-search"): void;
+}>();
+
+const store = useStore();
+const textQuery = ref("");
+const isFocused = ref(false);
+
+const isJson = computed(() => {
+  const trimmed = (textQuery.value ?? "").trim();
+  if (!trimmed.startsWith("{")) {
+    return false;
+  }
+  try {
+    JSON.parse(trimmed);
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+const isJsonEnabled = computed(() => props.mongoplugin !== "N/A");
+
+function startSearch(): void {
+  if (textQuery.value === "") {
+    store.updateFreeText(null);
+    store.updateMongoText(null);
+  } else if (isJsonEnabled.value && isJson.value) {
+    store.updateMongoText(textQuery.value);
+    store.updateFreeText(null);
+  } else {
+    store.updateFreeText(textQuery.value);
+    store.updateMongoText(null);
+  }
+  emit("start-search");
+}
+
+function clearSearch(): void {
+  textQuery.value = "";
+  store.updateFreeText(null);
+  store.updateMongoText(null);
+  emit("start-search");
+}
 </script>
 
-<style>
-.searchContainer {
+<style scoped>
+.search-container {
   display: flex;
   align-items: center;
-  gap: 8px; /* Spacing between elements */
-  width: 100%; /* Ensure container takes full width */
+  width: 280px;
+  transition: width 0.3s ease;
 }
 
-.jsonChecker {
-  color: #6f42c1; /* Soft purple for label text */
-  flex-shrink: 0; /* Prevent the label from shrinking */
+.search-container.search-expanded {
+  width: 480px;
 }
 
-.form-control {
-  border: 2px solid #6f42c1; /* A lighter shade of purple for border */
-  flex-grow: 1; /* Allow the input to grow and fill the space */
-  margin-right: auto; /* Push all subsequent elements to the right */
+.search-field {
+  flex: 1;
 }
 
-.jsonChecker {
-  max-width: calc(50% - 4px); /* Adjust accordingly */
-  white-space: nowrap; /* Keep the label text on a single line */
-  overflow: hidden; /* Hide overflow */
-  text-overflow: ellipsis; /* Add an ellipsis to truncated text */
+.search-label {
+  flex-shrink: 0;
 }
 
-.form-control {
-  padding: 0.375rem 0.75rem;
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .search-container {
+    width: 200px;
+  }
+
+  .search-container.search-expanded {
+    width: 320px;
+  }
+}
+
+@media (max-width: 600px) {
+  .search-container {
+    width: 150px;
+  }
+
+  .search-container.search-expanded {
+    width: 220px;
+  }
+
+  .search-label {
+    display: none;
+  }
 }
 </style>

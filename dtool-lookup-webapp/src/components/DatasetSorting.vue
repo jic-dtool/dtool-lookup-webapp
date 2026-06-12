@@ -1,134 +1,132 @@
 <template>
-  <div class="d-flex justify-content-between align-items-center">
-    <!-- Left side: Text and Dropdown for contents per page -->
-    <div class="d-flex align-items-center">
-      <!-- Adjusted margin and alignment -->
-      <div class="align-self-center" style="margin-right: 8px; font-size: 16px">
-        Contents per page:
-      </div>
-      <BFormSelect
-  v-model="selectedContentsPerPage"
-  class="me-3"
-  style="width: 100px"
-  :options="perPageOptions"
-  @change="updatePerPage($event.target.value)"
->
-</BFormSelect>
+  <v-row align="center" dense>
+    <!-- Left side: Contents per page -->
+    <v-col cols="auto" class="d-flex align-center">
+      <span class="text-body-2 mr-2">Contents per page:</span>
+      <v-select
+        v-model="selectedContentsPerPage"
+        :items="perPageOptions"
+        item-title="text"
+        item-value="value"
+        density="compact"
+        variant="outlined"
+        hide-details
+        style="width: 90px"
+        @update:model-value="updatePerPage"
+      />
+    </v-col>
 
+    <v-spacer />
 
-    </div>
-
-    <!-- Right side: Dropdown for sorting options and Button for sort direction -->
-    <div class="d-flex align-items-center">
-      <BFormSelect
+    <!-- Right side: Sorting options -->
+    <v-col cols="auto" class="d-flex align-center">
+      <v-select
         v-model="selectedSortOption"
-        class="me-2"
-        style="width: 200px"
-        :options="formattedOptions"
-      >
-      </BFormSelect>
-      <button class="btn btn-primary sort-button" @click="toggleSortDirection">
-        <img :src="sortIcon" alt="Sort Icon" class="sort-icon" />
-      </button>
-    </div>
-  </div>
+        :items="formattedOptions"
+        item-title="text"
+        item-value="value"
+        density="compact"
+        variant="outlined"
+        hide-details
+        style="width: 160px"
+        class="mr-2"
+      />
+      <v-btn
+        color="primary"
+        size="small"
+        :icon="
+          sortDirection === 'asc' ? 'mdi-sort-ascending' : 'mdi-sort-descending'
+        "
+        @click="toggleSortDirection"
+      />
+    </v-col>
+  </v-row>
 </template>
 
-<script>
-import { BFormSelect } from "bootstrap-vue-next";
+<script setup lang="ts">
+import { ref, computed, watch } from "vue";
+import { useStore } from "@/store";
 
-export default {
-  name: "DatasetSorting",
-  components: {
-    BFormSelect,
-  },
-  data() {
-    // Initialize selectedSortOption and sortDirection based on store state
-    let initialSortOption = this.$store.state.selected_sort_option;
-    let initialcontentsPerPage = this.$store.state.update_current_Per_Page;
+interface PerPageOption {
+  text: string;
+  value: number;
+}
 
-    let initialSortDirection = "asc";
-    if (initialSortOption.startsWith("-")) {
-      initialSortDirection = "desc";
-      initialSortOption = initialSortOption.substring(1);
-    }
-    return {
-      selectedSortOption: initialSortOption,
-      sortOptions: [
-        "uri",
-        "base_uri",
-        "created_at",
-        "creator_username",
-        "frozen_at",
-        "name",
-        "uuid",
-      ],
-      sortDirection: initialSortDirection,
-      selectedContentsPerPage: initialcontentsPerPage,
-      perPageOptions: [
-        { text: "10", value: 10 },
-        { text: "20", value: 20 },
-        { text: "50", value: 50 },
-        { text: "100", value: 100 },
-      ],
-    };
-  },
-  computed: {
-    // Format sortOptions for display in the dropdown
-    formattedOptions() {
-      return this.sortOptions.map((option) => ({
-        text: option
-          .replace(/_/g, " ")
-          .replace(/\b\w/g, (l) => l.toUpperCase()),
-        value: option,
-      }));
-    },
-    // Get the appropriate sort icon based on the sortDirection
-    sortIcon() {
-      return require(`@/assets/icons/sort-${this.sortDirection}.svg`);
-    },
-    // Get the selectedSortValue with the correct prefix based on sortDirection
-    selectedSortValue() {
-      return this.sortDirection === "asc"
-        ? this.selectedSortOption
-        : `-${this.selectedSortOption}`;
-    },
-  },
-  methods: {
-    // Toggle the sortDirection and update the store and emit an event
-    toggleSortDirection() {
-      this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
-      this.$store.commit("update_selected_sort_option", this.selectedSortValue);
-      this.$emit("start-search");
-    },
-    updatePerPage(perpage) {
-      this.selectedContentsPerPage =
-        this.selectedContentsPerPage === perpage ? null : perpage; // Toggle selection
-      this.$store.commit("update_current_Per_Page", perpage);
-      this.$emit("start-search");
-    },
-  },
-  watch: {
-    // Update the store and emit an event when selectedSortOption changes
-    selectedSortOption() {
-      this.$store.commit("update_selected_sort_option", this.selectedSortValue);
-      this.$emit("start-search");
-    },
-  },
+interface SortOption {
+  text: string;
+  value: string;
+}
+
+const emit = defineEmits<{
+  (e: "start-search"): void;
+}>();
+
+const store = useStore();
+
+// Initialize selectedSortOption and sortDirection based on store state
+const getInitialSortOption = (): string => {
+  const option = store.selected_sort_option;
+  return option.startsWith("-") ? option.substring(1) : option;
 };
+
+const getInitialSortDirection = (): "asc" | "desc" => {
+  return store.selected_sort_option.startsWith("-") ? "desc" : "asc";
+};
+
+const selectedSortOption = ref(getInitialSortOption());
+const sortDirection = ref<"asc" | "desc">(getInitialSortDirection());
+const selectedContentsPerPage = ref(store.update_current_Per_Page);
+
+const sortOptions = [
+  "frozen_at",
+  "created_at",
+  "name",
+  "uuid",
+  "creator_username",
+  "uri",
+  "base_uri",
+];
+
+const perPageOptions: PerPageOption[] = [
+  { text: "10", value: 10 },
+  { text: "20", value: 20 },
+  { text: "50", value: 50 },
+  { text: "100", value: 100 },
+];
+
+// Format sortOptions for display in the dropdown
+const formattedOptions = computed<SortOption[]>(() => {
+  return sortOptions.map((option) => ({
+    text: option.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+    value: option,
+  }));
+});
+
+// Get the selectedSortValue with the correct prefix based on sortDirection
+const selectedSortValue = computed(() => {
+  return sortDirection.value === "asc"
+    ? selectedSortOption.value
+    : `-${selectedSortOption.value}`;
+});
+
+// Watch for changes to selectedSortOption
+watch(selectedSortOption, () => {
+  store.updateSelectedSortOption(selectedSortValue.value);
+  store.updateCurrentPageNumber(1);
+  emit("start-search");
+});
+
+// Toggle the sortDirection and update the store and emit an event
+function toggleSortDirection(): void {
+  sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+  store.updateSelectedSortOption(selectedSortValue.value);
+  store.updateCurrentPageNumber(1);
+  emit("start-search");
+}
+
+function updatePerPage(perpage: number): void {
+  store.updateCurrentPerPage(perpage);
+  store.updateCurrentPageNumber(1);
+  emit("start-search");
+}
 </script>
-
-<style>
-.sort-button {
-  color: inherit;
-}
-
-.sort-icon {
-  filter: invert(100%);
-  transition: filter 0.3s;
-}
-
-.sort-button:hover .sort-icon {
-  filter: invert(0%);
-}
-</style>
