@@ -1,9 +1,9 @@
 /**
- * Single source of truth for build-time server configuration.
+ * Single source of truth for build-time server and webapp configuration.
  *
- * All modules must derive server endpoints from here so that a missing
- * environment variable degrades consistently instead of producing
- * "healthy but broken" states from divergent defaults.
+ * All modules must derive server endpoints and feature flags from here so
+ * that a missing environment variable degrades consistently instead of
+ * producing "healthy but broken" states from divergent defaults.
  */
 
 export const serverUrl: string =
@@ -16,3 +16,5 @@ export const tokenGeneratorUrl: string =
 export const authLogoutUrl: string =
   process.env.VUE_APP_DTOOL_LOOKUP_SERVER_AUTH_LOGOUT_URL ||
   `${serverUrl}/auth/logout`;
+
+export const authEnabled = process.env.VUE_APP_AUTH_ENABLED !== "false";
