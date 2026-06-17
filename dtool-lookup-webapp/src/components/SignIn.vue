@@ -1,451 +1,355 @@
 <template>
-  <div class="center-wrapper">
-    <div
-      class="container"
-      :class="{ 'right-panel-active': rightPanelActive }"
-      id="container"
-    >
-      <!-- Sign In Form -->
-      <div class="form-container sign-in-container">
-        <form @submit.stop.prevent="getToken">
-          <!-- Logo Image -->
-          <img
-            :src="logoSrc"
-            alt="Logo"
-            style="max-width: 100px; display: block; margin: 0 auto 20px"
-          />
+  <div class="sign-in-wrapper">
+    <v-container class="fill-height" fluid>
+      <v-row align="center" justify="center">
+        <v-col cols="12" sm="10" md="8" lg="6">
+          <v-card elevation="12" class="overflow-hidden">
+            <v-row no-gutters>
+              <!-- Sign In Form -->
+              <v-col
+                cols="12"
+                :md="rightPanelActive ? 6 : 6"
+                :order="rightPanelActive ? 2 : 1"
+                class="pa-0"
+              >
+                <v-card-text class="pa-8">
+                  <div class="text-center mb-6">
+                    <v-avatar size="80">
+                      <v-img :src="logoSrc" alt="Logo" />
+                    </v-avatar>
+                  </div>
 
-          <h1 v-html="firstContainerTitle"></h1>
+                  <h1
+                    class="text-h5 font-weight-bold text-center mb-6"
+                    v-html="
+                      rightPanelActive
+                        ? fourthContainerHeading
+                        : firstContainerTitle
+                    "
+                  ></h1>
 
-          <input
-            v-model="username"
-            type="username"
-            placeholder="UserName"
-            required
-            :disabled="signInLoading"
-          />
-          <input
-            v-model="password"
-            type="password"
-            placeholder="Password"
-            required
-            :disabled="signInLoading"
-          />
-          <div v-if="signInFailed" class="alert alert-danger" role="alert">
-            Invalid username or password
-          </div>
-          <button
-            :disabled="signInLoading"
-            class="btn btn-lg btn-primary btn-block"
-          >
-            Sign In
-          </button>
+                  <!-- Sign In Form (shown when not right panel active) -->
+                  <div v-if="!rightPanelActive">
+                    <!-- Auth store error message for unauthorized users (ORCID login but not registered) -->
+                    <v-alert
+                      v-if="auth.status === 'unauthorized' && auth.error"
+                      type="warning"
+                      class="mb-4"
+                      closable
+                      @click:close="auth.clearError()"
+                    >
+                      <template #title>
+                        {{ auth.error.message }}
+                      </template>
+                      {{ auth.error.details }}
+                    </v-alert>
 
-          <div class="d-flex justify-content-center" v-if="signInLoading">
-            <div class="spinner-border text-primary">
-              <span class="sr-only">Authenticating...</span>
-            </div>
-          </div>
-        </form>
-      </div>
+                    <!-- OAuth2 Login Button (if enabled) -->
+                    <div v-if="oauth2Enabled" class="mb-4">
+                      <v-btn
+                        color="primary"
+                        size="large"
+                        block
+                        :href="oauth2LoginUrl"
+                        :loading="auth.isLoading"
+                        prepend-icon="mdi-login"
+                      >
+                        Sign in with {{ oauth2ProviderName }}
+                      </v-btn>
 
-      <!-- second and third Container -->
-      <div class="overlay-container">
-        <div class="overlay">
-          <div class="overlay-panel second-container">
-            <h1 v-html="secondContainerTitle"></h1>
+                      <div
+                        v-if="showUsernamePasswordForm"
+                        class="d-flex align-center my-4"
+                      >
+                        <v-divider />
+                        <span class="mx-3 text-grey">or</span>
+                        <v-divider />
+                      </div>
+                    </div>
 
-            <p v-html="secondContainerMessage"></p>
-            <button class="ghost" @click="activateRightPanel">More Info</button>
-          </div>
+                    <!-- Username/Password Form (if enabled) -->
+                    <v-form
+                      v-if="showUsernamePasswordForm"
+                      @submit.prevent="handleUsernamePasswordLogin"
+                    >
+                      <v-text-field
+                        v-model="username"
+                        label="Username"
+                        prepend-inner-icon="mdi-account"
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-3"
+                        :disabled="signInLoading"
+                        required
+                      />
 
-          <div class="overlay-panel third-container">
-            <h1 v-html="thirdContainerHeading"></h1>
+                      <v-text-field
+                        v-model="password"
+                        label="Password"
+                        prepend-inner-icon="mdi-lock"
+                        type="password"
+                        variant="outlined"
+                        density="comfortable"
+                        class="mb-3"
+                        :disabled="signInLoading"
+                        required
+                      />
 
-            <p v-html="thirdContainerMessage"></p>
+                      <v-alert
+                        v-if="signInFailed"
+                        type="error"
+                        density="compact"
+                        class="mb-4"
+                      >
+                        Invalid username or password
+                      </v-alert>
 
-            <button class="ghost" @click="deactivateRightPanel">
-              Return to Sign In
-            </button>
-          </div>
-        </div>
-      </div>
+                      <v-btn
+                        type="submit"
+                        color="primary"
+                        size="large"
+                        block
+                        :loading="signInLoading"
+                        :disabled="signInLoading"
+                      >
+                        Sign In
+                      </v-btn>
+                    </v-form>
+                  </div>
 
-      <!-- Fourth Container -->
-      <div class="form-container fourth-container">
-        <form action="#">
-          <img
-            :src="logoSrc"
-            alt="Logo"
-            style="max-width: 100px; display: block; margin: 0 auto 20px"
-          />
+                  <!-- Resources (shown when right panel active) -->
+                  <div v-else>
+                    <p
+                      v-html="fourthContainerIntro"
+                      class="text-body-1 mb-4"
+                    ></p>
+                    <v-list density="compact" class="bg-transparent">
+                      <v-list-item
+                        v-for="(resource, index) in fourthContainerResources"
+                        :key="index"
+                        :href="resource.url"
+                        target="_blank"
+                        prepend-icon="mdi-link"
+                      >
+                        <v-list-item-title>{{
+                          resource.text
+                        }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </div>
+                </v-card-text>
+              </v-col>
 
-          <h1 v-html="fourthContainerHeading"></h1>
+              <!-- Info Panel -->
+              <v-col
+                cols="12"
+                md="6"
+                :order="rightPanelActive ? 1 : 2"
+                class="d-none d-md-flex"
+              >
+                <v-sheet
+                  class="fill-height w-100 d-flex flex-column align-center justify-center pa-8"
+                  :style="overlayGradient"
+                >
+                  <h1
+                    class="text-h5 font-weight-bold text-white text-center mb-4"
+                    v-html="
+                      rightPanelActive
+                        ? thirdContainerHeading
+                        : secondContainerTitle
+                    "
+                  ></h1>
 
-          <p v-html="fourthContainerIntro"></p>
-          <ul style="list-style-type: none; padding: 0">
-            <li
-              v-for="(resource, index) in fourthContainerResources"
-              :key="index"
+                  <p
+                    class="text-body-1 text-white text-center mb-6"
+                    v-html="
+                      rightPanelActive
+                        ? thirdContainerMessage
+                        : secondContainerMessage
+                    "
+                  ></p>
+
+                  <v-btn
+                    variant="outlined"
+                    color="white"
+                    @click="
+                      rightPanelActive
+                        ? deactivateRightPanel()
+                        : activateRightPanel()
+                    "
+                  >
+                    {{ rightPanelActive ? "Return to Sign In" : "More Info" }}
+                  </v-btn>
+                </v-sheet>
+              </v-col>
+            </v-row>
+          </v-card>
+
+          <!-- Mobile info button -->
+          <div class="d-md-none text-center mt-4">
+            <v-btn
+              variant="text"
+              color="primary"
+              @click="
+                rightPanelActive ? deactivateRightPanel() : activateRightPanel()
+              "
             >
-              <a :href="resource.url" target="_blank">{{ resource.text }}</a>
-            </li>
-          </ul>
-        </form>
-      </div>
-    </div>
+              {{ rightPanelActive ? "Return to Sign In" : "More Info" }}
+            </v-btn>
+          </div>
+        </v-col>
+      </v-row>
+    </v-container>
   </div>
 </template>
 
-<script>
-export default {
-  name: "SignIn",
-  data: function () {
-    return {
-      username: null,
-      password: null,
-      signInFailed: false,
-      signInInfo: null,
-      signInLoading: false,
-      signInErrored: false,
-      rightPanelActive: false,
-      tokenGeneratorURL:
-        process.env.VUE_APP_DTOOL_LOOKUP_SERVER_TOKEN_GENERATOR_URL,
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import axios from "axios";
+import type { AxiosError, AxiosResponse } from "axios";
+import type { ResourceLink } from "@/types";
+import { serverUrl, tokenGeneratorUrl } from "@/config";
+import { useNotificationStore } from "@/stores/notifications";
+import { useAuthStore } from "@/stores/auth";
 
-      logoSrc: process.env.VUE_APP_LANDING_PAGE_ICON_PATH || "/icons/128x128/dtool_logo.png",
+interface TokenResponse {
+  token?: string;
+}
 
-      firstContainerTitle:
-        process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In",
-      secondContainerTitle:
-        process.env.VUE_APP_SECOND_CONTAINER_TITLE || "Welcome to Dtool",
-      secondContainerMessage:
-        process.env.VUE_APP_SECOND_CONTAINER_MESSAGE ||
-        "Make your data more resilient, portable and easy to work with by packaging files & metadata into self-contained datasets.",
-      thirdContainerHeading:
-        process.env.VUE_APP_THIRD_CONTAINER_HEADING || "Access Your Account",
-      thirdContainerMessage:
-        process.env.VUE_APP_THIRD_CONTAINER_MESSAGE ||
-        "To log in, use the default credentials: Username - <strong>testuser</strong>, Password - <strong>test_password</strong>.",
-      fourthContainerHeading:
-        process.env.VUE_APP_FOURTH_CONTAINER_HEADING ||
-        "Supporting Documentation",
-      fourthContainerIntro:
-        process.env.VUE_APP_FOURTH_CONTAINER_INTRO ||
-        "Please refer to the following resources for more information:",
-      fourthContainerResources: process.env.VUE_APP_FOURTH_CONTAINER_RESOURCES
-        ? JSON.parse(process.env.VUE_APP_FOURTH_CONTAINER_RESOURCES)
-        : [
-            {
-              text: "dtool-lookup-webapp repository",
-              url: "https://github.com/livMatS/dtool-lookup-webapp",
-            },
-            {
-              text: "dserver REST API documentation",
-              url: "https://demo.dtool.dev/lookup/doc/swagger",
-            },
-            {
-              text: "dtool documentation",
-              url: "https://dtool.readthedocs.io/",
-            },
-          ],
-    };
-  },
-  computed: {
-    loginCredentials: function () {
-      return { username: this.username, password: this.password };
-    },
-  },
-  methods: {
-    signIn: function (token) {
-      this.$emit("sign-in", token);
-    },
-    getToken: function () {
-      console.log(process.env);
-      this.signInLoading = true;
-      this.$http
-        .post(this.tokenGeneratorURL, this.loginCredentials, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-        .then((response) => {
-          this.signInInfo = response.data;
-          if ("token" in this.signInInfo) {
-            this.signIn(this.signInInfo.token);
-          } else {
-            this.signInFailed = true;
-          }
-        })
-        .catch((error) => {
-          console.log(error);
-          this.signInErrored = true;
-        })
-        .finally(() => (this.signInLoading = false));
-    },
-    activateRightPanel() {
-      this.rightPanelActive = true;
-    },
-    deactivateRightPanel() {
-      this.rightPanelActive = false;
-    },
-  },
-};
+const notifications = useNotificationStore();
+const auth = useAuthStore();
+
+const username = ref<string | null>(null);
+const password = ref<string | null>(null);
+const signInFailed = ref(false);
+const signInInfo = ref<TokenResponse | null>(null);
+const signInLoading = ref(false);
+const rightPanelActive = ref(false);
+
+const logoSrc =
+  process.env.VUE_APP_LANDING_PAGE_ICON_PATH || "/icons/128x128/dtool_logo.png";
+
+// OAuth2 configuration
+const oauth2Enabled = process.env.VUE_APP_OAUTH2_ENABLED === "true";
+const oauth2ProviderName = process.env.VUE_APP_OAUTH2_PROVIDER_NAME || "OAuth2";
+const oauth2LoginUrl = `${serverUrl}/auth/login`;
+// Show username/password form if OAuth2 is disabled or if explicitly enabled
+const showUsernamePasswordForm =
+  !oauth2Enabled || process.env.VUE_APP_SHOW_USERNAME_PASSWORD_FORM === "true";
+const firstContainerTitle =
+  process.env.VUE_APP_FIRST_CONTAINER_TITLE || "Sign In";
+const secondContainerTitle =
+  process.env.VUE_APP_SECOND_CONTAINER_TITLE || "Welcome to Dtool";
+const secondContainerMessage =
+  process.env.VUE_APP_SECOND_CONTAINER_MESSAGE ||
+  "Make your data more resilient, portable and easy to work with by packaging files & metadata into self-contained datasets.";
+const thirdContainerHeading =
+  process.env.VUE_APP_THIRD_CONTAINER_HEADING || "Access Your Account";
+const thirdContainerMessage =
+  process.env.VUE_APP_THIRD_CONTAINER_MESSAGE ||
+  "To log in, use the default credentials: Username - <strong>testuser</strong>, Password - <strong>test_password</strong>.";
+const fourthContainerHeading =
+  process.env.VUE_APP_FOURTH_CONTAINER_HEADING || "Supporting Documentation";
+const fourthContainerIntro =
+  process.env.VUE_APP_FOURTH_CONTAINER_INTRO ||
+  "Please refer to the following resources for more information:";
+const fourthContainerResources: ResourceLink[] = process.env
+  .VUE_APP_FOURTH_CONTAINER_RESOURCES
+  ? JSON.parse(process.env.VUE_APP_FOURTH_CONTAINER_RESOURCES)
+  : [
+      {
+        text: "dtool-lookup-webapp repository",
+        url: "https://github.com/livMatS/dtool-lookup-webapp",
+      },
+      {
+        text: "dserver REST API documentation",
+        url: "https://demo.dtool.dev/lookup/doc/swagger",
+      },
+      {
+        text: "dtool documentation",
+        url: "https://dtool.readthedocs.io/",
+      },
+    ];
+
+const loginCredentials = computed(() => {
+  return { username: username.value, password: password.value };
+});
+
+const overlayGradient = computed(() => {
+  return {
+    background:
+      "linear-gradient(135deg, #6A1B9A 0%, #7B1FA2 50%, #9C27B0 75%, #AB47BC 100%)",
+  };
+});
+
+async function handleUsernamePasswordLogin(): Promise<void> {
+  signInLoading.value = true;
+  signInFailed.value = false;
+  auth.clearError();
+
+  try {
+    const response: AxiosResponse<TokenResponse> = await axios.post(
+      tokenGeneratorUrl,
+      loginCredentials.value,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    signInInfo.value = response.data;
+    if (
+      signInInfo.value &&
+      "token" in signInInfo.value &&
+      signInInfo.value.token
+    ) {
+      // Use auth store to login (this verifies the token works)
+      const success = await auth.login(signInInfo.value.token);
+      if (!success) {
+        // Auth store will have set the error
+        signInFailed.value = true;
+      }
+    } else {
+      signInFailed.value = true;
+    }
+  } catch (error) {
+    const axiosError = error as AxiosError;
+
+    // Determine error type and show appropriate message
+    if (axiosError.code === "ERR_NETWORK") {
+      notifications.error(
+        "Unable to connect to authentication server. Please check that the token generator service is running.",
+        10000,
+      );
+    } else if (axiosError.response?.status === 401) {
+      signInFailed.value = true;
+    } else if (axiosError.response?.status === 403) {
+      notifications.error("Access denied. Please check your credentials.");
+    } else if (axiosError.response?.status === 500) {
+      notifications.error(
+        "Authentication server error. Please try again later.",
+      );
+    } else {
+      notifications.error(`Authentication failed: ${axiosError.message}`);
+    }
+  } finally {
+    signInLoading.value = false;
+  }
+}
+
+function activateRightPanel(): void {
+  rightPanelActive.value = true;
+}
+
+function deactivateRightPanel(): void {
+  rightPanelActive.value = false;
+}
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css?family=Montserrat:400,800");
-
-* {
-  box-sizing: border-box;
+.sign-in-wrapper {
+  min-height: 100vh;
+  background: #f5f5f5;
 }
-
-.center-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh; /* Full height of the viewport */
-  background: #f6f5f7;
-}
-
-body {
-  margin: 0; /* Ensure there's no default margin */
-  display: flex;
-  justify-content: center; /* Center horizontally */
-  align-items: center; /* Center vertically */
-  min-height: 100vh; /* Minimum height to take full viewport height */
-  background: #f6f5f7;
-  font-family: "Montserrat", sans-serif;
-}
-
-h1 {
-  font-weight: bold;
-  margin: 0;
-}
-
-h2 {
-  text-align: center;
-}
-
-p {
-  font-size: 18px;
-  font-weight: 100;
-  line-height: 20px;
-  letter-spacing: 0.5px;
-  margin: 20px 0 30px;
-}
-
-span {
-  font-size: 12px;
-}
-
-a {
-  color: #333;
-  font-size: 14px;
-  text-decoration: none;
-  margin: 15px 0;
-}
-
-button {
-  border-radius: 20px;
-  border: 1px solid #95319b;
-  background-color: #95319b;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: bold;
-  padding: 12px 45px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: transform 80ms ease-in;
-}
-
-button:hover,
-button:active,
-button:focus {
-  background-color: #8b319b; /* Background color for hover and active states */
-  border-color: #8b319b; /* Border color for hover and active states */
-}
-
-button:active {
-  transform: scale(0.95); /* Slight scale down to give a pressed effect */
-}
-
-button:focus {
-  outline: none;
-}
-
-button.ghost {
-  background-color: transparent;
-  border-color: #ffffff;
-}
-
-form {
-  background-color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 0 50px;
-  height: 100%;
-  text-align: center;
-}
-
-input {
-  background-color: #eee;
-  border: none;
-  padding: 12px 15px;
-  margin: 8px 0;
-  width: 100%;
-}
-
-.container {
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
-  position: relative;
-  overflow: hidden;
-  width: 90vw;
-  max-width: 800px;
-  min-height: 530px;
-}
-
-.form-container {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  transition: all 0.6s ease-in-out;
-}
-
-.sign-in-container {
-  left: 0;
-  width: 50%;
-  z-index: 2;
-}
-
-.container.right-panel-active .sign-in-container {
-  transform: translateX(100%);
-}
-
-.fourth-container {
-  left: 0;
-  width: 50%;
-  opacity: 0;
-  z-index: 1;
-}
-
-.container.right-panel-active .fourth-container {
-  transform: translateX(100%);
-  opacity: 1;
-  z-index: 5;
-  animation: show 0.6s;
-}
-
-@keyframes show {
-  0%,
-  49.99% {
-    opacity: 0;
-    z-index: 1;
-  }
-
-  50%,
-  100% {
-    opacity: 1;
-    z-index: 5;
-  }
-}
-
-.overlay-container {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 50%;
-  height: 100%;
-  overflow: hidden;
-  transition: transform 0.6s ease-in-out;
-  z-index: 100;
-}
-
-.container.right-panel-active .overlay-container {
-  transform: translateX(-100%);
-}
-
-.overlay {
-  background: #cc1e67;
-  background: -webkit-linear-gradient(
-    135deg,
-    #8b319b 0%,
-    #95319b 50%,
-    #b44acb 75%,
-    #cc70e6 100%
-  );
-  background: linear-gradient(
-    135deg,
-    #8b319b 0%,
-    #95319b 50%,
-    #b44acb 75%,
-    #cc70e6 100%
-  );
-
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: 0 0;
-  color: #ffffff;
-  position: relative;
-  left: -100%;
-  height: 100%;
-  width: 200%;
-  transform: translateX(0);
-  transition: transform 0.6s ease-in-out;
-}
-
-.container.right-panel-active .overlay {
-  transform: translateX(50%);
-}
-
-.overlay-panel {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 0 40px;
-  text-align: center;
-  top: 0;
-  height: 100%;
-  width: 50%;
-  transform: translateX(0);
-  transition: transform 0.6s ease-in-out;
-}
-
-.third-container {
-  transform: translateX(-20%);
-}
-
-.container.right-panel-active .third-container {
-  transform: translateX(0);
-}
-
-.second-container {
-  right: 0;
-  transform: translateX(0);
-}
-
-.container.right-panel-active .second-container {
-  transform: translateX(20%);
-}
-
-
-@media (max-width: 668px) {
-  .overlay-container,
-  .fourth-container {
-    display: none;
-  }
-
-  /* Ensure the sign-in container takes full available space */
-  .sign-in-container {
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto; /* Center the sign-in container */
-  }
-}
-
 </style>
