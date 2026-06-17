@@ -27,5 +27,6 @@ declare namespace NodeJS {
     VUE_APP_INFO_CONTENT?: string;
     VUE_APP_DTOOL_JSON_PATH?: string;
     VUE_APP_DTOOL_README_YAML_PATH?: string;
+    VUE_APP_AUTH_ENABLED?: string;
   }
 }

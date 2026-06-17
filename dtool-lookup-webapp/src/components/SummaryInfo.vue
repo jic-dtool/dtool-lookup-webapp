@@ -283,7 +283,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useStore } from "@/store";
-import { useAuthStore } from "@/stores/auth";
 import { dserverApi } from "@/services/dserverApi";
 import type { SummaryInfo } from "@/services/dserverApi";
 
@@ -292,7 +291,6 @@ const emit = defineEmits<{
 }>();
 
 const store = useStore();
-const auth = useAuthStore();
 
 const summary_info = ref<SummaryInfo | null>(null);
 const loading = ref(true);
@@ -301,16 +299,8 @@ const errored = ref(false);
 async function load_summary(): Promise<void> {
   errored.value = false;
   loading.value = true;
-
-  const username = auth.username;
-  if (!username) {
-    errored.value = true;
-    loading.value = false;
-    return;
-  }
-
   try {
-    summary_info.value = await dserverApi.getUserSummary(username);
+    summary_info.value = await dserverApi.getMySummary();
   } catch (error) {
     console.log(error);
     errored.value = true;

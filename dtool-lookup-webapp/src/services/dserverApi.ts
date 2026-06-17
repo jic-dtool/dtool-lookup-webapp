@@ -18,6 +18,7 @@ import type {
   ReadmeResponse,
   ManifestResponse,
   SummaryInfo,
+  UserWithPermissions,
   DServerError,
   AuthenticationError,
   AuthorizationError,
@@ -41,6 +42,7 @@ export type {
   ReadmeResponse,
   ManifestResponse,
   SummaryInfo,
+  UserWithPermissions,
   DServerError,
   AuthenticationError,
   AuthorizationError,
@@ -128,6 +130,14 @@ class DServerApi {
 
   async getUserSummary(username: string): Promise<SummaryInfo> {
     return this.ensureClient().getUserSummary(username);
+  }
+
+  async getMe(): Promise<UserWithPermissions> {
+    return this.ensureClient().getMe();
+  }
+
+  async getMySummary(): Promise<SummaryInfo> {
+    return this.ensureClient().getMySummary();
   }
 
   // =========================================================================

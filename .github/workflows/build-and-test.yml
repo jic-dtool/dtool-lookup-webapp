@@ -2,39 +2,72 @@ name: dtool-lookup-webapp-build-and-test
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        node-version: ['16', '18']
-    name: Node ${{ matrix.node-version }} 
+        node-version: ['20', '22', '24']
+    name: Node ${{ matrix.node-version }}
     steps:
-      - name: Check out
+      - name: Check out webapp
         uses: actions/checkout@v4
+        with:
+          path: dtool-lookup-webapp
 
-      - name: Set up node
+      # dserver-client is a local file:../../dserver-client-js dependency, so the
+      # client repo must sit one level above the webapp's package.json. Checking
+      # the webapp out under dtool-lookup-webapp/ and the client under
+      # dserver-client-js/ makes file:../../dserver-client-js resolve correctly.
+      - name: Check out dserver-client-js
+        uses: actions/checkout@v4
+        with:
+          repository: livMatS/dserver-client-js
+          path: dserver-client-js
+
+      - name: Set up Node ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: dtool-lookup-webapp/dtool-lookup-webapp/package-lock.json
+
+      # Build the client first so its dist/ exists before the webapp links it.
+      # dserver-client-js ships TypeScript sources only (main/types point to
+      # dist/) and has no committed lockfile, so use npm install + build.
+      - name: Build dserver-client-js
+        working-directory: dserver-client-js
+        run: |
+          npm install
+          npm run build
 
       - name: Install dependencies
-        working-directory: ./dtool-lookup-webapp
-        run: npm install
+        working-directory: dtool-lookup-webapp/dtool-lookup-webapp
+        run: npm ci
 
       - name: Lint
-        working-directory: ./dtool-lookup-webapp
+        working-directory: dtool-lookup-webapp/dtool-lookup-webapp
         run: npm run lint src
 
+      - name: Type-check
+        working-directory: dtool-lookup-webapp/dtool-lookup-webapp
+        run: npm run type-check
+
       - name: Build
-        working-directory: ./dtool-lookup-webapp
+        working-directory: dtool-lookup-webapp/dtool-lookup-webapp
         run: npm run build
 
       - name: Run tests
-        working-directory: ./dtool-lookup-webapp
+        working-directory: dtool-lookup-webapp/dtool-lookup-webapp
         run: npm run test:unit

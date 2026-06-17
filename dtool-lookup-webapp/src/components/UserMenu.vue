@@ -8,14 +8,16 @@
         class="user-menu-btn"
       >
         <v-icon start>mdi-account-circle</v-icon>
-        <span class="d-none d-sm-inline">{{ username || "User" }}</span>
+        <span v-if="authEnabled" class="d-none d-sm-inline">{{
+          username || "User"
+        }}</span>
         <v-icon end>mdi-menu-down</v-icon>
       </v-btn>
     </template>
 
     <v-card min-width="280" rounded="lg">
       <!-- User info header -->
-      <div class="pa-4 pb-2">
+      <div v-if="authEnabled" class="pa-4 pb-2">
         <div class="d-flex align-center">
           <v-avatar color="primary" size="40">
             <v-icon color="white">mdi-account</v-icon>
@@ -31,7 +33,7 @@
         </div>
       </div>
 
-      <v-divider />
+      <v-divider v-if="authEnabled" />
 
       <v-list density="compact" nav>
         <!-- Copy Token to Clipboard -->
@@ -75,16 +77,18 @@
           <v-list-item-title>Info</v-list-item-title>
         </v-list-item>
 
-        <v-divider class="my-1" />
+        <template v-if="authEnabled">
+          <v-divider class="my-1" />
 
-        <!-- Logout -->
-        <v-list-item
-          prepend-icon="mdi-logout"
-          base-color="error"
-          @click="logout"
-        >
-          <v-list-item-title>Logout</v-list-item-title>
-        </v-list-item>
+          <!-- Logout -->
+          <v-list-item
+            prepend-icon="mdi-logout"
+            base-color="error"
+            @click="logout"
+          >
+            <v-list-item-title>Logout</v-list-item-title>
+          </v-list-item>
+        </template>
       </v-list>
     </v-card>
   </v-menu>
@@ -242,6 +246,7 @@ import { ref, computed } from "vue";
 import { useStore } from "@/store";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notifications";
+import { authEnabled } from "@/config";
 
 const emit = defineEmits<{
   (e: "logoutAction"): void;
