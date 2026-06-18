@@ -17,4 +17,7 @@ export const authLogoutUrl: string =
   process.env.VUE_APP_DTOOL_LOOKUP_SERVER_AUTH_LOGOUT_URL ||
   `${serverUrl}/auth/logout`;
 
+export const oauth2LoginUrl: string =
+  process.env.VUE_APP_OAUTH2_LOGIN_URL || `${serverUrl}/auth/login`;
+
 export const authEnabled = process.env.VUE_APP_AUTH_ENABLED !== "false";

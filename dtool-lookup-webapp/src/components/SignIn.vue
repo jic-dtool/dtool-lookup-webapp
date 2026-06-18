@@ -208,7 +208,7 @@ import { ref, computed } from "vue";
 import axios from "axios";
 import type { AxiosError, AxiosResponse } from "axios";
 import type { ResourceLink } from "@/types";
-import { serverUrl, tokenGeneratorUrl } from "@/config";
+import { tokenGeneratorUrl, oauth2LoginUrl } from "@/config";
 import { useNotificationStore } from "@/stores/notifications";
 import { useAuthStore } from "@/stores/auth";
 
@@ -232,7 +232,7 @@ const logoSrc =
 // OAuth2 configuration
 const oauth2Enabled = process.env.VUE_APP_OAUTH2_ENABLED === "true";
 const oauth2ProviderName = process.env.VUE_APP_OAUTH2_PROVIDER_NAME || "OAuth2";
-const oauth2LoginUrl = `${serverUrl}/auth/login`;
+// oauth2LoginUrl is imported from @/config (env-configurable via VUE_APP_OAUTH2_LOGIN_URL)
 // Show username/password form if OAuth2 is disabled or if explicitly enabled
 const showUsernamePasswordForm =
   !oauth2Enabled || process.env.VUE_APP_SHOW_USERNAME_PASSWORD_FORM === "true";
