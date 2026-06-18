@@ -341,8 +341,15 @@ async function downloadFile(fileName: string): Promise<void> {
       : process.env.VUE_APP_DTOOL_README_YAML_PATH ||
         `data/templates/${fileName}`;
 
+  // Send the JWT so server-side generators (e.g. the config-generator plugin)
+  // can produce a per-user file. Harmless for static template paths.
+  const headers: Record<string, string> = {};
+  if (authEnabled && auth.token) {
+    headers["Authorization"] = `Bearer ${auth.token}`;
+  }
+
   try {
-    const response = await fetch(filePath);
+    const response = await fetch(filePath, { headers });
     if (!response.ok) throw new Error("Network response was not ok");
 
     const text = await response.text();
